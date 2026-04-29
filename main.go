@@ -38,22 +38,18 @@ func main() {
 
 	// get password: priority -p > config file > password file > -e > SSHPASS
 	pass := *password
-	if pass == "" && *configFile != "" {
-		// try parsing as config file first
-		config, err = parseConfigFile(*configFile)
+	if *configFile != "" {
+		config, pass, err = loadConfigOrPasswordFile(*configFile, pass, *strictHostKey)
 		if err != nil {
-			// not a config file, try as single-line password file
-			pass, err = readPasswordFile(*configFile)
-			if err != nil {
-				fatalError("Error: %v", err)
-			}
-		} else {
-			// config file parsed successfully, set StrictHostKey from command line
-			config.StrictHostKey = *strictHostKey
+			fatalError("Error: %v", err)
 		}
 	}
 	if pass == "" && *useEnv {
 		pass = getEnvPassword()
+	}
+	if config != nil {
+		mergeConfig(config, nil, pass, *keyPath, *host, *user, *port)
+		config.StrictHostKey = *strictHostKey
 	}
 
 	// detect command type
@@ -176,5 +172,9 @@ func main() {
 
 	if err != nil && !isClosedConnError(err) {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		if code, ok := exitCodeFromError(err); ok {
+			os.Exit(code)
+		}
+		os.Exit(1)
 	}
 }

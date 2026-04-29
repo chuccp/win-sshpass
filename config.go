@@ -92,6 +92,36 @@ func mergeConfig(dst, src *Config, pass, keyPath, host, user, port string) {
 	applyUserDefault(dst)
 }
 
+// loadConfigOrPasswordFile treats filename as a config file first, falling back
+// to a single-line password file when it is not a config.
+func loadConfigOrPasswordFile(filename, password string, strictHostKey bool) (*Config, string, error) {
+	pass := password
+
+	config, err := parseConfigFile(filename)
+	if err == nil {
+		config.StrictHostKey = strictHostKey
+		if pass != "" {
+			config.Password = pass
+		} else {
+			pass = config.Password
+		}
+		return config, pass, nil
+	}
+
+	if pass != "" {
+		if _, statErr := os.Stat(filename); statErr != nil {
+			return nil, "", fmt.Errorf("failed to access config/password file: %w", statErr)
+		}
+		return nil, pass, nil
+	}
+
+	pass, err = readPasswordFile(filename)
+	if err != nil {
+		return nil, "", err
+	}
+	return nil, pass, nil
+}
+
 // parseConfigFile parses a config file (format: key: value)
 func parseConfigFile(filename string) (*Config, error) {
 	file, err := os.Open(filename)
@@ -132,9 +162,6 @@ func parseConfigFile(filename string) (*Config, error) {
 
 	if config.Host == "" {
 		return nil, fmt.Errorf("config file missing host")
-	}
-	if config.Password == "" && config.KeyPath == "" {
-		return nil, fmt.Errorf("config file missing password or key")
 	}
 
 	return config, nil

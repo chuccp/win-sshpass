@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -67,9 +68,9 @@ func isWindowsLocalPath(p string) bool {
 }
 
 // cleanRemotePath normalizes a remote path for SFTP use.
-// - Strips the leading "/" from "//" prefix used to bypass Git Bash path conversion
-//   (e.g. "//tmp/file" -> "/tmp/file")
-// - Detects Windows local paths caused by Git Bash conversion and exits with a hint
+//   - Strips the leading "/" from "//" prefix used to bypass Git Bash path conversion
+//     (e.g. "//tmp/file" -> "/tmp/file")
+//   - Detects Windows local paths caused by Git Bash conversion and exits with a hint
 func cleanRemotePath(p string) string {
 	// "//" prefix: user intentionally used it to bypass Git Bash conversion
 	// e.g. "//tmp/file" should become "/tmp/file"
@@ -160,6 +161,19 @@ func parseUserHostPath(arg string) (user, host, remotePath string) {
 func isClosedConnError(err error) bool {
 	msg := err.Error()
 	return containsIgnoreCase(msg, "closed network connection")
+}
+
+type exitStatusError interface {
+	error
+	ExitStatus() int
+}
+
+func exitCodeFromError(err error) (int, bool) {
+	var exitErr exitStatusError
+	if errors.As(err, &exitErr) {
+		return exitErr.ExitStatus(), true
+	}
+	return 0, false
 }
 
 // fatalError prints an error message to stderr and exits with code 1

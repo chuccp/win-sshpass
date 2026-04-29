@@ -151,15 +151,17 @@ func parseRsyncArgs(args []string) (*Config, []string) {
 
 // detectCommandType detects the command type
 func detectCommandType(args []string) CommandType {
-	for _, arg := range args {
-		if arg == "scp" {
-			return CommandSCP
-		}
-		if arg == "rsync" {
-			return CommandRsync
-		}
+	if len(args) == 0 {
+		return CommandSSH
 	}
-	return CommandSSH
+	switch args[0] {
+	case "scp":
+		return CommandSCP
+	case "rsync":
+		return CommandRsync
+	default:
+		return CommandSSH
+	}
 }
 
 // printUsage prints the usage
