@@ -86,12 +86,6 @@ func main() {
 			// if -h flag was used and no user@host found in args, use remaining args as command
 			if config.Host == "" && *host != "" {
 				config.Host = *host
-				if *user != "" {
-					config.User = *user
-				}
-				if *port != "" && *port != "22" {
-					config.Port = *port
-				}
 				cmdToRun = joinArgs(remainingArgs)
 			}
 			if pass != "" {
@@ -102,6 +96,9 @@ func main() {
 			}
 			if *user != "" {
 				config.User = *user
+			}
+			if *port != "" && *port != "22" {
+				config.Port = *port
 			}
 			config.StrictHostKey = *strictHostKey
 		} else if *host != "" && (pass != "" || *keyPath != "") {
