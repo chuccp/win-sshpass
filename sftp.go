@@ -12,6 +12,16 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+// ensureRemoteDir creates a remote directory if it doesn't exist
+func ensureRemoteDir(client *ssh.Client, path string) error {
+	sftpClient, err := sftp.NewClient(client)
+	if err != nil {
+		return fmt.Errorf("failed to create SFTP client: %w", err)
+	}
+	defer sftpClient.Close()
+	return sftpClient.MkdirAll(path)
+}
+
 // uploadFile uploads a file or directory to the remote server
 func uploadFile(client *ssh.Client, localPath, remotePath string) error {
 	sftpClient, err := sftp.NewClient(client)

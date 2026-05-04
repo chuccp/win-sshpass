@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -15,7 +16,7 @@ func main() {
 	port := flag.String("P", "22", "port")
 	keyPath := flag.String("i", "", "private key file path")
 	command := flag.String("c", "", "command to execute")
-	localPath := flag.String("local", "", "local file path (for upload/download)")
+	localPath := flag.String("local", "", "local file path(s), comma-separated for multiple files (for upload/download)")
 	remotePath := flag.String("remote", "", "remote file path (for upload/download)")
 	download := flag.Bool("d", false, "download mode (remote to local)")
 	useEnv := flag.Bool("e", false, "read password from environment variable SSHPASS")
@@ -135,18 +136,47 @@ func main() {
 
 	// file transfer
 	if *localPath != "" && *remotePath != "" {
-		// fix Git Bash path conversion for remote paths
-		rPath := cleanRemotePath(*remotePath)
+		// support comma-separated multiple local/remote paths
+		localPaths := strings.Split(*localPath, ",")
+		for i := range localPaths {
+			localPaths[i] = strings.TrimSpace(localPaths[i])
+		}
+		remotePaths := strings.Split(*remotePath, ",")
+		for i := range remotePaths {
+			remotePaths[i] = strings.TrimSpace(remotePaths[i])
+			remotePaths[i] = cleanRemotePath(remotePaths[i])
+		}
+
 		if *download {
-			fmt.Printf("Downloading %s -> %s...\n", *remotePath, *localPath)
-			if err := downloadFile(client, rPath, *localPath); err != nil {
-				fatalError("Download failed: %v", err)
+			// ensure local target directories exist
+			for _, lp := range localPaths {
+				if err := os.MkdirAll(lp, 0755); err != nil {
+					fatalError("Error: failed to create local directory %q: %v", lp, err)
+				}
+			}
+			for _, rPath := range remotePaths {
+				for _, lp := range localPaths {
+					fmt.Printf("Downloading %s -> %s...\n", rPath, lp)
+					if err := downloadFile(client, rPath, lp); err != nil {
+						fatalError("Download failed: %v", err)
+					}
+				}
 			}
 			fmt.Println("Download successful!")
 		} else {
-			fmt.Printf("Uploading %s -> %s...\n", *localPath, *remotePath)
-			if err := uploadFile(client, *localPath, rPath); err != nil {
-				fatalError("Upload failed: %v", err)
+			// ensure remote target directories exist
+			for _, rPath := range remotePaths {
+				if err := ensureRemoteDir(client, rPath); err != nil {
+					fatalError("Error: failed to create remote directory %q: %v", rPath, err)
+				}
+			}
+			for _, lp := range localPaths {
+				for _, rPath := range remotePaths {
+					fmt.Printf("Uploading %s -> %s...\n", lp, rPath)
+					if err := uploadFile(client, lp, rPath); err != nil {
+						fatalError("Upload failed: %v", err)
+					}
+				}
 			}
 			fmt.Println("Upload successful!")
 		}
