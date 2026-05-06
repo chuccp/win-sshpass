@@ -16,7 +16,7 @@ func main() {
 	port := flag.String("P", "22", "port")
 	keyPath := flag.String("i", "", "private key file path")
 	command := flag.String("c", "", "command to execute")
-	localPath := flag.String("local", "", "local file path(s), comma-separated for multiple files (for upload/download)")
+	localPath := flag.String("local", "", "local file path(s), comma or space separated for multiple files (for upload/download)")
 	remotePath := flag.String("remote", "", "remote file path (for upload/download)")
 	download := flag.Bool("d", false, "download mode (remote to local)")
 	useEnv := flag.Bool("e", false, "read password from environment variable SSHPASS")
@@ -136,8 +136,22 @@ func main() {
 
 	// file transfer
 	if *localPath != "" && *remotePath != "" {
-		// support comma-separated multiple local/remote paths
-		localPaths := strings.Split(*localPath, ",")
+		// support comma or space separated multiple local/remote paths
+		// complex paths (containing '/') must use comma as separator
+		var localPaths []string
+		if strings.Contains(*localPath, ",") {
+			localPaths = strings.Split(*localPath, ",")
+		} else if strings.Contains(*localPath, " ") {
+			// paths with '/' are considered complex, must use comma
+			for _, p := range strings.Fields(*localPath) {
+				if strings.Contains(p, "/") {
+					fatalError("Error: local path %q contains '/'. Please use commas to separate multiple file paths (e.g., -local \"./a/file.txt,./b/file.txt\")", p)
+				}
+			}
+			localPaths = strings.Fields(*localPath)
+		} else {
+			localPaths = []string{*localPath}
+		}
 		for i := range localPaths {
 			localPaths[i] = strings.TrimSpace(localPaths[i])
 		}
