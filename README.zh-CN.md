@@ -20,8 +20,8 @@ Windows 版 sshpass 工具，实现类似 Linux sshpass 的功能。
 从 [GitHub Releases](https://github.com/chuccp/win-sshpass/releases) 下载最新版本：
 
 1. 打开 [Releases](https://github.com/chuccp/win-sshpass/releases) 页面
-2. 下载最新版本的 `win-sshpass.exe`
-3. 开箱即用！无需安装，无需任何依赖，单文件即可使用
+2. 下载 `win-sshpass.exe`（zip）或 `win-sshpass-v*.msi`（安装包）
+3. 如果使用 MSI 安装包：运行安装程序即可，安装目录会自动添加到系统 PATH 中
 
 > **零依赖**：`win-sshpass.exe` 是一个独立的可执行文件，无需安装 OpenSSH 或任何其他软件。下载后放入 PATH 目录即可直接使用。
 
@@ -71,6 +71,12 @@ win-sshpass -f server.config
 # 上传文件
 win-sshpass -h <主机> -p <密码> -local <本地路径> -remote <远程路径>
 
+# 上传多个文件（逗号分隔）
+win-sshpass -h <主机> -p <密码> -local "a.txt,b.txt,c.txt" -remote /tmp/
+
+# 上传多个文件（空格分隔，仅适用于不含 / 或 \ 的简单路径）
+win-sshpass -h <主机> -p <密码> -local "a.txt b.txt c.txt" -remote /tmp/
+
 # 上传目录（自动递归）
 win-sshpass -h <主机> -p <密码> -local <本地目录> -remote <远程目录>
 
@@ -104,7 +110,7 @@ win-sshpass -p <密码> rsync -avz <本地路径> user@host:<远程路径>
 | `-u` | 用户名，默认 root | `-u ubuntu` |
 | `-P` | 端口，默认 22 | `-P 2222` |
 | `-c` | 执行的命令 | `-c 'ls -la'` |
-| `-local` | 本地路径（上传/下载） | `-local ./file.txt` |
+| `-local` | 本地路径（逗号或空格分隔） | `-local "a.txt,b.txt"` |
 | `-remote` | 远程路径（上传/下载） | `-remote /tmp/file.txt` |
 | `-d` | 下载模式 | `-d` |
 | `-k` | 启用严格主机密钥验证 | `-k` |

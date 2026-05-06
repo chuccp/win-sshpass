@@ -26,8 +26,8 @@ A Windows implementation of sshpass, providing similar functionality to the Linu
 Download the latest release from [GitHub Releases](https://github.com/chuccp/win-sshpass/releases):
 
 1. Go to [Releases](https://github.com/chuccp/win-sshpass/releases) page
-2. Download `win-sshpass.exe` from the latest release
-3. That's it! No installation, no dependencies — just a single executable
+2. Download `win-sshpass.exe` (zip) or `win-sshpass-v*.msi` (installer)
+3. If using MSI: run the installer — it will add the install directory to your system PATH automatically
 
 > **Zero dependencies**: `win-sshpass.exe` is a standalone binary. No need to install OpenSSH or any other software. Download it, put it in your PATH, and you're ready to go.
 
@@ -77,6 +77,12 @@ win-sshpass -f server.config
 # Upload file
 win-sshpass -h <host> -p <password> -local <local_path> -remote <remote_path>
 
+# Upload multiple files (comma-separated)
+win-sshpass -h <host> -p <password> -local "a.txt,b.txt,c.txt" -remote /tmp/
+
+# Upload multiple files (space-separated, only for simple paths without / or \)
+win-sshpass -h <host> -p <password> -local "a.txt b.txt c.txt" -remote /tmp/
+
 # Upload directory (auto-recursive)
 win-sshpass -h <host> -p <password> -local <local_dir> -remote <remote_dir>
 
@@ -110,7 +116,7 @@ win-sshpass -p <password> rsync -avz <local_path> user@host:<remote_path>
 | `-u` | Username, default: root | `-u ubuntu` |
 | `-P` | Port, default: 22 | `-P 2222` |
 | `-c` | Command to execute | `-c 'ls -la'` |
-| `-local` | Local path (upload/download) | `-local ./file.txt` |
+| `-local` | Local path(s) (comma or space separated) | `-local "a.txt,b.txt"` |
 | `-remote` | Remote path (upload/download) | `-remote /tmp/file.txt` |
 | `-d` | Download mode | `-d` |
 | `-k` | Enable strict host key verification | `-k` |
