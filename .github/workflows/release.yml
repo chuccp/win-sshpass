@@ -40,7 +40,7 @@ jobs:
       - name: Install WiX Toolset
         run: |
           dotnet tool install --global wix
-          wix license accept
+          wix eula accept wix7
 
       - name: Generate product code GUID
         run: |
