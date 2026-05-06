@@ -3,7 +3,7 @@
 
   <Package Name="win-sshpass" Version="$(var.Version)"
            Manufacturer="win-sshpass" UpgradeCode="a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-           InstallerVersion="500" Scope="perMachine" Compressed="yes">
+           InstallerVersion="500" Scope="perMachine" Compressed="yes" Platform="x64">
 
     <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
 
@@ -15,8 +15,24 @@
 
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="INSTALLDIR" Name="win-sshpass">
-        <Component Id="MainExe" Guid="*">
+        <Component Id="MainExe" Guid="a2b3c4d5-e6f7-8901-abcd-ef2345678901">
           <File Id="MainFile" Source="win-sshpass.exe" KeyPath="yes" />
+        </Component>
+
+        <Component Id="ReadmeEn" Guid="b3c4d5e6-f7a8-9012-bcde-f34567890123">
+          <File Id="ReadmeEnFile" Source="README.md" Name="README.md" KeyPath="yes" />
+        </Component>
+
+        <Component Id="ReadmeZhCN" Guid="c4d5e6f7-a8b9-0123-cdef-456789012345">
+          <File Id="ReadmeZhCNFile" Source="README.zh-CN.md" Name="README.zh-CN.md" KeyPath="yes" />
+        </Component>
+
+        <Component Id="ReadmeZhTW" Guid="d5e6f7a8-b9c0-1234-defa-567890123456">
+          <File Id="ReadmeZhTWFile" Source="README.zh-TW.md" Name="README.zh-TW.md" KeyPath="yes" />
+        </Component>
+
+        <Component Id="ReadmeJa" Guid="e6f7a8b9-c0d1-2345-efab-678901234567">
+          <File Id="ReadmeJaFile" Source="README.ja.md" Name="README.ja.md" KeyPath="yes" />
         </Component>
 
         <Component Id="PathEnv" Guid="b1c2d3e4-f5a6-7890-bcde-f12345678901">
@@ -29,6 +45,10 @@
 
     <ComponentGroup Id="MainComponents">
       <ComponentRef Id="MainExe" />
+      <ComponentRef Id="ReadmeEn" />
+      <ComponentRef Id="ReadmeZhCN" />
+      <ComponentRef Id="ReadmeZhTW" />
+      <ComponentRef Id="ReadmeJa" />
       <ComponentRef Id="PathEnv" />
     </ComponentGroup>
 

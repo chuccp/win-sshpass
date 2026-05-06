@@ -46,7 +46,14 @@ func main() {
 	useEnv := flag.Bool("e", false, "read password from environment variable SSHPASS")
 	strictHostKey := flag.Bool("k", false, "enable strict host key verification")
 	showVersion := flag.Bool("v", false, "show version")
+	showHelp := flag.Bool("help", false, "show help")
 	flag.Parse()
+
+	// display help
+	if *showHelp {
+		printUsage()
+		return
+	}
 
 	// display version
 	if *showVersion {
