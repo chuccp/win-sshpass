@@ -7,31 +7,31 @@ import (
 	"strings"
 )
 
-	// splitPaths splits a path string by comma or space separator.
-	// Returns error if complex paths (containing '/' or '\') are space-separated.
-	// name identifies which parameter for error messages (e.g., "local" or "remote").
-	func splitPaths(s, name string) ([]string, error) {
-		var paths []string
-		if strings.Contains(s, ",") {
-			for _, p := range strings.Split(s, ",") {
-				if p = strings.TrimSpace(p); p != "" {
-					paths = append(paths, p)
-				}
+// splitPaths splits a path string by comma or space separator.
+// Returns error if complex paths (containing '/' or '\') are space-separated.
+// name identifies which parameter for error messages (e.g., "local" or "remote").
+func splitPaths(s, name string) ([]string, error) {
+	var paths []string
+	if strings.Contains(s, ",") {
+		for _, p := range strings.Split(s, ",") {
+			if p = strings.TrimSpace(p); p != "" {
+				paths = append(paths, p)
 			}
-		} else if strings.Contains(s, " ") {
-			for _, p := range strings.Fields(s) {
-				if strings.ContainsAny(p, "/\\") {
-					return nil, fmt.Errorf("path %q contains a path separator. Please use commas to separate multiple %s paths (e.g., -%s \"./a/file.txt,./b/file.txt\")", p, name, name)
-				}
-			}
-			paths = strings.Fields(s)
-		} else {
-			paths = []string{s}
 		}
-		return paths, nil
+	} else if strings.Contains(s, " ") {
+		for _, p := range strings.Fields(s) {
+			if strings.ContainsAny(p, "/\\") {
+				return nil, fmt.Errorf("path %q contains a path separator. Please use commas to separate multiple %s paths (e.g., -%s \"./a/file.txt,./b/file.txt\")", p, name, name)
+			}
+		}
+		paths = strings.Fields(s)
+	} else {
+		paths = []string{s}
 	}
+	return paths, nil
+}
 
-	func main() {
+func main() {
 	// command line arguments
 	configFile := flag.String("f", "", "password file or config file path")
 	host := flag.String("h", "", "host address")
