@@ -42,13 +42,8 @@ jobs:
           dotnet tool install --global wix
           wix eula accept wix7
 
-      - name: Generate product code GUID
-        run: |
-          $guid = [guid]::NewGuid().ToString()
-          echo "PRODUCT_GUID=$guid" >> $env:GITHUB_ENV
-
       - name: Build MSI
-        run: wix build -d Version=${{ github.ref_name }} -d ProductCode=${{ env.PRODUCT_GUID }} -out win-sshpass-${{ github.ref_name }}.msi .github/workflows/win-sshpass.wxs
+        run: wix build -d Version=${{ github.ref_name }} -out win-sshpass-${{ github.ref_name }}.msi .github/workflows/win-sshpass.wxs
 
       - name: Create release
         uses: softprops/action-gh-release@v1

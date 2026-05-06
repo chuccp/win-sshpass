@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
-     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
 
   <Package Name="win-sshpass" Version="$(var.Version)"
            Manufacturer="win-sshpass" UpgradeCode="a1b2c3d4-e5f6-7890-abcd-ef1234567890"
@@ -16,11 +15,11 @@
 
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="INSTALLDIR" Name="win-sshpass">
-        <Component Id="MainExe" Guid="{a1b2c3d4-e5f6-7890-abcd-ef1234567891}">
+        <Component Id="MainExe" Guid="*">
           <File Id="MainFile" Source="win-sshpass.exe" KeyPath="yes" />
         </Component>
 
-        <Component Id="PathEnv" Guid="$(var.ProductCode)">
+        <Component Id="PathEnv" Guid="b1c2d3e4-f5a6-7890-bcde-f12345678901">
           <Environment Id="PATH_Env" Name="PATH"
                        Value="[INSTALLDIR]" Permanent="no"
                        Part="last" Action="set" System="yes" />
