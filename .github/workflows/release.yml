@@ -37,10 +37,23 @@ jobs:
           $tag = "${{ github.ref_name }}"
           Compress-Archive -Path win-sshpass.exe,README.md,README.zh-CN.md,README.zh-TW.md,README.ja.md -DestinationPath "win-sshpass-$tag.zip"
 
+      - name: Install WiX Toolset
+        run: dotnet tool install --global wix
+
+      - name: Generate product code GUID
+        run: |
+          $guid = [guid]::NewGuid().ToString()
+          echo "PRODUCT_GUID=$guid" >> $env:GITHUB_ENV
+
+      - name: Build MSI
+        run: wix build -d Version=${{ github.ref_name }} -d ProductCode=${{ env.PRODUCT_GUID }} -ext WixUtilExtension -out win-sshpass-${{ github.ref_name }}.msi .github/workflows/win-sshpass.wxs
+
       - name: Create release
         uses: softprops/action-gh-release@v1
         with:
-          files: win-sshpass-*.zip
+          files: |
+            win-sshpass-*.zip
+            win-sshpass-*.msi
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -7,7 +7,31 @@ import (
 	"strings"
 )
 
-func main() {
+	// splitPaths splits a path string by comma or space separator.
+	// Returns error if complex paths (containing '/' or '\') are space-separated.
+	// name identifies which parameter for error messages (e.g., "local" or "remote").
+	func splitPaths(s, name string) ([]string, error) {
+		var paths []string
+		if strings.Contains(s, ",") {
+			for _, p := range strings.Split(s, ",") {
+				if p = strings.TrimSpace(p); p != "" {
+					paths = append(paths, p)
+				}
+			}
+		} else if strings.Contains(s, " ") {
+			for _, p := range strings.Fields(s) {
+				if strings.ContainsAny(p, "/\\") {
+					return nil, fmt.Errorf("path %q contains a path separator. Please use commas to separate multiple %s paths (e.g., -%s \"./a/file.txt,./b/file.txt\")", p, name, name)
+				}
+			}
+			paths = strings.Fields(s)
+		} else {
+			paths = []string{s}
+		}
+		return paths, nil
+	}
+
+	func main() {
 	// command line arguments
 	configFile := flag.String("f", "", "password file or config file path")
 	host := flag.String("h", "", "host address")
@@ -136,28 +160,15 @@ func main() {
 
 	// file transfer
 	if *localPath != "" && *remotePath != "" {
-		// support comma or space separated multiple local/remote paths
-		// complex paths (containing '/') must use comma as separator
-		var localPaths []string
-		if strings.Contains(*localPath, ",") {
-			localPaths = strings.Split(*localPath, ",")
-		} else if strings.Contains(*localPath, " ") {
-			// paths with '/' are considered complex, must use comma
-			for _, p := range strings.Fields(*localPath) {
-				if strings.Contains(p, "/") {
-					fatalError("Error: local path %q contains '/'. Please use commas to separate multiple file paths (e.g., -local \"./a/file.txt,./b/file.txt\")", p)
-				}
-			}
-			localPaths = strings.Fields(*localPath)
-		} else {
-			localPaths = []string{*localPath}
+		localPaths, err := splitPaths(*localPath, "local")
+		if err != nil {
+			fatalError("Error: %v", err)
 		}
-		for i := range localPaths {
-			localPaths[i] = strings.TrimSpace(localPaths[i])
+		remotePaths, err := splitPaths(*remotePath, "remote")
+		if err != nil {
+			fatalError("Error: %v", err)
 		}
-		remotePaths := strings.Split(*remotePath, ",")
 		for i := range remotePaths {
-			remotePaths[i] = strings.TrimSpace(remotePaths[i])
 			remotePaths[i] = cleanRemotePath(remotePaths[i])
 		}
 
