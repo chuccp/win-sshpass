@@ -38,7 +38,9 @@ jobs:
           Compress-Archive -Path win-sshpass.exe,README.md,README.zh-CN.md,README.zh-TW.md,README.ja.md -DestinationPath "win-sshpass-$tag.zip"
 
       - name: Install WiX Toolset
-        run: dotnet tool install --global wix
+        run: |
+          dotnet tool install --global wix
+          wix license accept
 
       - name: Generate product code GUID
         run: |
