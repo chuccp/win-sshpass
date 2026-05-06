@@ -43,7 +43,7 @@ jobs:
           wix eula accept wix7
 
       - name: Build MSI
-        run: wix build -d Version=${{ github.ref_name }} -out win-sshpass-${{ github.ref_name }}.msi .github/workflows/win-sshpass.wxs
+        run: wix build -arch x64 -d Version=${{ github.ref_name }} -out win-sshpass-${{ github.ref_name }}.msi .github/workflows/win-sshpass.wxs
 
       - name: Create release
         uses: softprops/action-gh-release@v1

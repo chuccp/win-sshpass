@@ -3,7 +3,7 @@
 
   <Package Name="win-sshpass" Version="$(var.Version)"
            Manufacturer="win-sshpass" UpgradeCode="a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-           InstallerVersion="500" Scope="perMachine" Compressed="yes" Platform="x64">
+           InstallerVersion="500" Scope="perMachine" Compressed="yes">
 
     <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
 
