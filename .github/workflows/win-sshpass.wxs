@@ -16,11 +16,11 @@
 
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="INSTALLDIR" Name="win-sshpass">
-        <Component Id="MainExe" Guid="*">
+        <Component Id="MainExe" Guid="{a1b2c3d4-e5f6-7890-abcd-ef1234567891}">
           <File Id="MainFile" Source="win-sshpass.exe" KeyPath="yes" />
         </Component>
 
-        <Component Id="PathEnv" Guid="*">
+        <Component Id="PathEnv" Guid="$(var.ProductCode)">
           <Environment Id="PATH_Env" Name="PATH"
                        Value="[INSTALLDIR]" Permanent="no"
                        Part="last" Action="set" System="yes" />
