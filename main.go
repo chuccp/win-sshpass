@@ -45,6 +45,8 @@ func main() {
 	download := flag.Bool("d", false, "download mode (remote to local)")
 	useEnv := flag.Bool("e", false, "read password from environment variable SSHPASS")
 	strictHostKey := flag.Bool("k", false, "enable strict host key verification")
+	timeout := flag.Int("t", 0, "total operation timeout in seconds (0 = no limit)")
+	connectTimeout := flag.Int("ct", 10, "TCP connection timeout in seconds")
 	showVersion := flag.Bool("v", false, "show version")
 	showHelp := flag.Bool("help", false, "show help")
 	flag.Parse()
@@ -80,7 +82,7 @@ func main() {
 		pass = getEnvPassword()
 	}
 	if config != nil {
-		mergeConfig(config, nil, pass, *keyPath, *host, *user, *port)
+		mergeConfig(config, nil, pass, *keyPath, *host, *user, *port, *timeout, *connectTimeout)
 		config.StrictHostKey = *strictHostKey
 	}
 
@@ -91,7 +93,7 @@ func main() {
 	switch cmdType {
 	case CommandSCP:
 		cfgConfig, scpArgs := parseSCPArgs(remainingArgs)
-		mergeConfig(cfgConfig, config, pass, *keyPath, *host, *user, *port)
+		mergeConfig(cfgConfig, config, pass, *keyPath, *host, *user, *port, *timeout, *connectTimeout)
 		cfgConfig.StrictHostKey = *strictHostKey
 		config = cfgConfig
 		if err := runSCP(config, scpArgs); err != nil {
@@ -101,7 +103,7 @@ func main() {
 
 	case CommandRsync:
 		cfgConfig, rsyncArgs := parseRsyncArgs(remainingArgs)
-		mergeConfig(cfgConfig, config, pass, *keyPath, *host, *user, *port)
+		mergeConfig(cfgConfig, config, pass, *keyPath, *host, *user, *port, *timeout, *connectTimeout)
 		cfgConfig.StrictHostKey = *strictHostKey
 		config = cfgConfig
 		if err := runRsync(config, rsyncArgs); err != nil {
@@ -133,6 +135,10 @@ func main() {
 				config.Port = *port
 			}
 			config.StrictHostKey = *strictHostKey
+			if *timeout > 0 {
+				config.Timeout = *timeout
+			}
+			config.ConnectTimeout = *connectTimeout
 		} else if *host != "" && (pass != "" || *keyPath != "") {
 			// read from command line arguments (including file transfer mode)
 			config = newDefaultConfig()
@@ -141,6 +147,8 @@ func main() {
 			config.Port = *port
 			config.KeyPath = *keyPath
 			config.StrictHostKey = *strictHostKey
+			config.Timeout = *timeout
+			config.ConnectTimeout = *connectTimeout
 			if *user != "" {
 				config.User = *user
 			}

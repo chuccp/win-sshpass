@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"os"
+	"time"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/knownhosts"
@@ -58,13 +60,23 @@ func SSHClient(config *Config) (*ssh.Client, error) {
 		HostKeyCallback: hostKeyCallback,
 	}
 
-	address := fmt.Sprintf("%s:%s", config.Host, config.Port)
-	client, err := ssh.Dial("tcp", address, sshConfig)
+	address := net.JoinHostPort(config.Host, config.Port)
+	var dialer net.Dialer
+	if config.ConnectTimeout > 0 {
+		dialer.Timeout = time.Duration(config.ConnectTimeout) * time.Second
+	}
+	conn, err := dialer.Dial("tcp", address)
 	if err != nil {
 		return nil, fmt.Errorf("connection failed: %w", err)
 	}
-
-	return client, nil
+	if config.Timeout > 0 {
+		conn.SetDeadline(time.Now().Add(time.Duration(config.Timeout) * time.Second))
+	}
+	sshConn, chans, reqs, err := ssh.NewClientConn(conn, address, sshConfig)
+	if err != nil {
+		return nil, fmt.Errorf("ssh handshake failed: %w", err)
+	}
+	return ssh.NewClient(sshConn, chans, reqs), nil
 }
 
 // getKnownHostsPath returns the known_hosts file path

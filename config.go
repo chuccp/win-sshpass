@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -14,14 +15,17 @@ type Config struct {
 	Password      string
 	Port          string
 	KeyPath       string // private key file path
-	StrictHostKey bool   // whether to verify host key
+	StrictHostKey    bool   // whether to verify host key
+	Timeout          int    // total operation deadline in seconds, 0 = no limit
+	ConnectTimeout   int    // TCP connection timeout in seconds
 }
 
 // newDefaultConfig creates a Config with default values
 func newDefaultConfig() *Config {
 	return &Config{
-		User: "root",
-		Port: "22",
+		User:           "root",
+		Port:           "22",
+		ConnectTimeout: 10,
 	}
 }
 
@@ -49,12 +53,15 @@ func (c *Config) validate() error {
 	if c.Password == "" && c.KeyPath == "" {
 		return fmt.Errorf("no authentication method provided (password or key required)")
 	}
+	if c.Timeout > 0 && c.ConnectTimeout >= c.Timeout {
+		c.ConnectTimeout = max(c.Timeout-1, 1)
+	}
 	return nil
 }
 
 // mergeConfig merges non-empty fields from src into dst,
 // then applies command-line overrides and user default
-func mergeConfig(dst, src *Config, pass, keyPath, host, user, port string) {
+func mergeConfig(dst, src *Config, pass, keyPath, host, user, port string, timeout, connectTimeout int) {
 	// inherit from source (config file)
 	if src != nil {
 		if src.Password != "" {
@@ -72,6 +79,12 @@ func mergeConfig(dst, src *Config, pass, keyPath, host, user, port string) {
 		if src.Port != "" {
 			dst.Port = src.Port
 		}
+		if src.Timeout > 0 {
+			dst.Timeout = src.Timeout
+		}
+		if src.ConnectTimeout > 0 {
+			dst.ConnectTimeout = src.ConnectTimeout
+		}
 	}
 	// command-line overrides
 	if pass != "" {
@@ -88,6 +101,12 @@ func mergeConfig(dst, src *Config, pass, keyPath, host, user, port string) {
 	}
 	if port != "" && port != "22" {
 		dst.Port = port
+	}
+	if timeout > 0 {
+		dst.Timeout = timeout
+	}
+	if connectTimeout > 0 {
+		dst.ConnectTimeout = connectTimeout
 	}
 	applyUserDefault(dst)
 }
@@ -157,6 +176,14 @@ func parseConfigFile(filename string) (*Config, error) {
 			config.Port = value
 		case "key", "keypath":
 			config.KeyPath = value
+		case "timeout":
+			if t, err := strconv.Atoi(value); err == nil && t >= 0 {
+				config.Timeout = t
+			}
+		case "connect_timeout":
+			if t, err := strconv.Atoi(value); err == nil && t >= 0 {
+				config.ConnectTimeout = t
+			}
 		}
 	}
 

@@ -173,6 +173,8 @@ func printUsage() {
 	fmt.Println("  -i <key>           use private key authentication")
 	fmt.Println("  -e                 read password from environment variable SSHPASS")
 	fmt.Println("  -k                 enable strict host key verification (use known_hosts file)")
+	fmt.Println("  -t <seconds>       total operation timeout in seconds (0 = no limit, default: 0)")
+	fmt.Println("  -ct <seconds>      TCP connection timeout in seconds (default: 10)")
 	fmt.Println("  -local <path>      local file path(s), comma-separated for multiple files")
 	fmt.Println("  -remote <path>     remote file path (for upload/download)")
 	fmt.Println("  -d                 download mode (remote to local)")

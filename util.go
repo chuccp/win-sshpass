@@ -22,15 +22,6 @@ func isAllDigits(s string) bool {
 	return len(s) > 0
 }
 
-// containsIgnoreCase checks if substr is in s, case-insensitive
-func containsIgnoreCase(s, substr string) bool {
-	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
-}
-
-// equalIgnoreCase checks if two strings are equal, case-insensitive
-func equalIgnoreCase(a, b string) bool {
-	return strings.EqualFold(a, b)
-}
 
 // --- String manipulation ---
 
@@ -144,8 +135,7 @@ func parseUserHostPath(arg string) (user, host, remotePath string) {
 
 // isClosedConnError checks if an error is caused by a closed network connection
 func isClosedConnError(err error) bool {
-	msg := err.Error()
-	return containsIgnoreCase(msg, "closed network connection")
+	return strings.Contains(strings.ToLower(err.Error()), "closed network connection")
 }
 
 type exitStatusError interface {
@@ -162,7 +152,7 @@ func exitCodeFromError(err error) (int, bool) {
 }
 
 // fatalError prints an error message to stderr and exits with code 1
-func fatalError(format string, args ...interface{}) {
+func fatalError(format string, args ...any) {
 	fmt.Fprintf(os.Stderr, format+"\n", args...)
 	os.Exit(1)
 }
