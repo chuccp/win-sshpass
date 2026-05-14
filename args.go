@@ -14,14 +14,6 @@ const (
 	CommandRsync
 )
 
-// ParsedCommand represents the parsed command
-type ParsedCommand struct {
-	Config  *Config
-	Type    CommandType
-	Command string   // command to execute
-	SCPArgs []string // scp arguments
-}
-
 // parseSSHArgs parses ssh-style arguments (user@host or -p port user@host)
 func parseSSHArgs(args []string) (*Config, string) {
 	config := newDefaultConfig()

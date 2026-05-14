@@ -34,24 +34,9 @@ func equalIgnoreCase(a, b string) bool {
 
 // --- String manipulation ---
 
-// joinWith joins string elements with a separator
-func joinWith(sep string, elems ...string) string {
-	return strings.Join(elems, sep)
-}
-
 // joinArgs joins a string slice with space
 func joinArgs(args []string) string {
 	return strings.Join(args, " ")
-}
-
-// replaceAll replaces all occurrences of old with new in s
-func replaceAll(s, old, new string) string {
-	return strings.ReplaceAll(s, old, new)
-}
-
-// trimSpace trims leading and trailing whitespace
-func trimSpace(s string) string {
-	return strings.TrimSpace(s)
 }
 
 // --- Path helpers ---

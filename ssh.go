@@ -131,7 +131,9 @@ func runShell(client *ssh.Client) error {
 	session.Stderr = os.Stderr
 
 	// watch for terminal resize events (platform-specific)
-	watchTerminalResize(session)
+	done := make(chan struct{})
+	defer close(done)
+	watchTerminalResize(session, done)
 
 	// start remote shell
 	if err := session.Shell(); err != nil {
