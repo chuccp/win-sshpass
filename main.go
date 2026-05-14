@@ -81,8 +81,17 @@ func main() {
 	if pass == "" && *useEnv {
 		pass = getEnvPassword()
 	}
+	cliOverride := &Config{
+		Password:       pass,
+		KeyPath:        *keyPath,
+		Host:           *host,
+		User:           *user,
+		Port:           *port,
+		Timeout:        *timeout,
+		ConnectTimeout: *connectTimeout,
+	}
 	if config != nil {
-		mergeConfig(config, nil, pass, *keyPath, *host, *user, *port, *timeout, *connectTimeout)
+		mergeConfig(config, nil, cliOverride)
 		config.StrictHostKey = *strictHostKey
 	}
 
@@ -93,7 +102,7 @@ func main() {
 	switch cmdType {
 	case CommandSCP:
 		cfgConfig, scpArgs := parseSCPArgs(remainingArgs)
-		mergeConfig(cfgConfig, config, pass, *keyPath, *host, *user, *port, *timeout, *connectTimeout)
+		mergeConfig(cfgConfig, config, cliOverride)
 		cfgConfig.StrictHostKey = *strictHostKey
 		config = cfgConfig
 		if err := runSCP(config, scpArgs); err != nil {
@@ -103,7 +112,7 @@ func main() {
 
 	case CommandRsync:
 		cfgConfig, rsyncArgs := parseRsyncArgs(remainingArgs)
-		mergeConfig(cfgConfig, config, pass, *keyPath, *host, *user, *port, *timeout, *connectTimeout)
+		mergeConfig(cfgConfig, config, cliOverride)
 		cfgConfig.StrictHostKey = *strictHostKey
 		config = cfgConfig
 		if err := runRsync(config, rsyncArgs); err != nil {
@@ -158,8 +167,9 @@ func main() {
 		}
 	}
 
-	// apply default user if still empty
+	// apply defaults and normalize
 	applyUserDefault(config)
+	config.normalize()
 
 	// validate config
 	if err := config.validate(); err != nil {

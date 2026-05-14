@@ -22,7 +22,6 @@ func isAllDigits(s string) bool {
 	return len(s) > 0
 }
 
-
 // --- String manipulation ---
 
 // joinArgs joins a string slice with space

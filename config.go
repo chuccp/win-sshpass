@@ -10,14 +10,14 @@ import (
 
 // Config represents SSH connection configuration
 type Config struct {
-	Host          string
-	User          string
-	Password      string
-	Port          string
-	KeyPath       string // private key file path
-	StrictHostKey    bool   // whether to verify host key
-	Timeout          int    // total operation deadline in seconds, 0 = no limit
-	ConnectTimeout   int    // TCP connection timeout in seconds
+	Host           string
+	User           string
+	Password       string
+	Port           string
+	KeyPath        string // private key file path
+	StrictHostKey  bool   // whether to verify host key
+	Timeout        int    // total operation deadline in seconds, 0 = no limit
+	ConnectTimeout int    // TCP connection timeout in seconds
 }
 
 // newDefaultConfig creates a Config with default values
@@ -36,6 +36,13 @@ func applyUserDefault(cfg *Config) {
 	}
 }
 
+// normalize ensures config values are consistent
+func (c *Config) normalize() {
+	if c.Timeout > 0 && c.ConnectTimeout >= c.Timeout {
+		c.ConnectTimeout = max(c.Timeout-1, 1)
+	}
+}
+
 // setUserHostFromArg parses user@host:path format and sets config fields
 func (c *Config) setUserHostFromArg(arg string) {
 	user, host, _ := parseUserHostPath(arg)
@@ -45,7 +52,7 @@ func (c *Config) setUserHostFromArg(arg string) {
 	}
 }
 
-// validate checks that the  config has required fields
+// validate checks that the config has required fields
 func (c *Config) validate() error {
 	if c.Host == "" {
 		return fmt.Errorf("host address not specified")
@@ -53,16 +60,12 @@ func (c *Config) validate() error {
 	if c.Password == "" && c.KeyPath == "" {
 		return fmt.Errorf("no authentication method provided (password or key required)")
 	}
-	if c.Timeout > 0 && c.ConnectTimeout >= c.Timeout {
-		c.ConnectTimeout = max(c.Timeout-1, 1)
-	}
 	return nil
 }
 
 // mergeConfig merges non-empty fields from src into dst,
-// then applies command-line overrides and user default
-func mergeConfig(dst, src *Config, pass, keyPath, host, user, port string, timeout, connectTimeout int) {
-	// inherit from source (config file)
+// then applies command-line overrides and user default.
+func mergeConfig(dst, src, override *Config) {
 	if src != nil {
 		if src.Password != "" {
 			dst.Password = src.Password
@@ -86,29 +89,33 @@ func mergeConfig(dst, src *Config, pass, keyPath, host, user, port string, timeo
 			dst.ConnectTimeout = src.ConnectTimeout
 		}
 	}
-	// command-line overrides
-	if pass != "" {
-		dst.Password = pass
-	}
-	if keyPath != "" {
-		dst.KeyPath = keyPath
-	}
-	if host != "" {
-		dst.Host = host
-	}
-	if user != "" {
-		dst.User = user
-	}
-	if port != "" && port != "22" {
-		dst.Port = port
-	}
-	if timeout > 0 {
-		dst.Timeout = timeout
-	}
-	if connectTimeout > 0 {
-		dst.ConnectTimeout = connectTimeout
+	if override != nil {
+		if override.Password != "" {
+			dst.Password = override.Password
+		}
+		if override.KeyPath != "" {
+			dst.KeyPath = override.KeyPath
+		}
+		if override.Host != "" {
+			dst.Host = override.Host
+		}
+		if override.User != "" {
+			dst.User = override.User
+		}
+		if override.Port != "" && override.Port != "22" {
+			dst.Port = override.Port
+		}
+		if override.Timeout > 0 {
+			dst.Timeout = override.Timeout
+		}
+		if override.ConnectTimeout > 0 {
+			dst.ConnectTimeout = override.ConnectTimeout
+		}
 	}
 	applyUserDefault(dst)
+	if dst.Timeout > 0 && dst.ConnectTimeout >= dst.Timeout {
+		dst.ConnectTimeout = max(dst.Timeout-1, 1)
+	}
 }
 
 // loadConfigOrPasswordFile treats filename as a config file first, falling back
