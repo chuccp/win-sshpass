@@ -159,10 +159,10 @@ win-sshpass -p 'mypass' ssh root@192.168.1.100 'docker ps'
 win-sshpass -i ~/.ssh/id_ed25519 ssh ubuntu@server.com 'sudo systemctl restart nginx'
 
 # 3. 上传整个目录到服务器
-win-sshpass -h server.com -p 'mypass' -local ./dist -remote /var/www/html
+win-sshpass -h server.com -p 'mypass' -local ./dist -remote //var/www/html
 
 # 4. 下载服务器日志目录
-win-sshpass -h server.com -p 'mypass' -d -remote /var/log/nginx -local ./logs
+win-sshpass -h server.com -p 'mypass' -d -remote //var/log/nginx -local ./logs
 
 # 5. SCP 上传文件
 win-sshpass -p 'mypass' scp ./app.jar user@server.com:/opt/app/
