@@ -67,15 +67,17 @@ win-sshpass -f server.config
 
 ### ファイル転送
 
+> **Git Bash ユーザー**: リモートパスには `//` プレフィックスを使用してください（例: `-remote //tmp/file.txt）。詳細は下記の [Git Bash の注意事項](#git-bash-の注意事項) を参照してください。
+
 ```bash
 # ファイルをアップロード
 win-sshpass -h <ホスト> -p <パスワード> -local <ローカルパス> -remote <リモートパス>
 
 # 複数のファイルをアップロード（カンマ区切り）
-win-sshpass -h <ホスト> -p <パスワード> -local "a.txt,b.txt,c.txt" -remote /tmp/
+win-sshpass -h <ホスト> -p <パスワード> -local "a.txt,b.txt,c.txt" -remote //tmp/
 
 # 複数のファイルをアップロード（スペース区切り、/ や \ を含まない単純なパスのみ）
-win-sshpass -h <ホスト> -p <パスワード> -local "a.txt b.txt c.txt" -remote /tmp/
+win-sshpass -h <ホスト> -p <パスワード> -local "a.txt b.txt c.txt" -remote //tmp/
 
 # ディレクトリをアップロード（自動再帰）
 win-sshpass -h <ホスト> -p <パスワード> -local <ローカルディレクトリ> -remote <リモートディレクトリ>
@@ -87,15 +89,25 @@ win-sshpass -h <ホスト> -p <パスワード> -d -remote <リモートパス> 
 ### SCP スタイル
 
 ```bash
+# ファイルをアップロード
 win-sshpass -p <パスワード> scp <ローカルファイル> user@host:<リモートパス>
 win-sshpass -p <パスワード> scp -P <ポート> <ローカルファイル> user@host:<リモートパス>
+
+# ディレクトリをアップロード
+win-sshpass -p <パスワード> scp -r <ローカルディレクトリ> user@host:<リモートパス>
+
+# ファイル/ディレクトリをダウンロード
 win-sshpass -p <パスワード> scp user@host:<リモートファイル> <ローカルパス>
 ```
 
 ### Rsync スタイル
 
 ```bash
+# アップロード
 win-sshpass -p <パスワード> rsync -avz <ローカルパス> user@host:<リモートパス>
+
+# ダウンロード
+win-sshpass -p <パスワード> rsync -avz user@host:<リモートパス> <ローカルパス>
 ```
 
 ## パラメータ

@@ -73,15 +73,17 @@ win-sshpass -f server.config
 
 ### File Transfer
 
+> **Git Bash users**: Use `//` prefix for remote paths, e.g. `-remote //tmp/file.txt`. See [Git Bash Notes](#git-bash-notes) below.
+
 ```bash
 # Upload file
 win-sshpass -h <host> -p <password> -local <local_path> -remote <remote_path>
 
 # Upload multiple files (comma-separated)
-win-sshpass -h <host> -p <password> -local "a.txt,b.txt,c.txt" -remote /tmp/
+win-sshpass -h <host> -p <password> -local "a.txt,b.txt,c.txt" -remote //tmp/
 
 # Upload multiple files (space-separated, only for simple paths without / or \)
-win-sshpass -h <host> -p <password> -local "a.txt b.txt c.txt" -remote /tmp/
+win-sshpass -h <host> -p <password> -local "a.txt b.txt c.txt" -remote //tmp/
 
 # Upload directory (auto-recursive)
 win-sshpass -h <host> -p <password> -local <local_dir> -remote <remote_dir>
@@ -93,15 +95,25 @@ win-sshpass -h <host> -p <password> -d -remote <remote_path> -local <local_path>
 ### SCP Style
 
 ```bash
+# Upload file
 win-sshpass -p <password> scp <local_file> user@host:<remote_path>
 win-sshpass -p <password> scp -P <port> <local_file> user@host:<remote_path>
+
+# Upload directory
+win-sshpass -p <password> scp -r <local_dir> user@host:<remote_path>
+
+# Download file/directory
 win-sshpass -p <password> scp user@host:<remote_file> <local_path>
 ```
 
 ### Rsync Style
 
 ```bash
+# Upload
 win-sshpass -p <password> rsync -avz <local_path> user@host:<remote_path>
+
+# Download
+win-sshpass -p <password> rsync -avz user@host:<remote_path> <local_path>
 ```
 
 ## Parameters
