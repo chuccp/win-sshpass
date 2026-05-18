@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -24,7 +25,11 @@ func SSHClient(config *Config) (*ssh.Client, error) {
 
 		signer, err := ssh.ParsePrivateKey(key)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse private key: %w", err)
+			hint := ""
+			if strings.Contains(err.Error(), "passphrase") || strings.Contains(err.Error(), "encrypted") || strings.Contains(err.Error(), "password protected") {
+				hint = " (key is passphrase-protected; this tool does not support encrypted private keys)"
+			}
+			return nil, fmt.Errorf("failed to parse private key: %w%s", err, hint)
 		}
 
 		authMethods = append(authMethods, ssh.PublicKeys(signer))
@@ -69,13 +74,18 @@ func SSHClient(config *Config) (*ssh.Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("connection failed: %w", err)
 	}
-	if config.Timeout > 0 {
-		conn.SetDeadline(time.Now().Add(time.Duration(config.Timeout) * time.Second))
+
+	// set handshake deadline using ConnectTimeout, then clear after handshake
+	if config.ConnectTimeout > 0 {
+		conn.SetDeadline(time.Now().Add(time.Duration(config.ConnectTimeout) * time.Second))
 	}
 	sshConn, chans, reqs, err := ssh.NewClientConn(conn, address, sshConfig)
 	if err != nil {
+		conn.Close()
 		return nil, fmt.Errorf("ssh handshake failed: %w", err)
 	}
+	// clear deadline so the connection can live for the session duration
+	conn.SetDeadline(time.Time{})
 	return ssh.NewClient(sshConn, chans, reqs), nil
 }
 
@@ -122,30 +132,31 @@ func runShell(client *ssh.Client) error {
 	}
 	defer session.Close()
 
-	// get current terminal size
-	cols, rows := getTerminalSize()
-
-	// set terminal modes
-	modes := ssh.TerminalModes{
-		ssh.ECHO:          1,
-		ssh.TTY_OP_ISPEED: 14400,
-		ssh.TTY_OP_OSPEED: 14400,
-	}
-
-	// request pseudo-terminal with actual size
-	if err := session.RequestPty("xterm", rows, cols, modes); err != nil {
-		return fmt.Errorf("failed to request terminal: %w", err)
-	}
-
 	// set standard I/O
 	session.Stdin = os.Stdin
 	session.Stdout = os.Stdout
 	session.Stderr = os.Stderr
 
-	// watch for terminal resize events (platform-specific)
-	done := make(chan struct{})
-	defer close(done)
-	watchTerminalResize(session, done)
+	// only request PTY when stdin is a terminal (interactive use).
+	// When stdin is a pipe, skip PTY to avoid echo issues and allow clean piping.
+	if term.IsTerminal(int(os.Stdin.Fd())) {
+		cols, rows := getTerminalSize()
+
+		modes := ssh.TerminalModes{
+			ssh.ECHO:          1,
+			ssh.TTY_OP_ISPEED: 14400,
+			ssh.TTY_OP_OSPEED: 14400,
+		}
+
+		if err := session.RequestPty("xterm", rows, cols, modes); err != nil {
+			return fmt.Errorf("failed to request terminal: %w", err)
+		}
+
+		// watch for terminal resize events (platform-specific)
+		done := make(chan struct{})
+		defer close(done)
+		watchTerminalResize(session, done)
+	}
 
 	// start remote shell
 	if err := session.Shell(); err != nil {

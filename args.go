@@ -17,6 +17,7 @@ const (
 // parseSSHArgs parses ssh-style arguments (user@host or -p port user@host)
 func parseSSHArgs(args []string) (*Config, string) {
 	config := newDefaultConfig()
+	config.Port = "" // clear default; only set if -p is explicitly used
 	var command string
 
 	i := 0
@@ -40,6 +41,11 @@ func parseSSHArgs(args []string) (*Config, string) {
 		if arg == "-o" && i+1 < len(args) {
 			// skip ssh options like StrictHostKeyChecking=no
 			i += 2
+			continue
+		}
+		if arg == "-v" {
+			// skip verbose flag (not supported natively)
+			i++
 			continue
 		}
 		if strings.Contains(arg, "@") {
@@ -66,6 +72,8 @@ func parseSSHArgs(args []string) (*Config, string) {
 // parseSCPArgs parses scp command arguments
 func parseSCPArgs(args []string) (*Config, []string) {
 	config := newDefaultConfig()
+	config.User = "" // clear default; only set if user@host:path is found
+	config.Port = "" // clear default; only set if -P is explicitly used
 	var scpArgs []string
 
 	i := 0
@@ -90,6 +98,11 @@ func parseSCPArgs(args []string) (*Config, []string) {
 			i += 2
 			continue
 		}
+		if arg == "-r" || arg == "-q" || arg == "-C" || arg == "-v" {
+			// flags handled natively by SFTP implementation: recursive, quiet, compression, verbose
+			i++
+			continue
+		}
 		if strings.Contains(arg, "@") && strings.Contains(arg, ":") {
 			config.setUserHostFromArg(arg)
 		}
@@ -103,6 +116,8 @@ func parseSCPArgs(args []string) (*Config, []string) {
 // parseRsyncArgs parses rsync command arguments
 func parseRsyncArgs(args []string) (*Config, []string) {
 	config := newDefaultConfig()
+	config.User = "" // clear default; only set if user@host:path is found
+	config.Port = "" // clear default; only set if --port= is explicitly used
 	var rsyncArgs []string
 
 	i := 0
@@ -122,14 +137,14 @@ func parseRsyncArgs(args []string) (*Config, []string) {
 			i++
 			continue
 		}
-		if strings.HasPrefix(arg, "-p") && len(arg) > 2 {
-			// -p22 format port (only match if followed by digits)
-			portPart := arg[2:]
+		if strings.HasPrefix(arg, "--port=") {
+			// --port=N format (rsync uses -p for --perms, not port)
+			portPart := arg[len("--port="):]
 			if isAllDigits(portPart) {
 				config.Port = portPart
-				i++
-				continue
 			}
+			i++
+			continue
 		}
 		if strings.Contains(arg, "@") && strings.Contains(arg, ":") {
 			config.setUserHostFromArg(arg)
@@ -160,7 +175,7 @@ func detectCommandType(args []string) CommandType {
 func printUsage() {
 	fmt.Println("Usage:")
 	fmt.Println("  sshpass [-p <password> | -f <passfile>] ssh [user@host] [command]")
-	fmt.Println("  sshpass [-p <password> | -f <passfile>] scp [options] [user@host:]path")
+	fmt.Println("  sshpass [-p <password> | -f <passfile>] scp [-r] [options] [user@host:]path")
 	fmt.Println("  sshpass [-p <password> | -f <passfile>] rsync [options] [user@host:]path")
 	fmt.Println("  sshpass -i <keypath> ssh [user@host] [command]")
 	fmt.Println("  sshpass -f <configfile> [-c <command>]")
@@ -185,7 +200,7 @@ func printUsage() {
 	fmt.Println("  sshpass -f pass.txt ssh user@example.com")
 	fmt.Println("  SSHPASS='pass' sshpass -e ssh user@example.com")
 	fmt.Println("  sshpass -i ~/.ssh/id_ed25519 ssh user@example.com")
-	fmt.Println("  sshpass -p 'pass' scp file.txt user@example.com:/tmp/")
+	fmt.Println("  sshpass -p 'pass' scp -r file.txt user@example.com:/tmp/")
 	fmt.Println("  sshpass -p 'pass' rsync -avz ./ user@example.com:/backup/")
 	fmt.Println("  sshpass -p 'pass' -h example.com -local file1.txt,file2.txt -remote /tmp/")
 	fmt.Println("  sshpass -p 'pass' -h example.com -local ./backup -remote /data/file.tar.gz -d")

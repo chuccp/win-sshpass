@@ -120,7 +120,10 @@ win-sshpass -p <password> rsync -avz <local_path> user@host:<remote_path>
 | `-remote` | Remote path (upload/download) | `-remote /tmp/file.txt` |
 | `-d` | Download mode | `-d` |
 | `-k` | Enable strict host key verification | `-k` |
+| `-t` | Total operation timeout in seconds (0 = no limit) | `-t 30` |
+| `-ct` | TCP connection timeout in seconds (default: 10) | `-ct 5` |
 | `-v` | Show version | `-v` |
+| `-help` | Show help message | `-help` |
 
 ## Configuration File Format
 
@@ -130,6 +133,9 @@ username: root
 password: your_password
 port: 22
 # key: ~/.ssh/id_ed25519  # optional, use private key instead of password
+# timeout: 0              # optional, total operation timeout in seconds (0 = no limit)
+# connect_timeout: 10     # optional, TCP connection timeout in seconds
+# strict_host_key: false  # optional, enable strict host key verification
 ```
 
 Usage:
@@ -158,6 +164,9 @@ win-sshpass -p 'mypass' scp ./app.jar user@server.com:/opt/app/
 # 6. Password via environment variable (more secure)
 export SSHPASS='mypass'
 win-sshpass -e ssh user@server.com 'whoami'
+
+# 7. Operation timeout (abort after 30 seconds)
+win-sshpass -p 'mypass' -t 30 ssh user@server.com 'long-running-command'
 ```
 
 ## Git Bash Notes

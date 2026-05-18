@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync/atomic"
+
+	"github.com/pkg/sftp"
 )
 
 // splitPaths splits a path string by comma or space separator.
@@ -86,13 +89,27 @@ func main() {
 		KeyPath:        *keyPath,
 		Host:           *host,
 		User:           *user,
-		Port:           *port,
-		Timeout:        *timeout,
-		ConnectTimeout: *connectTimeout,
+		Timeout:        -1, // -1 = not set; allows explicit 0 to override config file
+		ConnectTimeout: -1, // -1 = not set; allows explicit 0 to override config file
 	}
+	// Only include Port, Timeout, ConnectTimeout, and StrictHostKey if explicitly
+	// set by the user. Without flag.Visit, their default values would always
+	// override config file values since we can't distinguish "not set" from
+	// "set to default".
+	flag.Visit(func(f *flag.Flag) {
+		switch f.Name {
+		case "P":
+			cliOverride.Port = *port
+		case "t":
+			cliOverride.Timeout = *timeout
+		case "ct":
+			cliOverride.ConnectTimeout = *connectTimeout
+		case "k":
+			cliOverride.StrictHostKey = *strictHostKey
+		}
+	})
 	if config != nil {
 		mergeConfig(config, nil, cliOverride)
-		config.StrictHostKey = *strictHostKey
 	}
 
 	// detect command type
@@ -101,9 +118,12 @@ func main() {
 	// handle based on command type
 	switch cmdType {
 	case CommandSCP:
-		cfgConfig, scpArgs := parseSCPArgs(remainingArgs)
-		mergeConfig(cfgConfig, config, cliOverride)
-		cfgConfig.StrictHostKey = *strictHostKey
+		scpParsed, scpArgs := parseSCPArgs(remainingArgs)
+		cfgConfig := newDefaultConfig()
+		mergeConfig(cfgConfig, config, scpParsed)  // config file as src, scp-parsed as override
+		mergeConfig(cfgConfig, nil, cliOverride)    // CLI as final override
+		applyUserDefault(cfgConfig)
+		cfgConfig.normalize()
 		config = cfgConfig
 		if err := runSCP(config, scpArgs); err != nil {
 			fatalError("SCP failed: %v", err)
@@ -111,9 +131,12 @@ func main() {
 		return
 
 	case CommandRsync:
-		cfgConfig, rsyncArgs := parseRsyncArgs(remainingArgs)
-		mergeConfig(cfgConfig, config, cliOverride)
-		cfgConfig.StrictHostKey = *strictHostKey
+		rsyncParsed, rsyncArgs := parseRsyncArgs(remainingArgs)
+		cfgConfig := newDefaultConfig()
+		mergeConfig(cfgConfig, config, rsyncParsed) // config file as src, rsync-parsed as override
+		mergeConfig(cfgConfig, nil, cliOverride)     // CLI as final override
+		applyUserDefault(cfgConfig)
+		cfgConfig.normalize()
 		config = cfgConfig
 		if err := runRsync(config, rsyncArgs); err != nil {
 			fatalError("Rsync failed: %v", err)
@@ -131,45 +154,41 @@ func main() {
 				config.Host = *host
 				cmdToRun = joinArgs(remainingArgs)
 			}
-			if pass != "" {
-				config.Password = pass
-			}
-			if *keyPath != "" {
-				config.KeyPath = *keyPath
-			}
-			if *user != "" {
-				config.User = *user
-			}
-			if *port != "" && *port != "22" {
-				config.Port = *port
-			}
-			config.StrictHostKey = *strictHostKey
-			if *timeout > 0 {
-				config.Timeout = *timeout
-			}
-			config.ConnectTimeout = *connectTimeout
+			mergeConfig(config, nil, cliOverride)
 		} else if *host != "" && (pass != "" || *keyPath != "") {
 			// read from command line arguments (including file transfer mode)
 			config = newDefaultConfig()
-			config.Host = *host
-			config.Password = pass
-			config.Port = *port
-			config.KeyPath = *keyPath
-			config.StrictHostKey = *strictHostKey
-			config.Timeout = *timeout
-			config.ConnectTimeout = *connectTimeout
-			if *user != "" {
-				config.User = *user
-			}
+			mergeConfig(config, nil, cliOverride)
 		} else {
 			printUsage()
 			os.Exit(1)
+		}
+	} else if len(remainingArgs) > 0 {
+		// config from file, but remaining args may override host/user or provide command
+		sshArgs, cmd := parseSSHArgs(remainingArgs)
+		if sshArgs.Host != "" {
+			config.Host = sshArgs.Host
+			if sshArgs.User != "" {
+				config.User = sshArgs.User
+			}
+		}
+		if sshArgs.Port != "" {
+			config.Port = sshArgs.Port
+		}
+		if sshArgs.KeyPath != "" {
+			config.KeyPath = sshArgs.KeyPath
+		}
+		if cmd != "" {
+			cmdToRun = cmd
 		}
 	}
 
 	// apply defaults and normalize
 	applyUserDefault(config)
 	config.normalize()
+	if config.Port == "" {
+		config.Port = "22"
+	}
 
 	// validate config
 	if err := config.validate(); err != nil {
@@ -182,6 +201,14 @@ func main() {
 		fatalError("SSH connection failed: %v", err)
 	}
 	defer client.Close()
+
+	// set up operation timeout (timer resets on each data transfer)
+	var timedOut atomic.Bool
+	resetTimeout, stopTimer := setupOperationTimeout(func() {
+		timedOut.Store(true)
+		client.Close()
+	}, config.Timeout)
+	defer stopTimer()
 
 	// file transfer
 	if *localPath != "" && *remotePath != "" {
@@ -197,17 +224,18 @@ func main() {
 			remotePaths[i] = cleanRemotePath(remotePaths[i])
 		}
 
+		// create a single SFTP client for all transfers
+		sftpClient, err := sftp.NewClient(client)
+		if err != nil {
+			fatalError("SFTP failed: %v", err)
+		}
+		defer sftpClient.Close()
+
 		if *download {
-			// ensure local target directories exist
-			for _, lp := range localPaths {
-				if err := os.MkdirAll(lp, 0755); err != nil {
-					fatalError("Error: failed to create local directory %q: %v", lp, err)
-				}
-			}
 			for _, rPath := range remotePaths {
 				for _, lp := range localPaths {
 					fmt.Printf("Downloading %s -> %s...\n", rPath, lp)
-					if err := downloadFile(client, rPath, lp); err != nil {
+					if err := downloadFile(sftpClient, rPath, lp, resetTimeout); err != nil {
 						fatalError("Download failed: %v", err)
 					}
 				}
@@ -215,15 +243,10 @@ func main() {
 			fmt.Println("Download successful!")
 		} else {
 			// ensure remote target directories exist
-			for _, rPath := range remotePaths {
-				if err := ensureRemoteDir(client, rPath); err != nil {
-					fatalError("Error: failed to create remote directory %q: %v", rPath, err)
-				}
-			}
 			for _, lp := range localPaths {
 				for _, rPath := range remotePaths {
 					fmt.Printf("Uploading %s -> %s...\n", lp, rPath)
-					if err := uploadFile(client, lp, rPath); err != nil {
+					if err := uploadFile(sftpClient, lp, rPath, resetTimeout); err != nil {
 						fatalError("Upload failed: %v", err)
 					}
 				}
@@ -247,11 +270,16 @@ func main() {
 		err = runShell(client)
 	}
 
-	if err != nil && !isClosedConnError(err) {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		if code, ok := exitCodeFromError(err); ok {
-			os.Exit(code)
+	if err != nil {
+		if timedOut.Load() {
+			os.Exit(1)
 		}
-		os.Exit(1)
+		if !isClosedConnError(err) {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			if code, ok := exitCodeFromError(err); ok {
+				os.Exit(code)
+			}
+			os.Exit(1)
+		}
 	}
 }

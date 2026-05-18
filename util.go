@@ -7,6 +7,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 	"unicode"
 )
 
@@ -128,6 +129,27 @@ func parseUserHostPath(arg string) (user, host, remotePath string) {
 		}
 	}
 	return user, host, remotePath
+}
+
+// --- Timeout helpers ---
+
+// setupOperationTimeout creates a timer that calls closeFn after the given timeout.
+// Returns a reset function to extend the deadline and a stop function to cancel the timer.
+func setupOperationTimeout(closeFn func(), timeout int) (reset func(), stop func()) {
+	if timeout > 0 {
+		dur := time.Duration(timeout) * time.Second
+		timer := time.AfterFunc(dur, func() {
+			fmt.Fprintln(os.Stderr, "Operation timed out")
+			closeFn()
+		})
+		reset = func() {
+			timer.Reset(dur)
+		}
+		stop = func() { timer.Stop() }
+	} else {
+		stop = func() {}
+	}
+	return
 }
 
 // --- Error helpers ---

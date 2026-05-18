@@ -64,7 +64,7 @@ func (c *Config) validate() error {
 }
 
 // mergeConfig merges non-empty fields from src into dst,
-// then applies command-line overrides and user default.
+// then applies command-line overrides.
 func mergeConfig(dst, src, override *Config) {
 	if src != nil {
 		if src.Password != "" {
@@ -82,11 +82,14 @@ func mergeConfig(dst, src, override *Config) {
 		if src.Port != "" {
 			dst.Port = src.Port
 		}
-		if src.Timeout > 0 {
+		if src.Timeout >= 0 {
 			dst.Timeout = src.Timeout
 		}
-		if src.ConnectTimeout > 0 {
+		if src.ConnectTimeout >= 0 {
 			dst.ConnectTimeout = src.ConnectTimeout
+		}
+		if src.StrictHostKey {
+			dst.StrictHostKey = true
 		}
 	}
 	if override != nil {
@@ -102,19 +105,18 @@ func mergeConfig(dst, src, override *Config) {
 		if override.User != "" {
 			dst.User = override.User
 		}
-		if override.Port != "" && override.Port != "22" {
+		if override.Port != "" {
 			dst.Port = override.Port
 		}
-		if override.Timeout > 0 {
+		if override.Timeout >= 0 {
 			dst.Timeout = override.Timeout
 		}
-		if override.ConnectTimeout > 0 {
+		if override.ConnectTimeout >= 0 {
 			dst.ConnectTimeout = override.ConnectTimeout
 		}
-	}
-	applyUserDefault(dst)
-	if dst.Timeout > 0 && dst.ConnectTimeout >= dst.Timeout {
-		dst.ConnectTimeout = max(dst.Timeout-1, 1)
+		if override.StrictHostKey {
+			dst.StrictHostKey = true
+		}
 	}
 }
 
@@ -125,7 +127,10 @@ func loadConfigOrPasswordFile(filename, password string, strictHostKey bool) (*C
 
 	config, err := parseConfigFile(filename)
 	if err == nil {
-		config.StrictHostKey = strictHostKey
+		// CLI -k flag overrides config file, but config file value is preserved if -k not set
+		if strictHostKey {
+			config.StrictHostKey = true
+		}
 		if pass != "" {
 			config.Password = pass
 		} else {
@@ -134,6 +139,13 @@ func loadConfigOrPasswordFile(filename, password string, strictHostKey bool) (*C
 		return config, pass, nil
 	}
 
+	// If the file is a config file but has a real error (e.g. missing host),
+	// report it instead of silently falling back to password file.
+	if err != errNotConfigFile {
+		return nil, "", err
+	}
+
+	// Not a config file — fall back to treating it as a password file.
 	if pass != "" {
 		if _, statErr := os.Stat(filename); statErr != nil {
 			return nil, "", fmt.Errorf("failed to access config/password file: %w", statErr)
@@ -148,6 +160,9 @@ func loadConfigOrPasswordFile(filename, password string, strictHostKey bool) (*C
 	return nil, pass, nil
 }
 
+// errNotConfigFile indicates the file does not contain recognized config keys
+var errNotConfigFile = fmt.Errorf("not a config file")
+
 // parseConfigFile parses a config file (format: key: value)
 func parseConfigFile(filename string) (*Config, error) {
 	file, err := os.Open(filename)
@@ -157,6 +172,7 @@ func parseConfigFile(filename string) (*Config, error) {
 	defer file.Close()
 
 	config := newDefaultConfig()
+	hasKeys := false
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -175,23 +191,41 @@ func parseConfigFile(filename string) (*Config, error) {
 		switch key {
 		case "host":
 			config.Host = value
+			hasKeys = true
 		case "user", "username":
 			config.User = value
+			hasKeys = true
 		case "password":
 			config.Password = value
+			hasKeys = true
 		case "port":
 			config.Port = value
+			hasKeys = true
 		case "key", "keypath":
 			config.KeyPath = value
+			hasKeys = true
 		case "timeout":
 			if t, err := strconv.Atoi(value); err == nil && t >= 0 {
 				config.Timeout = t
 			}
+			hasKeys = true
 		case "connect_timeout":
 			if t, err := strconv.Atoi(value); err == nil && t >= 0 {
 				config.ConnectTimeout = t
 			}
+			hasKeys = true
+		case "strict_host_key":
+			config.StrictHostKey = parseBoolValue(value)
+			hasKeys = true
 		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error reading config file: %w", err)
+	}
+
+	if !hasKeys {
+		return nil, errNotConfigFile
 	}
 
 	if config.Host == "" {
@@ -199,6 +233,16 @@ func parseConfigFile(filename string) (*Config, error) {
 	}
 
 	return config, nil
+}
+
+// parseBoolValue parses a boolean value from a config file
+func parseBoolValue(s string) bool {
+	switch strings.ToLower(s) {
+	case "true", "yes", "1", "on":
+		return true
+	default:
+		return false
+	}
 }
 
 // readPasswordFile reads password from a single-line password file

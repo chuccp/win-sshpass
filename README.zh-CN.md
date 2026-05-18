@@ -114,7 +114,10 @@ win-sshpass -p <密码> rsync -avz <本地路径> user@host:<远程路径>
 | `-remote` | 远程路径（上传/下载） | `-remote /tmp/file.txt` |
 | `-d` | 下载模式 | `-d` |
 | `-k` | 启用严格主机密钥验证 | `-k` |
+| `-t` | 总操作超时时间（秒），0 表示不限 | `-t 30` |
+| `-ct` | TCP 连接超时时间（秒），默认 10 | `-ct 5` |
 | `-v` | 显示版本 | `-v` |
+| `-help` | 显示帮助信息 | `-help` |
 
 ## 配置文件格式
 
@@ -124,6 +127,9 @@ username: root
 password: your_password
 port: 22
 # key: ~/.ssh/id_ed25519  # 可选，使用私钥代替密码
+# timeout: 0              # 可选，总操作超时时间（秒），0 表示不限
+# connect_timeout: 10     # 可选，TCP 连接超时时间（秒）
+# strict_host_key: false  # 可选，启用严格主机密钥验证
 ```
 
 使用方式：
@@ -152,6 +158,9 @@ win-sshpass -p 'mypass' scp ./app.jar user@server.com:/opt/app/
 # 6. 环境变量传递密码（更安全）
 export SSHPASS='mypass'
 win-sshpass -e ssh user@server.com 'whoami'
+
+# 7. 操作超时（30 秒后自动中断）
+win-sshpass -p 'mypass' -t 30 ssh user@server.com 'long-running-command'
 ```
 
 ## Git Bash 注意事项

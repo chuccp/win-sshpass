@@ -9,27 +9,42 @@ import (
 
 	"github.com/pkg/sftp"
 	"github.com/schollz/progressbar/v3"
-	"golang.org/x/crypto/ssh"
 )
 
-// ensureRemoteDir creates a remote directory if it doesn't exist
-func ensureRemoteDir(client *ssh.Client, path string) error {
-	sftpClient, err := sftp.NewClient(client)
-	if err != nil {
-		return fmt.Errorf("failed to create SFTP client: %w", err)
-	}
-	defer sftpClient.Close()
-	return sftpClient.MkdirAll(path)
+// timeoutReader wraps an io.Reader and calls reset on each successful Read.
+// This keeps the operation timeout alive as long as data flows from the remote.
+type timeoutReader struct {
+	r     io.Reader
+	reset func()
 }
 
-// uploadFile uploads a file or directory to the remote server
-func uploadFile(client *ssh.Client, localPath, remotePath string) error {
-	sftpClient, err := sftp.NewClient(client)
-	if err != nil {
-		return fmt.Errorf("failed to create SFTP client: %w", err)
+func (tr *timeoutReader) Read(p []byte) (int, error) {
+	n, err := tr.r.Read(p)
+	if n > 0 && tr.reset != nil {
+		tr.reset()
 	}
-	defer sftpClient.Close()
+	return n, err
+}
 
+// timeoutWriter wraps an io.Writer and calls reset on each successful Write.
+// This keeps the operation timeout alive as long as data flows to the remote.
+type timeoutWriter struct {
+	w     io.Writer
+	reset func()
+}
+
+func (tw *timeoutWriter) Write(p []byte) (int, error) {
+	n, err := tw.w.Write(p)
+	if n > 0 && tw.reset != nil {
+		tw.reset()
+	}
+	return n, err
+}
+
+
+// uploadFile uploads a file or directory to the remote server.
+// resetTimeout is called on each data transfer to keep the operation timeout alive.
+func uploadFile(sftpClient *sftp.Client, localPath, remotePath string, resetTimeout func()) error {
 	// check if local path is a file or directory
 	localInfo, err := os.Stat(localPath)
 	if err != nil {
@@ -37,16 +52,19 @@ func uploadFile(client *ssh.Client, localPath, remotePath string) error {
 	}
 
 	if localInfo.IsDir() {
-		return uploadDirectory(sftpClient, localPath, remotePath)
+		return uploadDirectory(sftpClient, localPath, remotePath, resetTimeout)
 	}
-	return uploadSingleFile(sftpClient, localPath, remotePath)
+	return uploadSingleFile(sftpClient, localPath, remotePath, resetTimeout)
 }
 
 // uploadSingleFile uploads a single file
-func uploadSingleFile(sftpClient *sftp.Client, localPath, remotePath string) error {
+func uploadSingleFile(sftpClient *sftp.Client, localPath, remotePath string, resetTimeout func()) error {
 	// check if remote path is a directory
 	remoteFileInfo, err := sftpClient.Stat(remotePath)
 	if err == nil && remoteFileInfo.IsDir() {
+		remotePath = joinRemotePath(remotePath, localBaseName(localPath))
+	} else if err != nil && strings.HasSuffix(remotePath, "/") {
+		// path doesn't exist but has trailing slash: treat as directory target
 		remotePath = joinRemotePath(remotePath, localBaseName(localPath))
 	}
 
@@ -91,7 +109,9 @@ func uploadSingleFile(sftpClient *sftp.Client, localPath, remotePath string) err
 		progressbar.OptionUseANSICodes(true),
 	)
 
-	_, err = io.Copy(remoteFile, io.TeeReader(localFile, bar))
+	// wrap remote file writer to reset timeout on each data chunk
+	remoteWriter := &timeoutWriter{w: remoteFile, reset: resetTimeout}
+	_, err = io.Copy(remoteWriter, io.TeeReader(localFile, bar))
 	if err != nil {
 		return fmt.Errorf("failed to upload file: %w", err)
 	}
@@ -100,7 +120,7 @@ func uploadSingleFile(sftpClient *sftp.Client, localPath, remotePath string) err
 }
 
 // uploadDirectory uploads an entire directory
-func uploadDirectory(sftpClient *sftp.Client, localPath, remotePath string) error {
+func uploadDirectory(sftpClient *sftp.Client, localPath, remotePath string, resetTimeout func()) error {
 	// get local directory base name
 	localBase := localBaseName(localPath)
 
@@ -134,18 +154,13 @@ func uploadDirectory(sftpClient *sftp.Client, localPath, remotePath string) erro
 		}
 
 		// upload file
-		return uploadSingleFile(sftpClient, filePath, remoteFullPath)
+		return uploadSingleFile(sftpClient, filePath, remoteFullPath, resetTimeout)
 	})
 }
 
-// downloadFile downloads a file or directory from the remote server
-func downloadFile(client *ssh.Client, remotePath, localPath string) error {
-	sftpClient, err := sftp.NewClient(client)
-	if err != nil {
-		return fmt.Errorf("failed to create SFTP client: %w", err)
-	}
-	defer sftpClient.Close()
-
+// downloadFile downloads a file or directory from the remote server.
+// resetTimeout is called on each data transfer to keep the operation timeout alive.
+func downloadFile(sftpClient *sftp.Client, remotePath, localPath string, resetTimeout func()) error {
 	// check if remote path is a file or directory
 	remoteInfo, err := sftpClient.Stat(remotePath)
 	if err != nil {
@@ -153,13 +168,13 @@ func downloadFile(client *ssh.Client, remotePath, localPath string) error {
 	}
 
 	if remoteInfo.IsDir() {
-		return downloadDirectory(sftpClient, remotePath, localPath)
+		return downloadDirectory(sftpClient, remotePath, localPath, resetTimeout)
 	}
-	return downloadSingleFile(sftpClient, remotePath, localPath)
+	return downloadSingleFile(sftpClient, remotePath, localPath, resetTimeout)
 }
 
 // downloadSingleFile downloads a single file
-func downloadSingleFile(sftpClient *sftp.Client, remotePath, localPath string) error {
+func downloadSingleFile(sftpClient *sftp.Client, remotePath, localPath string, resetTimeout func()) error {
 	// check if local path is a directory
 	localFileInfo, err := os.Stat(localPath)
 	if err == nil && localFileInfo.IsDir() {
@@ -207,16 +222,23 @@ func downloadSingleFile(sftpClient *sftp.Client, remotePath, localPath string) e
 		progressbar.OptionUseANSICodes(true),
 	)
 
-	_, err = io.Copy(localFile, io.TeeReader(remoteFile, bar))
+	// wrap remote file reader to reset timeout on each data chunk
+	remoteReader := &timeoutReader{r: remoteFile, reset: resetTimeout}
+	_, err = io.Copy(localFile, io.TeeReader(remoteReader, bar))
 	if err != nil {
 		return fmt.Errorf("failed to download file: %w", err)
+	}
+
+	// flush data to disk for reliability
+	if err := localFile.Sync(); err != nil {
+		return fmt.Errorf("failed to sync file: %w", err)
 	}
 
 	return nil
 }
 
 // downloadDirectory downloads an entire directory
-func downloadDirectory(sftpClient *sftp.Client, remotePath, localPath string) error {
+func downloadDirectory(sftpClient *sftp.Client, remotePath, localPath string, resetTimeout func()) error {
 	// get remote directory name (trim trailing / to avoid remoteBaseName returning empty string)
 	remoteBase := remoteBaseName(strings.TrimSuffix(remotePath, "/"))
 
@@ -255,7 +277,7 @@ func downloadDirectory(sftpClient *sftp.Client, remotePath, localPath string) er
 			}
 		} else {
 			// download file
-			if err := downloadSingleFile(sftpClient, remoteFilePath, localFullPath); err != nil {
+			if err := downloadSingleFile(sftpClient, remoteFilePath, localFullPath, resetTimeout); err != nil {
 				return err
 			}
 		}
