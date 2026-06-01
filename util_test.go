@@ -59,6 +59,32 @@ func TestIsAllDigits(t *testing.T) {
 	}
 }
 
+func TestIsValidPort(t *testing.T) {
+	tests := []struct {
+		input string
+		want  bool
+	}{
+		{"22", true},
+		{"1", true},
+		{"65535", true},
+		{"8080", true},
+		{"0", false},
+		{"65536", false},
+		{"-1", false},
+		{"abc", false},
+		{"", false},
+		{"22a", false},
+		{"12.34", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			if got := isValidPort(tt.input); got != tt.want {
+				t.Errorf("isValidPort(%q) = %v, want %v", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestIsWindowsLocalPath(t *testing.T) {
 	tests := []struct {
 		input string

@@ -262,25 +262,37 @@ func TestMergeConfig(t *testing.T) {
 
 func TestValidate(t *testing.T) {
 	t.Run("missing host", func(t *testing.T) {
-		cfg := &Config{Password: "pass"}
+		cfg := &Config{Port: "22", Password: "pass"}
 		if err := cfg.validate(); err == nil {
 			t.Fatal("expected error for missing host")
 		}
 	})
+	t.Run("invalid port", func(t *testing.T) {
+		cfg := &Config{Host: "host", Port: "abc", Password: "pass"}
+		if err := cfg.validate(); err == nil {
+			t.Fatal("expected error for invalid port")
+		}
+	})
+	t.Run("port out of range", func(t *testing.T) {
+		cfg := &Config{Host: "host", Port: "99999", Password: "pass"}
+		if err := cfg.validate(); err == nil {
+			t.Fatal("expected error for port out of range")
+		}
+	})
 	t.Run("missing auth", func(t *testing.T) {
-		cfg := &Config{Host: "host"}
+		cfg := &Config{Host: "host", Port: "22"}
 		if err := cfg.validate(); err == nil {
 			t.Fatal("expected error for missing auth")
 		}
 	})
 	t.Run("valid with password", func(t *testing.T) {
-		cfg := &Config{Host: "host", Password: "pass"}
+		cfg := &Config{Host: "host", Port: "22", Password: "pass"}
 		if err := cfg.validate(); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
 	t.Run("valid with key", func(t *testing.T) {
-		cfg := &Config{Host: "host", KeyPath: "/key"}
+		cfg := &Config{Host: "host", Port: "22", KeyPath: "/key"}
 		if err := cfg.validate(); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}

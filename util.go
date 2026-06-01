@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -21,6 +22,12 @@ func isAllDigits(s string) bool {
 		}
 	}
 	return len(s) > 0
+}
+
+// isValidPort checks if a string is a valid network port number (1-65535)
+func isValidPort(s string) bool {
+	n, err := strconv.Atoi(s)
+	return err == nil && n >= 1 && n <= 65535
 }
 
 // --- String manipulation ---

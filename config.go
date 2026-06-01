@@ -57,6 +57,9 @@ func (c *Config) validate() error {
 	if c.Host == "" {
 		return fmt.Errorf("host address not specified")
 	}
+	if !isValidPort(c.Port) {
+		return fmt.Errorf("invalid port number: %s (must be 1-65535)", c.Port)
+	}
 	if c.Password == "" && c.KeyPath == "" {
 		return fmt.Errorf("no authentication method provided (password or key required)")
 	}
