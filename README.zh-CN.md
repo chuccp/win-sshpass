@@ -14,13 +14,19 @@ Windows 版 sshpass 工具，实现类似 Linux sshpass 的功能。
 - 交互式 Shell 模式下动态调整终端大小
 - Git Bash 路径转换检测与自动修复
 - 支持 IPv6 地址
+- 支持 x64 (amd64) 和 ARM64 架构
 
 ## 下载
 
 从 [GitHub Releases](https://github.com/chuccp/win-sshpass/releases) 下载最新版本：
 
+| 架构 | Zip | MSI 安装包 |
+|------|-----|------------|
+| **x64 (amd64)** | `win-sshpass-*-amd64.zip` | `win-sshpass-*-amd64.msi` |
+| **ARM64** | `win-sshpass-*-arm64.zip` | `win-sshpass-*-arm64.msi` |
+
 1. 打开 [Releases](https://github.com/chuccp/win-sshpass/releases) 页面
-2. 下载 `win-sshpass.exe`（zip）或 `win-sshpass-v*.msi`（安装包）
+2. 下载对应架构的 zip 或 MSI 安装包（x64 或 ARM64）
 3. 如果使用 MSI 安装包：运行安装程序即可，安装目录会自动添加到系统 PATH 中
 
 > **零依赖**：`win-sshpass.exe` 是一个独立的可执行文件，无需安装 OpenSSH 或任何其他软件。下载后放入 PATH 目录即可直接使用。

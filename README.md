@@ -20,13 +20,19 @@ A Windows implementation of sshpass, providing similar functionality to the Linu
 - Dynamic terminal resizing in interactive shell mode
 - Git Bash path conversion detection and auto-fix
 - IPv6 address support
+- Support for both x64 (amd64) and ARM64 architectures
 
 ## Download
 
 Download the latest release from [GitHub Releases](https://github.com/chuccp/win-sshpass/releases):
 
+| Architecture | Zip | MSI Installer |
+|--------------|-----|---------------|
+| **x64 (amd64)** | `win-sshpass-*-amd64.zip` | `win-sshpass-*-amd64.msi` |
+| **ARM64** | `win-sshpass-*-arm64.zip` | `win-sshpass-*-arm64.msi` |
+
 1. Go to [Releases](https://github.com/chuccp/win-sshpass/releases) page
-2. Download `win-sshpass.exe` (zip) or `win-sshpass-v*.msi` (installer)
+2. Download the zip or MSI for your architecture (x64 or ARM64)
 3. If using MSI: run the installer — it will add the install directory to your system PATH automatically
 
 > **Zero dependencies**: `win-sshpass.exe` is a standalone binary. No need to install OpenSSH or any other software. Download it, put it in your PATH, and you're ready to go.

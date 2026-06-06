@@ -14,13 +14,19 @@ Windows 版 sshpass ツール。Linux の sshpass と同様の機能を提供し
 - インタラクティブシェルモードでの動的ターミナルサイズ変更
 - Git Bash パス変換の検出と自動修正
 - IPv6 アドレス対応
+- x64 (amd64) および ARM64 アーキテクチャ対応
 
 ## ダウンロード
 
 [GitHub Releases](https://github.com/chuccp/win-sshpass/releases) から最新版をダウンロード：
 
+| アーキテクチャ | Zip | MSI インストーラー |
+|----------------|-----|-------------------|
+| **x64 (amd64)** | `win-sshpass-*-amd64.zip` | `win-sshpass-*-amd64.msi` |
+| **ARM64** | `win-sshpass-*-arm64.zip` | `win-sshpass-*-arm64.msi` |
+
 1. [Releases](https://github.com/chuccp/win-sshpass/releases) ページを開く
-2. `win-sshpass.exe`（zip）または `win-sshpass-v*.msi`（インストーラー）をダウンロード
+2. お使いのアーキテクチャ（x64 または ARM64）の zip または MSI インストーラーをダウンロード
 3. MSI インストーラーを使用する場合：インストーラーを実行するだけで、インストール先がシステム PATH に自動的に追加されます
 
 > **依存関係ゼロ**：`win-sshpass.exe` はスタンドアロンの実行ファイルです。OpenSSH やその他のソフトウェアのインストールは不要です。ダウンロードして PATH に配置すればすぐに使用できます。

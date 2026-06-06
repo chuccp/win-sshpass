@@ -14,13 +14,19 @@ Windows 版 sshpass 工具，實現類似 Linux sshpass 的功能。
 - 互動式 Shell 模式下動態調整終端大小
 - Git Bash 路徑轉換偵測與自動修復
 - 支援 IPv6 位址
+- 支援 x64 (amd64) 和 ARM64 架構
 
 ## 下載
 
 從 [GitHub Releases](https://github.com/chuccp/win-sshpass/releases) 下載最新版本：
 
+| 架構 | Zip | MSI 安裝包 |
+|------|-----|------------|
+| **x64 (amd64)** | `win-sshpass-*-amd64.zip` | `win-sshpass-*-amd64.msi` |
+| **ARM64** | `win-sshpass-*-arm64.zip` | `win-sshpass-*-arm64.msi` |
+
 1. 開啟 [Releases](https://github.com/chuccp/win-sshpass/releases) 頁面
-2. 下載 `win-sshpass.exe`（zip）或 `win-sshpass-v*.msi`（安裝包）
+2. 下載對應架構的 zip 或 MSI 安裝包（x64 或 ARM64）
 3. 如果使用 MSI 安裝包：執行安裝程式即可，安裝目錄會自動加入系統 PATH 中
 
 > **零依賴**：`win-sshpass.exe` 是一個獨立的可執行檔案，無需安裝 OpenSSH 或任何其他軟體。下載後放入 PATH 目錄即可直接使用。
