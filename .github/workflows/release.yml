@@ -11,6 +11,16 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+        include:
+          - arch: amd64
+            goarch: amd64
+            wix_arch: x64
+          - arch: arm64
+            goarch: arm64
+            wix_arch: arm64
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -31,11 +41,14 @@ jobs:
 
       - name: Build
         run: go build -ldflags="-s -w" -o win-sshpass.exe .
+        env:
+          GOARCH: ${{ matrix.goarch }}
 
       - name: Create zip package
         run: |
           $tag = "${{ github.ref_name }}"
-          Compress-Archive -Path win-sshpass.exe,README.md,README.zh-CN.md,README.zh-TW.md,README.ja.md -DestinationPath "win-sshpass-$tag.zip"
+          $arch = "${{ matrix.arch }}"
+          Compress-Archive -Path win-sshpass.exe,README.md,README.zh-CN.md,README.zh-TW.md,README.ja.md -DestinationPath "win-sshpass-$tag-$arch.zip"
 
       - name: Install WiX Toolset
         run: |
@@ -43,14 +56,30 @@ jobs:
           wix eula accept wix7
 
       - name: Build MSI
-        run: wix build -arch x64 -d Version=${{ github.ref_name }} -out win-sshpass-${{ github.ref_name }}.msi .github/workflows/win-sshpass.wxs
+        run: wix build -arch ${{ matrix.wix_arch }} -d Version=${{ github.ref_name }} -out win-sshpass-${{ github.ref_name }}-${{ matrix.arch }}.msi .github/workflows/win-sshpass.wxs
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-${{ matrix.arch }}
+          path: |
+            win-sshpass-*-${{ matrix.arch }}.zip
+            win-sshpass-*-${{ matrix.arch }}.msi
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
 
       - name: Create release
         uses: softprops/action-gh-release@v1
         with:
-          files: |
-            win-sshpass-*.zip
-            win-sshpass-*.msi
+          files: artifacts/*
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
