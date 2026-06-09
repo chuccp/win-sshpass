@@ -18,6 +18,7 @@ type Config struct {
 	StrictHostKey  bool   // whether to verify host key
 	Timeout        int    // total operation deadline in seconds, 0 = no limit
 	ConnectTimeout int    // TCP connection timeout in seconds
+	Retries        int    // total connection attempts (default 1 = single attempt, no retry)
 }
 
 // newDefaultConfig creates a Config with default values
@@ -26,6 +27,7 @@ func newDefaultConfig() *Config {
 		User:           "root",
 		Port:           "22",
 		ConnectTimeout: 10,
+		Retries:        3,
 	}
 }
 
@@ -66,61 +68,45 @@ func (c *Config) validate() error {
 	return nil
 }
 
+// mergeFrom merges non-empty/non-sentinel fields from src into dst.
+func (dst *Config) mergeFrom(src *Config) {
+	if src == nil {
+		return
+	}
+	if src.Password != "" {
+		dst.Password = src.Password
+	}
+	if src.KeyPath != "" {
+		dst.KeyPath = src.KeyPath
+	}
+	if src.User != "" {
+		dst.User = src.User
+	}
+	if src.Host != "" {
+		dst.Host = src.Host
+	}
+	if src.Port != "" {
+		dst.Port = src.Port
+	}
+	if src.Timeout >= 0 {
+		dst.Timeout = src.Timeout
+	}
+	if src.ConnectTimeout >= 0 {
+		dst.ConnectTimeout = src.ConnectTimeout
+	}
+	if src.Retries >= 0 {
+		dst.Retries = src.Retries
+	}
+	if src.StrictHostKey {
+		dst.StrictHostKey = true
+	}
+}
+
 // mergeConfig merges non-empty fields from src into dst,
 // then applies command-line overrides.
 func mergeConfig(dst, src, override *Config) {
-	if src != nil {
-		if src.Password != "" {
-			dst.Password = src.Password
-		}
-		if src.KeyPath != "" {
-			dst.KeyPath = src.KeyPath
-		}
-		if src.User != "" {
-			dst.User = src.User
-		}
-		if src.Host != "" {
-			dst.Host = src.Host
-		}
-		if src.Port != "" {
-			dst.Port = src.Port
-		}
-		if src.Timeout >= 0 {
-			dst.Timeout = src.Timeout
-		}
-		if src.ConnectTimeout >= 0 {
-			dst.ConnectTimeout = src.ConnectTimeout
-		}
-		if src.StrictHostKey {
-			dst.StrictHostKey = true
-		}
-	}
-	if override != nil {
-		if override.Password != "" {
-			dst.Password = override.Password
-		}
-		if override.KeyPath != "" {
-			dst.KeyPath = override.KeyPath
-		}
-		if override.Host != "" {
-			dst.Host = override.Host
-		}
-		if override.User != "" {
-			dst.User = override.User
-		}
-		if override.Port != "" {
-			dst.Port = override.Port
-		}
-		if override.Timeout >= 0 {
-			dst.Timeout = override.Timeout
-		}
-		if override.ConnectTimeout >= 0 {
-			dst.ConnectTimeout = override.ConnectTimeout
-		}
-		if override.StrictHostKey {
-			dst.StrictHostKey = true
-		}
-	}
+	dst.mergeFrom(src)
+	dst.mergeFrom(override)
 }
 
 // loadConfigOrPasswordFile treats filename as a config file first, falling back
@@ -215,6 +201,11 @@ func parseConfigFile(filename string) (*Config, error) {
 		case "connect_timeout":
 			if t, err := strconv.Atoi(value); err == nil && t >= 0 {
 				config.ConnectTimeout = t
+			}
+			hasKeys = true
+		case "retry", "retries":
+			if t, err := strconv.Atoi(value); err == nil && t >= 0 {
+				config.Retries = t
 			}
 			hasKeys = true
 		case "strict_host_key":

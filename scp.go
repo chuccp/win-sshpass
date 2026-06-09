@@ -3,22 +3,15 @@ package main
 import (
 	"fmt"
 	"strings"
-
-	"github.com/pkg/sftp"
 )
 
 // runSCP executes the scp command (file transfer over SSH)
 func runSCP(config *Config, args []string) error {
-	// establish SSH connection
-	client, err := SSHClient(config)
+	conn, err := connectSFTP(config)
 	if err != nil {
 		return err
 	}
-	defer client.Close()
-
-	// set up operation timeout (timer resets on each data transfer)
-	resetTimeout, stopTimer := setupOperationTimeout(func() { client.Close() }, config.Timeout)
-	defer stopTimer()
+	defer conn.Close()
 
 	// parse scp arguments to determine source and target
 	var remotePath string
@@ -61,26 +54,17 @@ func runSCP(config *Config, args []string) error {
 	// clean remote path (handle Git Bash // prefix and path conversion)
 	remotePath = cleanRemotePath(remotePath)
 
-	// create a single SFTP client for all transfers
-	sftpClient, err := sftp.NewClient(client)
-	if err != nil {
-		return fmt.Errorf("failed to create SFTP client: %w", err)
-	}
-	defer sftpClient.Close()
-
 	if isUpload {
-		// upload each local file/directory to the remote path
 		for _, lf := range localFiles {
-			if err := uploadFile(sftpClient, lf, remotePath, resetTimeout); err != nil {
+			if err := conn.Upload(lf, remotePath); err != nil {
 				return err
 			}
 		}
 		return nil
 	}
 
-	// download: downloadFile handles local directory creation internally
 	for _, lf := range localFiles {
-		if err := downloadFile(sftpClient, remotePath, lf, resetTimeout); err != nil {
+		if err := conn.Download(remotePath, lf); err != nil {
 			return err
 		}
 	}
@@ -125,30 +109,18 @@ func runRsync(config *Config, args []string) error {
 		break
 	}
 
-	// establish SSH connection
-	client, err := SSHClient(config)
+	conn, err := connectSFTP(config)
 	if err != nil {
 		return err
 	}
-	defer client.Close()
-
-	// set up operation timeout (timer resets on each data transfer)
-	resetTimeout, stopTimer := setupOperationTimeout(func() { client.Close() }, config.Timeout)
-	defer stopTimer()
-
-	// create a single SFTP client for all transfers
-	sftpClient, err := sftp.NewClient(client)
-	if err != nil {
-		return fmt.Errorf("failed to create SFTP client: %w", err)
-	}
-	defer sftpClient.Close()
+	defer conn.Close()
 
 	if isUpload {
 		// local to remote (upload)
 		_, _, remotePath := parseUserHostPath(remoteArg)
 		rPath := cleanRemotePath(remotePath)
 		for _, lf := range localArgs {
-			if err := uploadFile(sftpClient, lf, rPath, resetTimeout); err != nil {
+			if err := conn.Upload(lf, rPath); err != nil {
 				return err
 			}
 		}
@@ -157,9 +129,8 @@ func runRsync(config *Config, args []string) error {
 	// remote to local (download)
 	_, _, remotePath := parseUserHostPath(remoteArg)
 	rPath := cleanRemotePath(remotePath)
-	// download: downloadFile handles local directory creation internally
 	for _, lf := range localArgs {
-		if err := downloadFile(sftpClient, rPath, lf, resetTimeout); err != nil {
+		if err := conn.Download(rPath, lf); err != nil {
 			return err
 		}
 	}

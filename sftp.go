@@ -9,7 +9,79 @@ import (
 
 	"github.com/pkg/sftp"
 	"github.com/schollz/progressbar/v3"
+	"golang.org/x/crypto/ssh"
 )
+
+// sftpConnection bundles an SSH client and its SFTP sub-client with
+// the timeout machinery so callers can share a single connection setup.
+type sftpConnection struct {
+	sshClient    *ssh.Client
+	sftpClient   *sftp.Client
+	resetTimeout func()
+	stopTimer    func()
+}
+
+// Close tears down the SFTP connection in the correct order:
+// SFTP sub-client first, then timeout timer, then the underlying SSH client.
+func (c *sftpConnection) Close() {
+	c.sftpClient.Close()
+	c.stopTimer()
+	c.sshClient.Close()
+}
+
+// connectSFTP establishes an SSH connection and creates an SFTP client,
+// wiring up the operation timeout and interrupt handler.
+func connectSFTP(config *Config) (*sftpConnection, error) {
+	client, err := SSHClient(config)
+	if err != nil {
+		return nil, err
+	}
+	onInterrupt(func() { client.Close() })
+
+	resetTimeout, stopTimer := setupOperationTimeout(func() { client.Close() }, config.Timeout)
+
+	sftpClient, err := sftp.NewClient(client)
+	if err != nil {
+		stopTimer()
+		client.Close()
+		return nil, fmt.Errorf("failed to create SFTP client: %w", err)
+	}
+
+	return &sftpConnection{
+		sshClient:    client,
+		sftpClient:   sftpClient,
+		resetTimeout: resetTimeout,
+		stopTimer:    stopTimer,
+	}, nil
+}
+
+// Upload uploads a local file or directory to the remote path.
+func (c *sftpConnection) Upload(localPath, remotePath string) error {
+	return uploadFile(c.sftpClient, localPath, remotePath, c.resetTimeout)
+}
+
+// Download downloads a remote file or directory to the local path.
+func (c *sftpConnection) Download(remotePath, localPath string) error {
+	return downloadFile(c.sftpClient, remotePath, localPath, c.resetTimeout)
+}
+
+// createProgressBar creates a standardized progress bar for file transfers.
+func createProgressBar(description string, fileSize int64) *progressbar.ProgressBar {
+	return progressbar.NewOptions64(
+		fileSize,
+		progressbar.OptionSetDescription(description),
+		progressbar.OptionSetWriter(os.Stderr),
+		progressbar.OptionShowBytes(true),
+		progressbar.OptionSetWidth(40),
+		progressbar.OptionThrottle(65),
+		progressbar.OptionShowCount(),
+		progressbar.OptionOnCompletion(func() {
+			fmt.Fprint(os.Stderr, "\n")
+		}),
+		progressbar.OptionFullWidth(),
+		progressbar.OptionUseANSICodes(true),
+	)
+}
 
 // timeoutReader wraps an io.Reader and calls reset on each successful Read.
 // This keeps the operation timeout alive as long as data flows from the remote.
@@ -93,21 +165,7 @@ func uploadSingleFile(sftpClient *sftp.Client, localPath, remotePath string, res
 	}
 	defer remoteFile.Close()
 
-	// create progress bar
-	bar := progressbar.NewOptions64(
-		fileSize,
-		progressbar.OptionSetDescription(fmt.Sprintf("Uploading %s", localBaseName(localPath))),
-		progressbar.OptionSetWriter(os.Stderr),
-		progressbar.OptionShowBytes(true),
-		progressbar.OptionSetWidth(40),
-		progressbar.OptionThrottle(65),
-		progressbar.OptionShowCount(),
-		progressbar.OptionOnCompletion(func() {
-			fmt.Fprint(os.Stderr, "\n")
-		}),
-		progressbar.OptionFullWidth(),
-		progressbar.OptionUseANSICodes(true),
-	)
+	bar := createProgressBar(fmt.Sprintf("Uploading %s", localBaseName(localPath)), fileSize)
 
 	// wrap remote file writer to reset timeout on each data chunk
 	remoteWriter := &timeoutWriter{w: remoteFile, reset: resetTimeout}
@@ -206,21 +264,7 @@ func downloadSingleFile(sftpClient *sftp.Client, remotePath, localPath string, r
 	}
 	defer localFile.Close()
 
-	// create progress bar
-	bar := progressbar.NewOptions64(
-		fileSize,
-		progressbar.OptionSetDescription(fmt.Sprintf("Downloading %s", remoteBaseName(remotePath))),
-		progressbar.OptionSetWriter(os.Stderr),
-		progressbar.OptionShowBytes(true),
-		progressbar.OptionSetWidth(40),
-		progressbar.OptionThrottle(65),
-		progressbar.OptionShowCount(),
-		progressbar.OptionOnCompletion(func() {
-			fmt.Fprint(os.Stderr, "\n")
-		}),
-		progressbar.OptionFullWidth(),
-		progressbar.OptionUseANSICodes(true),
-	)
+	bar := createProgressBar(fmt.Sprintf("Downloading %s", remoteBaseName(remotePath)), fileSize)
 
 	// wrap remote file reader to reset timeout on each data chunk
 	remoteReader := &timeoutReader{r: remoteFile, reset: resetTimeout}

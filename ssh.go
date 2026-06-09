@@ -12,7 +12,7 @@ import (
 	"golang.org/x/term"
 )
 
-// SSHClient creates an SSH client connection
+// SSHClient creates an SSH client connection with automatic retry on transient failures.
 func SSHClient(config *Config) (*ssh.Client, error) {
 	var authMethods []ssh.AuthMethod
 
@@ -65,10 +65,46 @@ func SSHClient(config *Config) (*ssh.Client, error) {
 		HostKeyCallback: hostKeyCallback,
 	}
 
+	attempts := config.Retries
+	if attempts < 1 {
+		attempts = 1
+	}
+
 	address := net.JoinHostPort(config.Host, config.Port)
+	var lastErr error
+
+	for i := 0; i < attempts; i++ {
+		if i > 0 {
+			// exponential backoff: 2s, 4s, 8s, ... capped at 30s
+			delay := time.Duration(1<<(i-1)) * 2 * time.Second
+			if delay > 30*time.Second {
+				delay = 30 * time.Second
+			}
+			fmt.Fprintf(os.Stderr, "Retrying connection (attempt %d/%d) in %v...\n", i+1, attempts, delay)
+			time.Sleep(delay)
+		}
+
+		client, err := dialAndHandshake(address, sshConfig, config.ConnectTimeout)
+		if err == nil {
+			return client, nil
+		}
+
+		lastErr = err
+
+		// do not retry authentication failures
+		if isAuthError(err) {
+			return nil, err
+		}
+	}
+
+	return nil, fmt.Errorf("connection failed after %d attempts: %w", attempts, lastErr)
+}
+
+// dialAndHandshake performs a single TCP dial + SSH handshake.
+func dialAndHandshake(address string, sshConfig *ssh.ClientConfig, connectTimeout int) (*ssh.Client, error) {
 	var dialer net.Dialer
-	if config.ConnectTimeout > 0 {
-		dialer.Timeout = time.Duration(config.ConnectTimeout) * time.Second
+	if connectTimeout > 0 {
+		dialer.Timeout = time.Duration(connectTimeout) * time.Second
 	}
 	conn, err := dialer.Dial("tcp", address)
 	if err != nil {
@@ -76,8 +112,8 @@ func SSHClient(config *Config) (*ssh.Client, error) {
 	}
 
 	// set handshake deadline using ConnectTimeout, then clear after handshake
-	if config.ConnectTimeout > 0 {
-		conn.SetDeadline(time.Now().Add(time.Duration(config.ConnectTimeout) * time.Second))
+	if connectTimeout > 0 {
+		conn.SetDeadline(time.Now().Add(time.Duration(connectTimeout) * time.Second))
 	}
 	sshConn, chans, reqs, err := ssh.NewClientConn(conn, address, sshConfig)
 	if err != nil {
@@ -87,6 +123,16 @@ func SSHClient(config *Config) (*ssh.Client, error) {
 	// clear deadline so the connection can live for the session duration
 	conn.SetDeadline(time.Time{})
 	return ssh.NewClient(sshConn, chans, reqs), nil
+}
+
+// isAuthError checks if an error is an unrecoverable authentication failure.
+func isAuthError(err error) bool {
+	if err == nil {
+		return false
+	}
+	s := err.Error()
+	return strings.Contains(s, "unable to authenticate") ||
+		strings.Contains(s, "no supported methods remain")
 }
 
 // getKnownHostsPath returns the known_hosts file path

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/signal"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -35,6 +36,30 @@ func isValidPort(s string) bool {
 // joinArgs joins a string slice with space
 func joinArgs(args []string) string {
 	return strings.Join(args, " ")
+}
+
+// splitPaths splits a path string by comma or space separator.
+// Returns error if complex paths (containing '/' or '\') are space-separated.
+// name identifies which parameter for error messages (e.g., "local" or "remote").
+func splitPaths(s, name string) ([]string, error) {
+	var paths []string
+	if strings.Contains(s, ",") {
+		for _, p := range strings.Split(s, ",") {
+			if p = strings.TrimSpace(p); p != "" {
+				paths = append(paths, p)
+			}
+		}
+	} else if strings.Contains(s, " ") {
+		for _, p := range strings.Fields(s) {
+			if strings.ContainsAny(p, "/\\") {
+				return nil, fmt.Errorf("path %q contains a path separator. Please use commas to separate multiple %s paths (e.g., -%s \"./a/file.txt,./b/file.txt\")", p, name, name)
+			}
+		}
+		paths = strings.Fields(s)
+	} else {
+		paths = []string{s}
+	}
+	return paths, nil
 }
 
 // --- Path helpers ---
@@ -183,4 +208,18 @@ func exitCodeFromError(err error) (int, bool) {
 func fatalError(format string, args ...any) {
 	fmt.Fprintf(os.Stderr, format+"\n", args...)
 	os.Exit(1)
+}
+
+// onInterrupt sets up a one-shot handler that calls cleanup when the process
+// receives an interrupt signal (Ctrl+C). The cleanup should close the underlying
+// connection so the main goroutine unblocks and exits through the normal path
+// (running deferred functions). Safe to call multiple times — only the first
+// signal is honored.
+func onInterrupt(cleanup func()) {
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt)
+	go func() {
+		<-ch
+		cleanup()
+	}()
 }

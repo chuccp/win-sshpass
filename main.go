@@ -4,35 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strings"
 	"sync/atomic"
-
-	"github.com/pkg/sftp"
 )
-
-// splitPaths splits a path string by comma or space separator.
-// Returns error if complex paths (containing '/' or '\') are space-separated.
-// name identifies which parameter for error messages (e.g., "local" or "remote").
-func splitPaths(s, name string) ([]string, error) {
-	var paths []string
-	if strings.Contains(s, ",") {
-		for _, p := range strings.Split(s, ",") {
-			if p = strings.TrimSpace(p); p != "" {
-				paths = append(paths, p)
-			}
-		}
-	} else if strings.Contains(s, " ") {
-		for _, p := range strings.Fields(s) {
-			if strings.ContainsAny(p, "/\\") {
-				return nil, fmt.Errorf("path %q contains a path separator. Please use commas to separate multiple %s paths (e.g., -%s \"./a/file.txt,./b/file.txt\")", p, name, name)
-			}
-		}
-		paths = strings.Fields(s)
-	} else {
-		paths = []string{s}
-	}
-	return paths, nil
-}
 
 func main() {
 	// command line arguments
@@ -50,6 +23,7 @@ func main() {
 	strictHostKey := flag.Bool("k", false, "enable strict host key verification")
 	timeout := flag.Int("t", 0, "total operation timeout in seconds (0 = no limit)")
 	connectTimeout := flag.Int("ct", 10, "TCP connection timeout in seconds")
+	retries := flag.Int("retry", 3, "total connection attempts (default 3)")
 	showVersion := flag.Bool("v", false, "show version")
 	showHelp := flag.Bool("help", false, "show help")
 	flag.Parse()
@@ -91,11 +65,12 @@ func main() {
 		User:           *user,
 		Timeout:        -1, // -1 = not set; allows explicit 0 to override config file
 		ConnectTimeout: -1, // -1 = not set; allows explicit 0 to override config file
+		Retries:        -1, // -1 = not set; allows explicit 0 to override config file
 	}
-	// Only include Port, Timeout, ConnectTimeout, and StrictHostKey if explicitly
-	// set by the user. Without flag.Visit, their default values would always
-	// override config file values since we can't distinguish "not set" from
-	// "set to default".
+	// Only include Port, Timeout, ConnectTimeout, Retries, and StrictHostKey
+	// if explicitly set by the user. Without flag.Visit, their default values
+	// would always override config file values since we can't distinguish
+	// "not set" from "set to default".
 	flag.Visit(func(f *flag.Flag) {
 		switch f.Name {
 		case "P":
@@ -104,6 +79,8 @@ func main() {
 			cliOverride.Timeout = *timeout
 		case "ct":
 			cliOverride.ConnectTimeout = *connectTimeout
+		case "retry":
+			cliOverride.Retries = *retries
 		case "k":
 			cliOverride.StrictHostKey = *strictHostKey
 		}
@@ -195,22 +172,8 @@ func main() {
 		fatalError("Error: %v", err)
 	}
 
-	// establish SSH connection
-	client, err := SSHClient(config)
-	if err != nil {
-		fatalError("SSH connection failed: %v", err)
-	}
-	defer client.Close()
-
-	// set up operation timeout (timer resets on each data transfer)
-	var timedOut atomic.Bool
-	resetTimeout, stopTimer := setupOperationTimeout(func() {
-		timedOut.Store(true)
-		client.Close()
-	}, config.Timeout)
-	defer stopTimer()
-
-	// file transfer
+	// file transfer path — uses connectSFTP which manages its own SSH connection,
+	// timeout, and interrupt handling.
 	if *localPath != "" && *remotePath != "" {
 		localPaths, err := splitPaths(*localPath, "local")
 		if err != nil {
@@ -224,29 +187,27 @@ func main() {
 			remotePaths[i] = cleanRemotePath(remotePaths[i])
 		}
 
-		// create a single SFTP client for all transfers
-		sftpClient, err := sftp.NewClient(client)
+		conn, err := connectSFTP(config)
 		if err != nil {
-			fatalError("SFTP failed: %v", err)
+			fatalError("SFTP connection failed: %v", err)
 		}
-		defer sftpClient.Close()
+		defer conn.Close()
 
 		if *download {
 			for _, rPath := range remotePaths {
 				for _, lp := range localPaths {
 					fmt.Printf("Downloading %s -> %s...\n", rPath, lp)
-					if err := downloadFile(sftpClient, rPath, lp, resetTimeout); err != nil {
+					if err := conn.Download(rPath, lp); err != nil {
 						fatalError("Download failed: %v", err)
 					}
 				}
 			}
 			fmt.Println("Download successful!")
 		} else {
-			// ensure remote target directories exist
 			for _, lp := range localPaths {
 				for _, rPath := range remotePaths {
 					fmt.Printf("Uploading %s -> %s...\n", lp, rPath)
-					if err := uploadFile(sftpClient, lp, rPath, resetTimeout); err != nil {
+					if err := conn.Upload(lp, rPath); err != nil {
 						fatalError("Upload failed: %v", err)
 					}
 				}
@@ -257,6 +218,22 @@ func main() {
 	} else if *localPath != "" || *remotePath != "" {
 		fatalError("Error: file transfer requires both -local and -remote arguments")
 	}
+
+	// command/shell path
+	client, err := SSHClient(config)
+	if err != nil {
+		fatalError("SSH connection failed: %v", err)
+	}
+	onInterrupt(func() { client.Close() })
+	defer client.Close()
+
+	// set up operation timeout (timer resets on each data transfer)
+	var timedOut atomic.Bool
+	_, stopTimer := setupOperationTimeout(func() {
+		timedOut.Store(true)
+		client.Close()
+	}, config.Timeout)
+	defer stopTimer()
 
 	// execute command
 	cmd := *command
