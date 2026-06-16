@@ -1,10 +1,10 @@
 # win-sshpass
 
-[![GitHub release](https://img.shields.io/github/v/release/chuccp/win-sshpass?include_prereleases)](https://github.com/chuccp/win-sshpass/releases)
+[![GitHub release](https://badgen.net/github/release/chuccp/win-sshpass/include-prereleases)](https://github.com/chuccp/win-sshpass/releases)
 [![Go Report Card](https://goreportcard.com/badge/github.com/chuccp/win-sshpass)](https://goreportcard.com/report/github.com/chuccp/win-sshpass)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Go Version](https://img.shields.io/github/go-mod/go-version/chuccp/win-sshpass)](go.mod)
-[![Downloads](https://img.shields.io/github/downloads/chuccp/win-sshpass/total)](https://github.com/chuccp/win-sshpass/releases)
+[![License](https://badgen.net/badge/License/Apache%202.0/blue)](LICENSE)
+[![Go Version](https://badgen.net/github/go-mod/go-version/chuccp/win-sshpass)](go.mod)
+[![Downloads](https://badgen.net/github/downloads/chuccp/win-sshpass/total)](https://github.com/chuccp/win-sshpass/releases)
 
 [English](README.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [日本語](README.ja.md)
 
