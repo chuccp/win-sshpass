@@ -75,8 +75,12 @@ func SSHClient(config *Config) (*ssh.Client, error) {
 
 	for i := 0; i < attempts; i++ {
 		if i > 0 {
-			// exponential backoff: 2s, 4s, 8s, ... capped at 30s
-			delay := time.Duration(1<<(i-1)) * 2 * time.Second
+			// exponential backoff: 2s, 4s, 8s, 16s, then capped at 30s
+			shift := i - 1
+			if shift > 4 {
+				shift = 4
+			}
+			delay := time.Duration(1<<shift) * 2 * time.Second
 			if delay > 30*time.Second {
 				delay = 30 * time.Second
 			}
@@ -186,6 +190,16 @@ func runShell(client *ssh.Client) error {
 	// only request PTY when stdin is a terminal (interactive use).
 	// When stdin is a pipe, skip PTY to avoid echo issues and allow clean piping.
 	if term.IsTerminal(int(os.Stdin.Fd())) {
+		// put local terminal into raw mode so keystrokes are sent directly
+		// to the remote shell without local echo or line buffering
+		oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+		if err != nil {
+			return fmt.Errorf("failed to set raw terminal: %w", err)
+		}
+		defer func() {
+			term.Restore(int(os.Stdin.Fd()), oldState)
+		}()
+
 		cols, rows := getTerminalSize()
 
 		modes := ssh.TerminalModes{

@@ -148,6 +148,14 @@ func main() {
 			if sshArgs.User != "" {
 				config.User = sshArgs.User
 			}
+		} else if cmd == "" {
+			// no user@host in args; treat remaining args as a command
+			// (skip leading "ssh" if present)
+			cmdArgs := remainingArgs
+			if len(cmdArgs) > 0 && cmdArgs[0] == "ssh" {
+				cmdArgs = cmdArgs[1:]
+			}
+			cmd = joinArgs(cmdArgs)
 		}
 		if sshArgs.Port != "" {
 			config.Port = sshArgs.Port
@@ -251,12 +259,10 @@ func main() {
 		if timedOut.Load() {
 			os.Exit(1)
 		}
-		if !isClosedConnError(err) {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			if code, ok := exitCodeFromError(err); ok {
-				os.Exit(code)
-			}
-			os.Exit(1)
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		if code, ok := exitCodeFromError(err); ok {
+			os.Exit(code)
 		}
+		os.Exit(1)
 	}
 }

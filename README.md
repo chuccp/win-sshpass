@@ -17,6 +17,7 @@ A Windows implementation of sshpass, providing similar functionality to the Linu
 - File upload/download via SFTP (with progress bar)
 - SCP-style and Rsync-style file transfer
 - Config file support for managing multiple servers
+- Interactive shell with raw terminal mode (proper echo, Ctrl+C, and full-screen app support)
 - Dynamic terminal resizing in interactive shell mode
 - Git Bash path conversion detection and auto-fix
 - IPv6 address support
@@ -159,6 +160,7 @@ port: 22
 Usage:
 ```bash
 win-sshpass -f server.config -c 'ls -la'
+win-sshpass -f server.config 'ls -la'
 ```
 
 ## Complete Examples
@@ -185,6 +187,9 @@ win-sshpass -e ssh user@server.com 'whoami'
 
 # 7. Operation timeout (abort after 30 seconds)
 win-sshpass -p 'mypass' -t 30 ssh user@server.com 'long-running-command'
+
+# 8. Config file with positional command
+win-sshpass -f server.config 'docker ps'
 ```
 
 ## Git Bash Notes

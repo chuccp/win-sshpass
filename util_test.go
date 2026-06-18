@@ -190,12 +190,3 @@ func TestSplitPaths(t *testing.T) {
 		})
 	}
 }
-
-func TestIsClosedConnError(t *testing.T) {
-	if !isClosedConnError(fmt.Errorf("use of closed network connection")) {
-		t.Error("should match closed connection error")
-	}
-	if isClosedConnError(fmt.Errorf("something else")) {
-		t.Error("should not match other errors")
-	}
-}

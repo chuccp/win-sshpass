@@ -186,11 +186,6 @@ func setupOperationTimeout(closeFn func(), timeout int) (reset func(), stop func
 
 // --- Error helpers ---
 
-// isClosedConnError checks if an error is caused by a closed network connection
-func isClosedConnError(err error) bool {
-	return strings.Contains(strings.ToLower(err.Error()), "closed network connection")
-}
-
 type exitStatusError interface {
 	error
 	ExitStatus() int
