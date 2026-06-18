@@ -218,3 +218,7 @@ go build -o win-sshpass.exe .
 - golang.org/x/crypto/ssh
 - github.com/pkg/sftp
 - github.com/schollz/progressbar/v3
+
+## Related Project
+
+[**go-web-frame**](https://github.com/chuccp/go-web-frame) — A Go web framework with dependency injection, generics-based data access, and production-ready utilities. Ships with HTTP routing, caching, logging, Redis, and more out of the box.

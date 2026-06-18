@@ -212,3 +212,7 @@ go build -o win-sshpass.exe .
 - golang.org/x/crypto/ssh
 - github.com/pkg/sftp
 - github.com/schollz/progressbar/v3
+
+## 関連プロジェクト
+
+[**go-web-frame**](https://github.com/chuccp/go-web-frame) — Go Web フレームワーク。依存性注入、ジェネリクスベースのデータアクセス、本番対応ユーティリティを統合。HTTP ルーティング、キャッシュ、ロギング、Redis などを内蔵。

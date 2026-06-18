@@ -212,3 +212,7 @@ go build -o win-sshpass.exe .
 - golang.org/x/crypto/ssh
 - github.com/pkg/sftp
 - github.com/schollz/progressbar/v3
+
+## 相关项目
+
+[**go-web-frame**](https://github.com/chuccp/go-web-frame) — 一个 Go Web 框架，集成依赖注入、泛型数据访问和开箱即用的生产工具，内置 HTTP 路由、缓存、日志、Redis 等。
