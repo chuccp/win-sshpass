@@ -64,6 +64,9 @@ win-sshpass -p <password> ssh [user@host] [command]
 win-sshpass -p <password> ssh -p <port> user@host 'command'
 win-sshpass -p <password> ssh -o StrictHostKeyChecking=no user@host
 
+# Interactive shell (raw terminal mode: proper echo, Ctrl+C, vim/top support)
+win-sshpass -p <password> ssh user@host
+
 # Private key authentication
 win-sshpass -i <private_key_path> ssh [user@host] [command]
 

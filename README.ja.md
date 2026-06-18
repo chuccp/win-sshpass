@@ -11,6 +11,7 @@ Windows 版 sshpass ツール。Linux の sshpass と同様の機能を提供し
 - SFTP によるファイルのアップロード/ダウンロード（プログレスバー付き）
 - SCP スタイルおよび Rsync スタイルのファイル転送
 - 複数サーバー管理用の設定ファイルサポート
+- インタラクティブシェルの raw ターミナルモード（正しいエコー、Ctrl+C、vim/top フルスクリーンアプリ対応）
 - インタラクティブシェルモードでの動的ターミナルサイズ変更
 - Git Bash パス変換の検出と自動修正
 - IPv6 アドレス対応
@@ -56,6 +57,9 @@ win-sshpass -h example.com -p 'password' -d -remote /tmp/file.txt -local ./file.
 win-sshpass -p <パスワード> ssh [user@host] [コマンド]
 win-sshpass -p <パスワード> ssh -p <ポート> user@host 'コマンド'
 win-sshpass -p <パスワード> ssh -o StrictHostKeyChecking=no user@host
+
+# インタラクティブシェル（raw ターミナルモード：正しいエコー、Ctrl+C、vim/top 対応）
+win-sshpass -p <パスワード> ssh user@host
 
 # 秘密鍵認証
 win-sshpass -i <秘密鍵パス> ssh [user@host] [コマンド]
@@ -153,6 +157,7 @@ port: 22
 使用方法：
 ```bash
 win-sshpass -f server.config -c 'ls -la'
+win-sshpass -f server.config 'ls -la'
 ```
 
 ## 完全な例
@@ -179,6 +184,9 @@ win-sshpass -e ssh user@server.com 'whoami'
 
 # 7. 操作タイムアウト（30 秒後に自動中断）
 win-sshpass -p 'mypass' -t 30 ssh user@server.com 'long-running-command'
+
+# 8. 設定ファイル + 位置引数コマンド
+win-sshpass -f server.config 'docker ps'
 ```
 
 ## Git Bash の注意事項

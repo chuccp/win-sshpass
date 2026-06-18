@@ -11,6 +11,7 @@ Windows 版 sshpass 工具，實現類似 Linux sshpass 的功能。
 - 透過 SFTP 上傳/下載檔案（附進度條）
 - SCP 風格和 Rsync 風格的檔案傳輸
 - 設定檔支援，方便管理多台伺服器
+- 互動式 Shell 使用 raw 終端模式（正確的回顯、Ctrl+C、vim/top 全螢幕程式支援）
 - 互動式 Shell 模式下動態調整終端大小
 - Git Bash 路徑轉換偵測與自動修復
 - 支援 IPv6 位址
@@ -56,6 +57,9 @@ win-sshpass -h example.com -p 'password' -d -remote /tmp/file.txt -local ./file.
 win-sshpass -p <密碼> ssh [user@host] [命令]
 win-sshpass -p <密碼> ssh -p <端口> user@host '命令'
 win-sshpass -p <密碼> ssh -o StrictHostKeyChecking=no user@host
+
+# 互動式 Shell（raw 終端模式：正確的回顯、Ctrl+C、vim/top 支援）
+win-sshpass -p <密碼> ssh user@host
 
 # 私鑰認證
 win-sshpass -i <私鑰路徑> ssh [user@host] [命令]
@@ -153,6 +157,7 @@ port: 22
 使用方式：
 ```bash
 win-sshpass -f server.config -c 'ls -la'
+win-sshpass -f server.config 'ls -la'
 ```
 
 ## 完整範例
@@ -179,6 +184,9 @@ win-sshpass -e ssh user@server.com 'whoami'
 
 # 7. 操作逾時（30 秒後自動中斷）
 win-sshpass -p 'mypass' -t 30 ssh user@server.com 'long-running-command'
+
+# 8. 設定檔 + 位置參數命令
+win-sshpass -f server.config 'docker ps'
 ```
 
 ## Git Bash 注意事項
