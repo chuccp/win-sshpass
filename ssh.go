@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/knownhosts"
 	"golang.org/x/term"
@@ -182,8 +183,7 @@ func runShell(client *ssh.Client) error {
 	}
 	defer session.Close()
 
-	// set standard I/O
-	session.Stdin = os.Stdin
+	// set standard I/O (stdin is set per-mode below)
 	session.Stdout = os.Stdout
 	session.Stderr = os.Stderr
 
@@ -216,6 +216,20 @@ func runShell(client *ssh.Client) error {
 		done := make(chan struct{})
 		defer close(done)
 		watchTerminalResize(session, done)
+
+		// create SFTP sub-channel for rz/sz file transfer support
+		sftpClient, sftpErr := sftp.NewClient(client)
+		if sftpErr != nil {
+			session.Stdin = os.Stdin
+			session.Stdout = os.Stdout
+		} else {
+			defer sftpClient.Close()
+			monitor := newRzszMonitor(os.Stdin, sftpClient, oldState)
+			session.Stdin = os.Stdin
+			session.Stdout = &outputWriter{monitor: monitor, out: os.Stdout}
+		}
+	} else {
+		session.Stdin = os.Stdin
 	}
 
 	// start remote shell

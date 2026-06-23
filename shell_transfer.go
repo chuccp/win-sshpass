@@ -1,0 +1,357 @@
+package main
+
+import (
+	"bytes"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"strings"
+	"sync"
+
+	"github.com/ncruces/zenity"
+	"github.com/pkg/sftp"
+	"golang.org/x/term"
+)
+
+// rzszMonitor monitors SSH session OUTPUT for rz/sz commands that the remote
+// shell can't find. When "command not found" is detected and the command was
+// rz or sz, the handler runs locally via SFTP.
+//
+// This approach requires NO input interception at all — input goes directly
+// to the remote shell. This means full echo, tab completion, command history,
+// copy-paste, and all other terminal features work normally. rz/sz is detected
+// purely from the remote's output, so it works regardless of how the command
+// was entered.
+type rzszMonitor struct {
+	sftpClient *sftp.Client
+	stdin      *os.File
+	oldState   *term.State
+
+	mu      sync.Mutex
+	recent  []byte // rolling buffer of recent output
+	Handled bool   // set when a command is being handled (prevents re-trigger)
+	// test hooks
+	onRZ func(localPath string)
+	onSZ func(remotePath, localPath string)
+}
+
+func newRzszMonitor(stdin *os.File, sftpClient *sftp.Client, oldState *term.State) *rzszMonitor {
+	return &rzszMonitor{
+		stdin:      stdin,
+		sftpClient: sftpClient,
+		oldState:   oldState,
+	}
+}
+
+// outputWriter wraps os.Stdout, passing all output through while scanning for
+// rz/sz "command not found" patterns.
+type outputWriter struct {
+	monitor *rzszMonitor
+	out     io.Writer
+}
+
+func (w *outputWriter) Write(p []byte) (int, error) {
+	// Always pass output through immediately
+	n, err := w.out.Write(p)
+
+	w.monitor.mu.Lock()
+
+	// Skip if already handling a command
+	if w.monitor.Handled {
+		w.monitor.mu.Unlock()
+		return n, err
+	}
+
+	// Update rolling buffer
+	w.monitor.recent = append(w.monitor.recent, p...)
+	if len(w.monitor.recent) > 4096 {
+		w.monitor.recent = w.monitor.recent[len(w.monitor.recent)-4096:]
+	}
+
+	// Check if the new output contains "not found"
+	if containsNotFound(p) {
+		// Look for rz/sz command in the rolling buffer, near the "not found" line
+		cmd, args := extractCommandFromNotFound(w.monitor.recent)
+		if cmd != "" {
+			w.monitor.Handled = true
+			w.monitor.recent = w.monitor.recent[:0]
+			w.monitor.mu.Unlock()
+
+			// Run handler (blocks this goroutine — fine, remote is idle)
+			if cmd == "rz" {
+				path := ""
+				if len(args) > 0 {
+					path = args[0]
+				}
+				if w.monitor.onRZ != nil {
+					w.monitor.onRZ(path)
+				} else {
+					w.monitor.handleRZ(path)
+				}
+			} else if cmd == "sz" {
+				remotePath := ""
+				localPath := ""
+				if len(args) > 0 {
+					remotePath = args[0]
+				}
+				if len(args) > 1 {
+					localPath = args[1]
+				}
+				if w.monitor.onSZ != nil {
+					w.monitor.onSZ(remotePath, localPath)
+				} else {
+					w.monitor.handleSZ(remotePath, localPath)
+				}
+			}
+
+			w.monitor.mu.Lock()
+			w.monitor.Handled = false
+			w.monitor.mu.Unlock()
+			return n, err
+		}
+	}
+
+	w.monitor.mu.Unlock()
+	return n, err
+}
+
+// containsNotFound checks if the output contains a "command not found" pattern.
+func containsNotFound(p []byte) bool {
+	return bytes.Contains(p, []byte("not found")) ||
+		bytes.Contains(p, []byte("未找到命令")) ||
+		bytes.Contains(p, []byte("No such file or directory"))
+}
+
+// extractCommandFromNotFound finds the "not found" error line in the buffer,
+// extracts the command name from it, then looks at the preceding line (the
+// echoed command) for arguments. This avoids false positives from old buffer
+// content.
+func extractCommandFromNotFound(buf []byte) (string, []string) {
+	s := string(buf)
+
+	// Find "not found" (case-insensitive)
+	lowerS := strings.ToLower(s)
+	nfIdx := strings.Index(lowerS, "not found")
+	if nfIdx < 0 {
+		return "", nil
+	}
+
+	// Find the start of the line containing "not found"
+	lineStart := strings.LastIndex(s[:nfIdx], "\n")
+	if lineStart < 0 {
+		lineStart = 0
+	} else {
+		lineStart++
+	}
+
+	// Extract the "not found" line
+	lineEnd := strings.Index(s[nfIdx:], "\n")
+	if lineEnd < 0 {
+		lineEnd = len(s) - nfIdx
+	}
+	nfLine := s[lineStart : nfIdx+lineEnd]
+
+	// Extract command name from the error line
+	// bash: "-bash: rz: command not found"
+	// zsh:  "zsh: command not found: rz"
+	// sh:   "sh: rz: not found"
+	cmd := ""
+	for _, candidate := range []string{"rz", "sz"} {
+		for _, f := range strings.Fields(nfLine) {
+			f = strings.TrimSuffix(f, ":")
+			if f == candidate {
+				cmd = candidate
+				break
+			}
+		}
+		if cmd != "" {
+			break
+		}
+	}
+	if cmd == "" {
+		return "", nil
+	}
+
+	// Find the echoed command line (the line before "not found")
+	prevLineEnd := lineStart - 1
+	if prevLineEnd <= 0 {
+		return cmd, nil
+	}
+	prevLineStart := strings.LastIndex(s[:prevLineEnd], "\n")
+	if prevLineStart < 0 {
+		prevLineStart = 0
+	} else {
+		prevLineStart++
+	}
+	echoedLine := strings.TrimRight(s[prevLineStart:prevLineEnd], "\r")
+
+	// Parse args from the echoed line
+	fields := strings.Fields(echoedLine)
+	for i, f := range fields {
+		if f == cmd {
+			return cmd, fields[i+1:]
+		}
+	}
+
+	return cmd, nil
+}
+
+// parseEchoedCommand searches the output buffer for an echoed rz/sz command
+// and extracts the command name and arguments. The echoed line looks like:
+//   [root@host ~]# sz CLAUDE.md
+//   [root@host ~]# rz
+func parseEchoedCommand(buf []byte, pendingCmd string) (string, []string) {
+	cmdWord := strings.Fields(pendingCmd)[0] // "rz" or "sz"
+	s := string(buf)
+
+	for i := 0; i <= len(s)-len(cmdWord); i++ {
+		if !strings.HasPrefix(s[i:], cmdWord) {
+			continue
+		}
+		// Check word boundary before
+		if i > 0 {
+			prev := s[i-1]
+			if prev != ' ' && prev != '\r' && prev != '\n' && prev != '#' {
+				continue
+			}
+		}
+		// Check word boundary after
+		afterIdx := i + len(cmdWord)
+		if afterIdx < len(s) {
+			after := s[afterIdx]
+			if after != ' ' && after != '\r' && after != '\n' {
+				continue
+			}
+		}
+		// Found the command word — extract the rest of the line
+		rest := s[i:]
+		lineEnd := strings.IndexAny(rest, "\r\n")
+		if lineEnd >= 0 {
+			rest = rest[:lineEnd]
+		}
+		fields := strings.Fields(rest)
+		if len(fields) == 0 || fields[0] != cmdWord {
+			continue
+		}
+		return fields[0], fields[1:]
+	}
+
+	return "", nil
+}
+
+// --- Dialog helpers ---
+
+func showFileOpenDialog() (string, error) {
+	path, err := zenity.SelectFile(zenity.Title("Select file to upload"))
+	if errors.Is(err, zenity.ErrCanceled) {
+		return "", nil
+	}
+	return path, err
+}
+
+func showFileSaveDialog(defaultName string) (string, error) {
+	path, err := zenity.SelectFileSave(
+		zenity.Title("Save downloaded file"),
+		zenity.Filename(defaultName),
+		zenity.ConfirmOverwrite(),
+	)
+	if errors.Is(err, zenity.ErrCanceled) {
+		return "", nil
+	}
+	return path, err
+}
+
+// --- Handlers ---
+
+func (m *rzszMonitor) handleRZ(localPath string) {
+	m.restoreTerminal()
+	defer m.enterRawMode()
+
+	if localPath == "" {
+		path, err := showFileOpenDialog()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "File dialog error: %v\n", err)
+			fmt.Print("Local file path to upload: ")
+			localPath = readLineFromStdin()
+		} else {
+			localPath = path
+		}
+	}
+
+	if localPath == "" {
+		fmt.Println("Upload cancelled")
+		return
+	}
+
+	remoteCwd, err := m.sftpClient.Getwd()
+	if err != nil {
+		remoteCwd = "."
+	}
+
+	fmt.Printf("Uploading %s -> %s...\n", localPath, remoteCwd)
+	if err := uploadFile(m.sftpClient, localPath, remoteCwd, nil); err != nil {
+		fmt.Fprintf(os.Stderr, "Upload failed: %v\n", err)
+	} else {
+		fmt.Println("Upload complete")
+	}
+}
+
+func (m *rzszMonitor) handleSZ(remotePath, localPath string) {
+	if strings.HasPrefix(remotePath, "//") {
+		remotePath = remotePath[1:]
+	}
+
+	m.restoreTerminal()
+	defer m.enterRawMode()
+
+	if localPath == "" {
+		defaultName := remoteBaseName(remotePath)
+		path, err := showFileSaveDialog(defaultName)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "File dialog error: %v\n", err)
+			localPath = defaultName
+		} else if path != "" {
+			localPath = path
+		} else {
+			fmt.Println("Download cancelled")
+			return
+		}
+	}
+
+	fmt.Printf("Downloading %s -> %s...\n", remotePath, localPath)
+	if err := downloadFile(m.sftpClient, remotePath, localPath, nil); err != nil {
+		fmt.Fprintf(os.Stderr, "Download failed: %v\n", err)
+	} else {
+		fmt.Println("Download complete")
+	}
+}
+
+func (m *rzszMonitor) restoreTerminal() {
+	if m.oldState != nil {
+		term.Restore(int(m.stdin.Fd()), m.oldState)
+	}
+}
+
+func (m *rzszMonitor) enterRawMode() {
+	state, err := term.MakeRaw(int(m.stdin.Fd()))
+	if err == nil {
+		m.oldState = state
+	}
+}
+
+func readLineFromStdin() string {
+	var buf []byte
+	for {
+		var b [1]byte
+		n, err := os.Stdin.Read(b[:])
+		if err != nil || n == 0 {
+			break
+		}
+		if b[0] == '\r' || b[0] == '\n' {
+			break
+		}
+		buf = append(buf, b[0])
+	}
+	return strings.TrimSpace(string(buf))
+}
