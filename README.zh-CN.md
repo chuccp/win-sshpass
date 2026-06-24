@@ -34,6 +34,13 @@ Windows 版 sshpass 工具，实现类似 Linux sshpass 的功能。
 
 > **零依赖**：`win-sshpass.exe` 是一个独立的可执行文件，无需安装 OpenSSH 或任何其他软件。下载后放入 PATH 目录即可直接使用。
 
+### 通过 Scoop 安装
+
+```bash
+scoop bucket add chuccp https://github.com/chuccp/scoop-bucket
+scoop install win-sshpass
+```
+
 ## 快速开始
 
 ```bash

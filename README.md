@@ -40,6 +40,13 @@ Download the latest release from [GitHub Releases](https://github.com/chuccp/win
 
 > **Zero dependencies**: `win-sshpass.exe` is a standalone binary. No need to install OpenSSH or any other software. Download it, put it in your PATH, and you're ready to go.
 
+### Install via Scoop
+
+```bash
+scoop bucket add chuccp https://github.com/chuccp/scoop-bucket
+scoop install win-sshpass
+```
+
 ## Quick Start
 
 ```bash
