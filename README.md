@@ -54,6 +54,42 @@ win-sshpass -h example.com -p 'password' -local file.txt -remote /tmp/file.txt
 win-sshpass -h example.com -p 'password' -d -remote /tmp/file.txt -local ./file.txt
 ```
 
+## Interactive Shell
+
+When no command is specified, `win-sshpass` opens an interactive shell with **raw terminal mode**:
+
+```bash
+win-sshpass -p 'password' ssh user@host
+```
+
+**Raw terminal mode** features:
+
+- **Proper echo** — typed characters are displayed correctly (no double echo)
+- **Ctrl+C / Ctrl+Z** — signals are forwarded to the remote process
+- **Full-screen apps** — vim, top, htop, nano, etc. work correctly
+- **Dynamic terminal resizing** — the remote terminal automatically matches your local window size
+- **Tab completion** — remote shell tab completion works as expected
+
+### File Transfer in Interactive Shell
+
+While connected, use `rz` / `sz` commands to transfer files (no need to install anything on the remote server):
+
+```bash
+# Upload file to remote current directory (opens file picker)
+rz
+
+# Upload specific local file
+rz /local/path/to/file
+
+# Download remote file (opens save dialog)
+sz /remote/path/to/file
+
+# Download remote file to specific local path
+sz /remote/path/to/file /local/save/path
+```
+
+> **How it works**: When the remote shell reports `rz`/`sz: command not found`, the tool intercepts it and performs the transfer over SFTP instead. Files and directories are both supported, with progress bars.
+
 ## Command Format
 
 ### SSH Login
@@ -144,6 +180,7 @@ win-sshpass -p <password> rsync -avz user@host:<remote_path> <local_path>
 | `-k` | Enable strict host key verification | `-k` |
 | `-t` | Total operation timeout in seconds (0 = no limit) | `-t 30` |
 | `-ct` | TCP connection timeout in seconds (default: 10) | `-ct 5` |
+| `-retry` | Total connection attempts (default: 3) | `-retry 5` |
 | `-v` | Show version | `-v` |
 | `-help` | Show help message | `-help` |
 

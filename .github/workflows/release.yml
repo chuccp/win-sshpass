@@ -83,3 +83,107 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ============================================================
+  # Publish Scoop manifest to bucket repo
+  # Required secret: SCOOP_TOKEN (GitHub PAT with repo scope)
+  # Prerequisite: Create a GitHub repo named "scoop-bucket"
+  # ============================================================
+  scoop:
+    needs: release
+    runs-on: ubuntu-latest
+    if: ${{ secrets.SCOOP_TOKEN }}
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Generate and push Scoop manifest
+        env:
+          SCOOP_TOKEN: ${{ secrets.SCOOP_TOKEN }}
+        shell: bash
+        run: |
+          TAG="${{ github.ref_name }}"
+          VERSION="${TAG#v}"
+          BASE_URL="https://github.com/chuccp/win-sshpass/releases/download/${TAG}"
+
+          # Compute SHA-256 hashes
+          HASH_AMD64=$(sha256sum artifacts/win-sshpass-${TAG}-amd64.zip | awk '{print $1}')
+          HASH_ARM64=$(sha256sum artifacts/win-sshpass-${TAG}-arm64.zip | awk '{print $1}')
+
+          # Generate Scoop manifest JSON
+          cat > win-sshpass.json <<EOF
+          {
+              "version": "${VERSION}",
+              "description": "Windows SSHpass - SSH with password authentication from the command line.",
+              "homepage": "https://github.com/chuccp/win-sshpass",
+              "license": "Apache-2.0",
+              "architecture": {
+                  "64bit": {
+                      "url": "${BASE_URL}/win-sshpass-${TAG}-amd64.zip",
+                      "hash": "${HASH_AMD64}"
+                  },
+                  "arm64": {
+                      "url": "${BASE_URL}/win-sshpass-${TAG}-arm64.zip",
+                      "hash": "${HASH_ARM64}"
+                  }
+              },
+              "extract_dir": ".",
+              "bin": "win-sshpass.exe",
+              "checkver": {
+                  "github": "https://github.com/chuccp/win-sshpass"
+              },
+              "autoupdate": {
+                  "architecture": {
+                      "64bit": {
+                          "url": "https://github.com/chuccp/win-sshpass/releases/download/v\$version/win-sshpass-v\$version-amd64.zip"
+                      },
+                      "arm64": {
+                          "url": "https://github.com/chuccp/win-sshpass/releases/download/v\$version/win-sshpass-v\$version-arm64.zip"
+                      }
+                  }
+              }
+          }
+          EOF
+
+          # Clone scoop-bucket repo and push manifest
+          git clone https://x-access-token:${SCOOP_TOKEN}@github.com/chuccp/scoop-bucket.git
+          cd scoop-bucket
+          mkdir -p bucket
+          cp ../win-sshpass.json bucket/
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add bucket/win-sshpass.json
+          git diff --cached --quiet || git commit -m "Update win-sshpass to ${VERSION}"
+          git push
+
+  # ============================================================
+  # Submit winget package update PR to microsoft/winget-pkgs
+  # Required secret: WINGET_TOKEN (GitHub PAT with public_repo scope)
+  # Prerequisite: Package must already exist in winget-pkgs.
+  #   First-time submission: run locally with wingetcreate new
+  # ============================================================
+  winget:
+    needs: release
+    runs-on: windows-latest
+    if: ${{ secrets.WINGET_TOKEN }}
+    steps:
+      - name: Install wingetcreate
+        run: dotnet tool install --global wingetcreate
+
+      - name: Submit winget update
+        env:
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+        shell: bash
+        run: |
+          TAG="${{ github.ref_name }}"
+          VERSION="${TAG#v}"
+          BASE_URL="https://github.com/chuccp/win-sshpass/releases/download/${TAG}"
+
+          wingetcreate update chuccp.win-sshpass \
+            --version "${VERSION}" \
+            --urls "${BASE_URL}/win-sshpass-${TAG}-amd64.msi,${BASE_URL}/win-sshpass-${TAG}-arm64.msi" \
+            --submit \
+            --token "${WINGET_TOKEN}"

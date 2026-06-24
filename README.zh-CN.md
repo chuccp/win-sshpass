@@ -48,6 +48,42 @@ win-sshpass -h example.com -p 'password' -local file.txt -remote /tmp/file.txt
 win-sshpass -h example.com -p 'password' -d -remote /tmp/file.txt -local ./file.txt
 ```
 
+## 交互式 Shell
+
+不指定命令时，`win-sshpass` 会打开一个 **raw 终端模式** 的交互式 Shell：
+
+```bash
+win-sshpass -p 'password' ssh user@host
+```
+
+**Raw 终端模式** 特性：
+
+- **正确的回显** — 输入的字符正确显示（不会出现双重回显）
+- **Ctrl+C / Ctrl+Z** — 信号正确转发到远程进程
+- **全屏程序** — vim、top、htop、nano 等全屏应用正常运行
+- **动态终端大小调整** — 远程终端自动匹配本地窗口大小
+- **Tab 补全** — 远程 Shell 的 Tab 补全功能正常工作
+
+### 交互式 Shell 中的文件传输
+
+连接状态下，使用 `rz` / `sz` 命令传输文件（远程服务器无需安装任何软件）：
+
+```bash
+# 上传文件到远程当前目录（弹出文件选择器）
+rz
+
+# 上传指定本地文件
+rz /本地/文件/路径
+
+# 下载远程文件（弹出保存对话框）
+sz /远程/文件/路径
+
+# 下载远程文件到指定本地路径
+sz /远程/文件/路径 /本地/保存/路径
+```
+
+> **原理**：当远程 Shell 报 `rz`/`sz: command not found` 时，工具自动拦截并通过 SFTP 完成传输。支持文件和目录，带进度条。
+
 ## 命令格式
 
 ### SSH 登录
@@ -138,6 +174,7 @@ win-sshpass -p <密码> rsync -avz user@host:<远程路径> <本地路径>
 | `-k` | 启用严格主机密钥验证 | `-k` |
 | `-t` | 总操作超时时间（秒），0 表示不限 | `-t 30` |
 | `-ct` | TCP 连接超时时间（秒），默认 10 | `-ct 5` |
+| `-retry` | 总连接尝试次数（默认：3） | `-retry 5` |
 | `-v` | 显示版本 | `-v` |
 | `-help` | 显示帮助信息 | `-help` |
 

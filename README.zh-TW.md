@@ -48,6 +48,42 @@ win-sshpass -h example.com -p 'password' -local file.txt -remote /tmp/file.txt
 win-sshpass -h example.com -p 'password' -d -remote /tmp/file.txt -local ./file.txt
 ```
 
+## 互動式 Shell
+
+不指定命令時，`win-sshpass` 會開啟一個 **raw 終端模式** 的互動式 Shell：
+
+```bash
+win-sshpass -p 'password' ssh user@host
+```
+
+**Raw 終端模式** 特性：
+
+- **正確的回顯** — 輸入的字元正確顯示（不會出現雙重回顯）
+- **Ctrl+C / Ctrl+Z** — 訊號正確轉發到遠端程序
+- **全螢幕程式** — vim、top、htop、nano 等全螢幕應用正常運作
+- **動態終端大小調整** — 遠端終端自動匹配本地視窗大小
+- **Tab 補全** — 遠端 Shell 的 Tab 補全功能正常運作
+
+### 互動式 Shell 中的檔案傳輸
+
+連線狀態下，使用 `rz` / `sz` 命令傳輸檔案（遠端伺服器無需安裝任何軟體）：
+
+```bash
+# 上傳檔案到遠端目前目錄（彈出檔案選擇器）
+rz
+
+# 上傳指定本地檔案
+rz /本機/檔案/路徑
+
+# 下載遠端檔案（彈出儲存對話框）
+sz /遠端/檔案/路徑
+
+# 下載遠端檔案到指定本機路徑
+sz /遠端/檔案/路徑 /本機/儲存/路徑
+```
+
+> **原理**：當遠端 Shell 回報 `rz`/`sz: command not found` 時，工具自動攔截並透過 SFTP 完成傳輸。支援檔案和目錄，附進度條。
+
 ## 命令格式
 
 ### SSH 登入
@@ -138,6 +174,7 @@ win-sshpass -p <密碼> rsync -avz user@host:<遠端路徑> <本地路徑>
 | `-k` | 啟用嚴格主機金鑰驗證 | `-k` |
 | `-t` | 總操作逾時時間（秒），0 表示不限 | `-t 30` |
 | `-ct` | TCP 連線逾時時間（秒），預設 10 | `-ct 5` |
+| `-retry` | 總連線嘗試次數（預設：3） | `-retry 5` |
 | `-v` | 顯示版本 | `-v` |
 | `-help` | 顯示帮助資訊 | `-help` |
 
