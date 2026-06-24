@@ -92,7 +92,6 @@ jobs:
   scoop:
     needs: release
     runs-on: ubuntu-latest
-    if: ${{ secrets.SCOOP_TOKEN }}
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -105,6 +104,10 @@ jobs:
           SCOOP_TOKEN: ${{ secrets.SCOOP_TOKEN }}
         shell: bash
         run: |
+          if [ -z "${SCOOP_TOKEN}" ]; then
+            echo "SCOOP_TOKEN not set, skipping Scoop publish."
+            exit 0
+          fi
           TAG="${{ github.ref_name }}"
           VERSION="${TAG#v}"
           BASE_URL="https://github.com/chuccp/win-sshpass/releases/download/${TAG}"
@@ -169,7 +172,6 @@ jobs:
   # winget:
   #   needs: release
   #   runs-on: windows-latest
-  #   if: ${{ secrets.WINGET_TOKEN }}
   #   steps:
   #     - name: Install wingetcreate
   #       run: dotnet tool install --global wingetcreate
@@ -179,6 +181,10 @@ jobs:
   #         WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
   #       shell: bash
   #       run: |
+  #         if [ -z "${WINGET_TOKEN}" ]; then
+  #           echo "WINGET_TOKEN not set, skipping WinGet publish."
+  #           exit 0
+  #         fi
   #         TAG="${{ github.ref_name }}"
   #         VERSION="${TAG#v}"
   #         BASE_URL="https://github.com/chuccp/win-sshpass/releases/download/${TAG}"
