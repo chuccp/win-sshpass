@@ -10,6 +10,8 @@
 
 A Windows implementation of sshpass, providing similar functionality to the Linux sshpass tool.
 
+> 💡 **Like this project?** Give it a ⭐ Star — it helps others discover the tool!
+
 ## Features
 
 - SSH login with password or private key authentication
