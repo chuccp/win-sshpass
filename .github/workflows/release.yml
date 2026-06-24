@@ -165,25 +165,26 @@ jobs:
   # Prerequisite: Package must already exist in winget-pkgs.
   #   First-time submission: run locally with wingetcreate new
   # ============================================================
-  winget:
-    needs: release
-    runs-on: windows-latest
-    if: ${{ secrets.WINGET_TOKEN }}
-    steps:
-      - name: Install wingetcreate
-        run: dotnet tool install --global wingetcreate
-
-      - name: Submit winget update
-        env:
-          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
-        shell: bash
-        run: |
-          TAG="${{ github.ref_name }}"
-          VERSION="${TAG#v}"
-          BASE_URL="https://github.com/chuccp/win-sshpass/releases/download/${TAG}"
-
-          wingetcreate update chuccp.win-sshpass \
-            --version "${VERSION}" \
-            --urls "${BASE_URL}/win-sshpass-${TAG}-amd64.msi,${BASE_URL}/win-sshpass-${TAG}-arm64.msi" \
-            --submit \
-            --token "${WINGET_TOKEN}"
+  # TODO: Uncomment after winget application is approved
+  # winget:
+  #   needs: release
+  #   runs-on: windows-latest
+  #   if: ${{ secrets.WINGET_TOKEN }}
+  #   steps:
+  #     - name: Install wingetcreate
+  #       run: dotnet tool install --global wingetcreate
+  #
+  #     - name: Submit winget update
+  #       env:
+  #         WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+  #       shell: bash
+  #       run: |
+  #         TAG="${{ github.ref_name }}"
+  #         VERSION="${TAG#v}"
+  #         BASE_URL="https://github.com/chuccp/win-sshpass/releases/download/${TAG}"
+  #
+  #         wingetcreate update chuccp.win-sshpass \
+  #           --version "${VERSION}" \
+  #           --urls "${BASE_URL}/win-sshpass-${TAG}-amd64.msi,${BASE_URL}/win-sshpass-${TAG}-arm64.msi" \
+  #           --submit \
+  #           --token "${WINGET_TOKEN}"
