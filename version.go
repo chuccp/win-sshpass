@@ -1,5 +1,5 @@
-package main
+package sshpass
 
-var (
-	version = "v0.3.2"
-)
+// Version is the current sshpass version. It is overwritten at release time
+// from the git tag by the CI workflow.
+var Version = "v0.3.2"

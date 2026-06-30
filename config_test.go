@@ -1,4 +1,4 @@
-package main
+package sshpass
 
 import (
 	"os"
@@ -19,9 +19,9 @@ func writeTempFile(t *testing.T, content string) string {
 func TestParseConfigFileAllowsExternalAuth(t *testing.T) {
 	path := writeTempFile(t, "host: example.com\nusername: deploy\nport: 2222\n")
 
-	cfg, err := parseConfigFile(path)
+	cfg, err := LoadConfig(path)
 	if err != nil {
-		t.Fatalf("parseConfigFile returned error: %v", err)
+		t.Fatalf("LoadConfig returned error: %v", err)
 	}
 	if cfg.Host != "example.com" || cfg.User != "deploy" || cfg.Port != "2222" {
 		t.Fatalf("unexpected config: %+v", cfg)
@@ -34,9 +34,9 @@ func TestParseConfigFileAllowsExternalAuth(t *testing.T) {
 func TestLoadConfigOrPasswordFilePasswordOverridesConfig(t *testing.T) {
 	path := writeTempFile(t, "host: example.com\nuser: root\npassword: from-file\nport: 2222\n")
 
-	cfg, pass, err := loadConfigOrPasswordFile(path, "from-cli", true)
+	cfg, pass, err := LoadConfigOrPasswordFile(path, "from-cli", true)
 	if err != nil {
-		t.Fatalf("loadConfigOrPasswordFile returned error: %v", err)
+		t.Fatalf("LoadConfigOrPasswordFile returned error: %v", err)
 	}
 	if cfg == nil {
 		t.Fatal("expected config, got nil")
@@ -52,9 +52,9 @@ func TestLoadConfigOrPasswordFilePasswordOverridesConfig(t *testing.T) {
 func TestLoadConfigOrPasswordFileFallsBackToPasswordFile(t *testing.T) {
 	path := writeTempFile(t, "secret\n")
 
-	cfg, pass, err := loadConfigOrPasswordFile(path, "", false)
+	cfg, pass, err := LoadConfigOrPasswordFile(path, "", false)
 	if err != nil {
-		t.Fatalf("loadConfigOrPasswordFile returned error: %v", err)
+		t.Fatalf("LoadConfigOrPasswordFile returned error: %v", err)
 	}
 	if cfg != nil {
 		t.Fatalf("expected no config for password file, got %+v", cfg)
@@ -82,9 +82,9 @@ func TestParseConfigFileStrictHostKey(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			path := writeTempFile(t, tt.input)
-			cfg, err := parseConfigFile(path)
+			cfg, err := LoadConfig(path)
 			if err != nil {
-				t.Fatalf("parseConfigFile returned error: %v", err)
+				t.Fatalf("LoadConfig returned error: %v", err)
 			}
 			if cfg.StrictHostKey != tt.want {
 				t.Errorf("StrictHostKey = %v, want %v", cfg.StrictHostKey, tt.want)
@@ -95,9 +95,9 @@ func TestParseConfigFileStrictHostKey(t *testing.T) {
 
 func TestParseConfigFileTimeouts(t *testing.T) {
 	path := writeTempFile(t, "host: h\ntimeout: 60\nconnect_timeout: 5\n")
-	cfg, err := parseConfigFile(path)
+	cfg, err := LoadConfig(path)
 	if err != nil {
-		t.Fatalf("parseConfigFile returned error: %v", err)
+		t.Fatalf("LoadConfig returned error: %v", err)
 	}
 	if cfg.Timeout != 60 {
 		t.Errorf("Timeout = %d, want 60", cfg.Timeout)
@@ -109,28 +109,28 @@ func TestParseConfigFileTimeouts(t *testing.T) {
 
 func TestParseConfigFileMissingHost(t *testing.T) {
 	path := writeTempFile(t, "user: root\n")
-	_, err := parseConfigFile(path)
+	_, err := LoadConfig(path)
 	if err == nil {
 		t.Fatal("expected error for missing host")
 	}
-	if err == errNotConfigFile {
-		t.Fatalf("expected 'missing host' error, got errNotConfigFile")
+	if err == ErrNotConfigFile {
+		t.Fatalf("expected 'missing host' error, got ErrNotConfigFile")
 	}
 }
 
 func TestParseConfigFileNoRecognizedKeys(t *testing.T) {
 	path := writeTempFile(t, "just a password string\n")
-	_, err := parseConfigFile(path)
-	if err != errNotConfigFile {
-		t.Fatalf("expected errNotConfigFile, got %v", err)
+	_, err := LoadConfig(path)
+	if err != ErrNotConfigFile {
+		t.Fatalf("expected ErrNotConfigFile, got %v", err)
 	}
 }
 
 func TestParseConfigFileEmptyFile(t *testing.T) {
 	path := writeTempFile(t, "")
-	_, err := parseConfigFile(path)
-	if err != errNotConfigFile {
-		t.Fatalf("expected errNotConfigFile, got %v", err)
+	_, err := LoadConfig(path)
+	if err != ErrNotConfigFile {
+		t.Fatalf("expected ErrNotConfigFile, got %v", err)
 	}
 }
 
@@ -138,21 +138,21 @@ func TestLoadConfigOrPasswordFileConfigMissingHost(t *testing.T) {
 	// A file with recognized keys but missing host should be an error,
 	// not silently treated as a password file.
 	path := writeTempFile(t, "user: root\n")
-	_, _, err := loadConfigOrPasswordFile(path, "", false)
+	_, _, err := LoadConfigOrPasswordFile(path, "", false)
 	if err == nil {
 		t.Fatal("expected error for config file missing host")
 	}
-	if err == errNotConfigFile {
-		t.Fatalf("expected 'missing host' error, got errNotConfigFile")
+	if err == ErrNotConfigFile {
+		t.Fatalf("expected 'missing host' error, got ErrNotConfigFile")
 	}
 }
 
 func TestNormalize(t *testing.T) {
 	tests := []struct {
-		name            string
-		timeout         int
-		connectTimeout  int
-		wantConnect     int
+		name           string
+		timeout        int
+		connectTimeout int
+		wantConnect    int
 	}{
 		{"no timeout", 0, 10, 10},
 		{"connect < timeout", 30, 5, 5},
@@ -164,7 +164,7 @@ func TestNormalize(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := &Config{Timeout: tt.timeout, ConnectTimeout: tt.connectTimeout}
-			cfg.normalize()
+			cfg.Normalize()
 			if cfg.ConnectTimeout != tt.wantConnect {
 				t.Errorf("ConnectTimeout = %d, want %d", cfg.ConnectTimeout, tt.wantConnect)
 			}
@@ -174,10 +174,10 @@ func TestNormalize(t *testing.T) {
 
 func TestMergeConfig(t *testing.T) {
 	t.Run("src fields override dst", func(t *testing.T) {
-		dst := newDefaultConfig()
+		dst := NewConfig()
 		dst.Host = "original"
 		src := &Config{Host: "override", Password: "pass123"}
-		mergeConfig(dst, src, nil)
+		dst.MergeConfig(src, nil)
 		if dst.Host != "override" {
 			t.Errorf("Host = %q, want %q", dst.Host, "override")
 		}
@@ -187,10 +187,10 @@ func TestMergeConfig(t *testing.T) {
 	})
 
 	t.Run("override takes priority over src", func(t *testing.T) {
-		dst := newDefaultConfig()
+		dst := NewConfig()
 		src := &Config{Host: "from-src", Password: "src-pass"}
 		override := &Config{Host: "from-override", Password: "override-pass"}
-		mergeConfig(dst, src, override)
+		dst.MergeConfig(src, override)
 		if dst.Host != "from-override" {
 			t.Errorf("Host = %q, want %q", dst.Host, "from-override")
 		}
@@ -200,28 +200,28 @@ func TestMergeConfig(t *testing.T) {
 	})
 
 	t.Run("StrictHostKey merges from src", func(t *testing.T) {
-		dst := newDefaultConfig()
+		dst := NewConfig()
 		src := &Config{StrictHostKey: true}
-		mergeConfig(dst, src, nil)
+		dst.MergeConfig(src, nil)
 		if !dst.StrictHostKey {
 			t.Error("StrictHostKey should be true from src")
 		}
 	})
 
 	t.Run("StrictHostKey merges from override", func(t *testing.T) {
-		dst := newDefaultConfig()
+		dst := NewConfig()
 		override := &Config{StrictHostKey: true}
-		mergeConfig(dst, nil, override)
+		dst.MergeConfig(nil, override)
 		if !dst.StrictHostKey {
 			t.Error("StrictHostKey should be true from override")
 		}
 	})
 
 	t.Run("empty override preserves src values", func(t *testing.T) {
-		dst := newDefaultConfig()
+		dst := NewConfig()
 		src := &Config{Host: "host1", Password: "pass1", Port: "2222"}
 		override := &Config{}
-		mergeConfig(dst, src, override)
+		dst.MergeConfig(src, override)
 		if dst.Host != "host1" {
 			t.Errorf("Host = %q, want %q", dst.Host, "host1")
 		}
@@ -234,10 +234,10 @@ func TestMergeConfig(t *testing.T) {
 	})
 
 	t.Run("Timeout and ConnectTimeout 0 values are merged", func(t *testing.T) {
-		dst := newDefaultConfig() // Timeout=0, ConnectTimeout=10
+		dst := NewConfig() // Timeout=0, ConnectTimeout=10
 		src := &Config{Host: "h", Timeout: 60, ConnectTimeout: 5}
 		override := &Config{Timeout: 0, ConnectTimeout: 0}
-		mergeConfig(dst, src, override)
+		dst.MergeConfig(src, override)
 		if dst.Timeout != 0 {
 			t.Errorf("Timeout = %d, want 0 (override should apply)", dst.Timeout)
 		}
@@ -247,10 +247,10 @@ func TestMergeConfig(t *testing.T) {
 	})
 
 	t.Run("Timeout and ConnectTimeout -1 sentinel is skipped", func(t *testing.T) {
-		dst := newDefaultConfig() // Timeout=0, ConnectTimeout=10
+		dst := NewConfig() // Timeout=0, ConnectTimeout=10
 		src := &Config{Host: "h", Timeout: 60, ConnectTimeout: 5}
 		override := &Config{Timeout: -1, ConnectTimeout: -1}
-		mergeConfig(dst, src, override)
+		dst.MergeConfig(src, override)
 		if dst.Timeout != 60 {
 			t.Errorf("Timeout = %d, want 60 (sentinel -1 should be skipped)", dst.Timeout)
 		}
@@ -263,37 +263,37 @@ func TestMergeConfig(t *testing.T) {
 func TestValidate(t *testing.T) {
 	t.Run("missing host", func(t *testing.T) {
 		cfg := &Config{Port: "22", Password: "pass"}
-		if err := cfg.validate(); err == nil {
+		if err := cfg.Validate(); err == nil {
 			t.Fatal("expected error for missing host")
 		}
 	})
 	t.Run("invalid port", func(t *testing.T) {
 		cfg := &Config{Host: "host", Port: "abc", Password: "pass"}
-		if err := cfg.validate(); err == nil {
+		if err := cfg.Validate(); err == nil {
 			t.Fatal("expected error for invalid port")
 		}
 	})
 	t.Run("port out of range", func(t *testing.T) {
 		cfg := &Config{Host: "host", Port: "99999", Password: "pass"}
-		if err := cfg.validate(); err == nil {
+		if err := cfg.Validate(); err == nil {
 			t.Fatal("expected error for port out of range")
 		}
 	})
 	t.Run("missing auth", func(t *testing.T) {
 		cfg := &Config{Host: "host", Port: "22"}
-		if err := cfg.validate(); err == nil {
+		if err := cfg.Validate(); err == nil {
 			t.Fatal("expected error for missing auth")
 		}
 	})
 	t.Run("valid with password", func(t *testing.T) {
 		cfg := &Config{Host: "host", Port: "22", Password: "pass"}
-		if err := cfg.validate(); err != nil {
+		if err := cfg.Validate(); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
 	t.Run("valid with key", func(t *testing.T) {
 		cfg := &Config{Host: "host", Port: "22", KeyPath: "/key"}
-		if err := cfg.validate(); err != nil {
+		if err := cfg.Validate(); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})

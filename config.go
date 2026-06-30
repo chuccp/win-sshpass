@@ -1,4 +1,4 @@
-package main
+package sshpass
 
 import (
 	"bufio"
@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// Config represents SSH connection configuration
+// Config represents SSH connection configuration.
 type Config struct {
 	Host           string
 	User           string
@@ -21,8 +21,8 @@ type Config struct {
 	Retries        int    // total connection attempts (default 1 = single attempt, no retry)
 }
 
-// newDefaultConfig creates a Config with default values
-func newDefaultConfig() *Config {
+// NewConfig creates a Config with default values.
+func NewConfig() *Config {
 	return &Config{
 		User:           "root",
 		Port:           "22",
@@ -31,31 +31,31 @@ func newDefaultConfig() *Config {
 	}
 }
 
-// applyUserDefault sets the user to "root" if empty
-func applyUserDefault(cfg *Config) {
-	if cfg.User == "" {
-		cfg.User = "root"
+// ApplyUserDefault sets the user to "root" if empty.
+func (c *Config) ApplyUserDefault() {
+	if c.User == "" {
+		c.User = "root"
 	}
 }
 
-// normalize ensures config values are consistent
-func (c *Config) normalize() {
+// Normalize ensures config values are consistent.
+func (c *Config) Normalize() {
 	if c.Timeout > 0 && c.ConnectTimeout >= c.Timeout {
 		c.ConnectTimeout = max(c.Timeout-1, 1)
 	}
 }
 
-// setUserHostFromArg parses user@host:path format and sets config fields
-func (c *Config) setUserHostFromArg(arg string) {
-	user, host, _ := parseUserHostPath(arg)
+// SetUserHostFromArg parses user@host:path format and sets config fields.
+func (c *Config) SetUserHostFromArg(arg string) {
+	user, host, _ := ParseUserHostPath(arg)
 	if user != "" && host != "" {
 		c.User = user
 		c.Host = host
 	}
 }
 
-// validate checks that the config has required fields
-func (c *Config) validate() error {
+// Validate checks that the config has required fields.
+func (c *Config) Validate() error {
 	if c.Host == "" {
 		return fmt.Errorf("host address not specified")
 	}
@@ -68,8 +68,8 @@ func (c *Config) validate() error {
 	return nil
 }
 
-// mergeFrom merges non-empty/non-sentinel fields from src into dst.
-func (dst *Config) mergeFrom(src *Config) {
+// MergeFrom merges non-empty/non-sentinel fields from src into dst.
+func (dst *Config) MergeFrom(src *Config) {
 	if src == nil {
 		return
 	}
@@ -102,19 +102,20 @@ func (dst *Config) mergeFrom(src *Config) {
 	}
 }
 
-// mergeConfig merges non-empty fields from src into dst,
-// then applies command-line overrides.
-func mergeConfig(dst, src, override *Config) {
-	dst.mergeFrom(src)
-	dst.mergeFrom(override)
+// MergeConfig merges non-empty fields from src into dst, then applies overrides.
+func (dst *Config) MergeConfig(src, override *Config) {
+	dst.MergeFrom(src)
+	dst.MergeFrom(override)
 }
 
-// loadConfigOrPasswordFile treats filename as a config file first, falling back
-// to a single-line password file when it is not a config.
-func loadConfigOrPasswordFile(filename, password string, strictHostKey bool) (*Config, string, error) {
+// LoadConfigOrPasswordFile treats filename as a config file first, falling back
+// to a single-line password file when it is not a config. password is the
+// already-known password (e.g. from -p); it takes priority over the file.
+// strictHostKey, when true, forces StrictHostKey on the resulting config.
+func LoadConfigOrPasswordFile(filename, password string, strictHostKey bool) (*Config, string, error) {
 	pass := password
 
-	config, err := parseConfigFile(filename)
+	config, err := LoadConfig(filename)
 	if err == nil {
 		// CLI -k flag overrides config file, but config file value is preserved if -k not set
 		if strictHostKey {
@@ -130,7 +131,7 @@ func loadConfigOrPasswordFile(filename, password string, strictHostKey bool) (*C
 
 	// If the file is a config file but has a real error (e.g. missing host),
 	// report it instead of silently falling back to password file.
-	if err != errNotConfigFile {
+	if err != ErrNotConfigFile {
 		return nil, "", err
 	}
 
@@ -149,18 +150,18 @@ func loadConfigOrPasswordFile(filename, password string, strictHostKey bool) (*C
 	return nil, pass, nil
 }
 
-// errNotConfigFile indicates the file does not contain recognized config keys
-var errNotConfigFile = fmt.Errorf("not a config file")
+// ErrNotConfigFile indicates the file does not contain recognized config keys.
+var ErrNotConfigFile = fmt.Errorf("not a config file")
 
-// parseConfigFile parses a config file (format: key: value)
-func parseConfigFile(filename string) (*Config, error) {
+// LoadConfig parses a config file (format: key: value).
+func LoadConfig(filename string) (*Config, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open config file: %w", err)
 	}
 	defer file.Close()
 
-	config := newDefaultConfig()
+	config := NewConfig()
 	hasKeys := false
 
 	scanner := bufio.NewScanner(file)
@@ -219,7 +220,7 @@ func parseConfigFile(filename string) (*Config, error) {
 	}
 
 	if !hasKeys {
-		return nil, errNotConfigFile
+		return nil, ErrNotConfigFile
 	}
 
 	if config.Host == "" {
@@ -248,7 +249,7 @@ func readPasswordFile(filename string) (string, error) {
 	return strings.TrimSpace(string(data)), nil
 }
 
-// getEnvPassword gets password from environment variable
-func getEnvPassword() string {
+// GetEnvPassword returns the password from the SSHPASS environment variable.
+func GetEnvPassword() string {
 	return os.Getenv("SSHPASS")
 }

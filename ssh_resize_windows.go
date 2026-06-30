@@ -1,6 +1,6 @@
 //go:build windows
 
-package main
+package sshpass
 
 import (
 	"time"
@@ -8,8 +8,10 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// watchTerminalResize monitors terminal resize on Windows by polling
-func watchTerminalResize(session *ssh.Session, done <-chan struct{}) {
+// watchTerminalResize monitors terminal resize on Windows by polling.
+// fd is the terminal file descriptor whose size is polled and reported to the
+// remote session.
+func watchTerminalResize(session *ssh.Session, done <-chan struct{}, fd int) {
 	go func() {
 		var lastCols, lastRows int
 		ticker := time.NewTicker(250 * time.Millisecond)
@@ -19,10 +21,10 @@ func watchTerminalResize(session *ssh.Session, done <-chan struct{}) {
 			case <-done:
 				return
 			case <-ticker.C:
-				cols, rows := getTerminalSize()
+				cols, rows := getTerminalSize(fd)
 				if cols != lastCols || rows != lastRows {
 					lastCols, lastRows = cols, rows
-					sendWindowChange(session)
+					sendWindowChange(session, fd)
 				}
 			}
 		}

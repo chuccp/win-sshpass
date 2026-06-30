@@ -1,15 +1,13 @@
-package main
+package sshpass
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 	"sync"
 
-	"github.com/ncruces/zenity"
 	"github.com/pkg/sftp"
 	"golang.org/x/term"
 )
@@ -24,9 +22,14 @@ import (
 // purely from the remote's output, so it works regardless of how the command
 // was entered.
 type rzszMonitor struct {
-	sftpClient *sftp.Client
-	stdin      *os.File
-	oldState   *term.State
+	sftpClient   *sftp.Client
+	stdin        *os.File
+	oldState     *term.State
+	selector     FileSelector
+	stdout       io.Writer
+	stderr       io.Writer
+	resetTimeout func()
+	progress     ProgressFunc
 
 	mu      sync.Mutex
 	recent  []byte // rolling buffer of recent output
@@ -36,16 +39,21 @@ type rzszMonitor struct {
 	onSZ func(remotePath, localPath string)
 }
 
-func newRzszMonitor(stdin *os.File, sftpClient *sftp.Client, oldState *term.State) *rzszMonitor {
+func newRzszMonitor(stdin *os.File, sftpClient *sftp.Client, oldState *term.State, selector FileSelector, stdout, stderr io.Writer, resetTimeout func(), progress ProgressFunc) *rzszMonitor {
 	return &rzszMonitor{
-		stdin:      stdin,
-		sftpClient: sftpClient,
-		oldState:   oldState,
+		stdin:        stdin,
+		sftpClient:   sftpClient,
+		oldState:     oldState,
+		selector:     selector,
+		stdout:       stdout,
+		stderr:       stderr,
+		resetTimeout: resetTimeout,
+		progress:     progress,
 	}
 }
 
-// outputWriter wraps os.Stdout, passing all output through while scanning for
-// rz/sz "command not found" patterns.
+// outputWriter wraps the session stdout writer, passing all output through
+// while scanning for rz/sz "command not found" patterns.
 type outputWriter struct {
 	monitor *rzszMonitor
 	out     io.Writer
@@ -199,8 +207,9 @@ func extractCommandFromNotFound(buf []byte) (string, []string) {
 
 // parseEchoedCommand searches the output buffer for an echoed rz/sz command
 // and extracts the command name and arguments. The echoed line looks like:
-//   [root@host ~]# sz CLAUDE.md
-//   [root@host ~]# rz
+//
+//	[root@host ~]# sz CLAUDE.md
+//	[root@host ~]# rz
 func parseEchoedCommand(buf []byte, pendingCmd string) (string, []string) {
 	cmdWord := strings.Fields(pendingCmd)[0] // "rz" or "sz"
 	s := string(buf)
@@ -240,47 +249,27 @@ func parseEchoedCommand(buf []byte, pendingCmd string) (string, []string) {
 	return "", nil
 }
 
-// --- Dialog helpers ---
-
-func showFileOpenDialog() (string, error) {
-	path, err := zenity.SelectFile(zenity.Title("Select file to upload"))
-	if errors.Is(err, zenity.ErrCanceled) {
-		return "", nil
-	}
-	return path, err
-}
-
-func showFileSaveDialog(defaultName string) (string, error) {
-	path, err := zenity.SelectFileSave(
-		zenity.Title("Save downloaded file"),
-		zenity.Filename(defaultName),
-		zenity.ConfirmOverwrite(),
-	)
-	if errors.Is(err, zenity.ErrCanceled) {
-		return "", nil
-	}
-	return path, err
-}
-
 // --- Handlers ---
 
 func (m *rzszMonitor) handleRZ(localPath string) {
 	m.restoreTerminal()
 	defer m.enterRawMode()
 
-	if localPath == "" {
-		path, err := showFileOpenDialog()
+	if localPath == "" && m.selector != nil {
+		path, err := m.selector.OpenFile()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "File dialog error: %v\n", err)
-			fmt.Print("Local file path to upload: ")
-			localPath = readLineFromStdin()
+			fmt.Fprintf(m.stderr, "File dialog error: %v\n", err)
 		} else {
 			localPath = path
 		}
 	}
+	if localPath == "" {
+		fmt.Fprint(m.stdout, "Local file path to upload: ")
+		localPath = readLineFromStdin(m.stdin)
+	}
 
 	if localPath == "" {
-		fmt.Println("Upload cancelled")
+		fmt.Fprintln(m.stdout, "Upload cancelled")
 		return
 	}
 
@@ -289,11 +278,11 @@ func (m *rzszMonitor) handleRZ(localPath string) {
 		remoteCwd = "."
 	}
 
-	fmt.Printf("Uploading %s -> %s...\n", localPath, remoteCwd)
-	if err := uploadFile(m.sftpClient, localPath, remoteCwd, nil); err != nil {
-		fmt.Fprintf(os.Stderr, "Upload failed: %v\n", err)
+	fmt.Fprintf(m.stdout, "Uploading %s -> %s...\n", localPath, remoteCwd)
+	if err := uploadFile(m.sftpClient, localPath, remoteCwd, m.resetTimeout, m.progress); err != nil {
+		fmt.Fprintf(m.stderr, "Upload failed: %v\n", err)
 	} else {
-		fmt.Println("Upload complete")
+		fmt.Fprintln(m.stdout, "Upload complete")
 	}
 }
 
@@ -305,25 +294,28 @@ func (m *rzszMonitor) handleSZ(remotePath, localPath string) {
 	m.restoreTerminal()
 	defer m.enterRawMode()
 
-	if localPath == "" {
+	if localPath == "" && m.selector != nil {
 		defaultName := remoteBaseName(remotePath)
-		path, err := showFileSaveDialog(defaultName)
+		path, err := m.selector.SaveFile(defaultName)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "File dialog error: %v\n", err)
+			fmt.Fprintf(m.stderr, "File dialog error: %v\n", err)
 			localPath = defaultName
 		} else if path != "" {
 			localPath = path
 		} else {
-			fmt.Println("Download cancelled")
+			fmt.Fprintln(m.stdout, "Download cancelled")
 			return
 		}
 	}
+	if localPath == "" {
+		localPath = remoteBaseName(remotePath)
+	}
 
-	fmt.Printf("Downloading %s -> %s...\n", remotePath, localPath)
-	if err := downloadFile(m.sftpClient, remotePath, localPath, nil); err != nil {
-		fmt.Fprintf(os.Stderr, "Download failed: %v\n", err)
+	fmt.Fprintf(m.stdout, "Downloading %s -> %s...\n", remotePath, localPath)
+	if err := downloadFile(m.sftpClient, remotePath, localPath, m.resetTimeout, m.progress); err != nil {
+		fmt.Fprintf(m.stderr, "Download failed: %v\n", err)
 	} else {
-		fmt.Println("Download complete")
+		fmt.Fprintln(m.stdout, "Download complete")
 	}
 }
 
@@ -340,11 +332,11 @@ func (m *rzszMonitor) enterRawMode() {
 	}
 }
 
-func readLineFromStdin() string {
+func readLineFromStdin(r io.Reader) string {
 	var buf []byte
 	for {
 		var b [1]byte
-		n, err := os.Stdin.Read(b[:])
+		n, err := r.Read(b[:])
 		if err != nil || n == 0 {
 			break
 		}

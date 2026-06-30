@@ -252,10 +252,79 @@ win-sshpass ... -remote /tmp/file.txt
 win-sshpass ... -remote //tmp/file.txt
 ```
 
+## Use as a Go SDK
+
+`win-sshpass` is also a reusable Go library (`package sshpass`). Import it to
+embed SSH/SFTP/shell capabilities in your own application:
+
+```bash
+go get github.com/chuccp/win-sshpass
+```
+
+```go
+package main
+
+import (
+	"log"
+
+	sshpass "github.com/chuccp/win-sshpass"
+)
+
+func main() {
+	cfg := sshpass.NewConfig()
+	cfg.Host = "example.com"
+	cfg.User = "root"
+	cfg.Password = "secret"
+
+	// NewClient dials and returns a ready-to-use client.
+	client, err := sshpass.NewClient(cfg, sshpass.WithSignalHandler())
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer client.Close()
+
+	// Execute a command (output streams to os.Stdout/os.Stderr by default).
+	if err := client.Exec("uname -a"); err != nil {
+		log.Fatal(err)
+	}
+
+	// Upload a file over SFTP.
+	sftp, err := client.SFTP()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer sftp.Close()
+	if err := sftp.Upload("./local.txt", "/tmp/remote.txt"); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+### Customization options
+
+Behavior is configured through functional options passed to `NewClient`:
+
+| Option | Purpose |
+|--------|---------|
+| `WithStdin(r)` / `WithStdout(w)` / `WithStderr(w)` | Redirect I/O streams (default `os.Stdin`/`os.Stdout`/`os.Stderr`). |
+| `WithProgress(fn)` | Set a `ProgressFunc` callback that receives `(description string, sent, total int64)` during SFTP transfers. The SDK performs no rendering — callers display progress however they like. Defaults to none (headless-friendly). |
+| `WithFileSelector(s)` | Set the `FileSelector` used by the rz/sz shell-transfer fallback. The SDK ships no default implementation; without one, rz/sz prompts for a path on stdin. |
+| `WithSignalHandler()` | Register a Ctrl+C handler that closes the connection. Off by default so the library never interferes with host signal handling. |
+
+The SDK intentionally bundles **no UI code** (no progress bar, no file dialog).
+Those concerns live in the CLI package (`cmd/sshpass/ui.go`), which wires a
+progressbar-based `ProgressFunc` and a zenity-based `FileSelector` into the
+client. Library users provide their own.
+
+Lower-level helpers are also exported for advanced use: `Dial`, `NewConfig`,
+`LoadConfig`, `LoadConfigOrPasswordFile`, `ParseSSHArgs`, `ParseSCPArgs`,
+`ParseRsyncArgs`, `DetectCommandType`, `RunSCP`, `RunRsync`, `CleanRemotePath`,
+`SplitPaths`, `ParseUserHostPath`, `ExitCodeFromError`.
+
 ## Build
 
 ```bash
-go build -o win-sshpass.exe .
+go build -o win-sshpass.exe ./cmd/sshpass
 ```
 
 ## Dependencies

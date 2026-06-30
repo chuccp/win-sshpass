@@ -1,8 +1,9 @@
-package main
+package sshpass
 
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"path"
@@ -33,15 +34,15 @@ func isValidPort(s string) bool {
 
 // --- String manipulation ---
 
-// joinArgs joins a string slice with space
-func joinArgs(args []string) string {
+// JoinArgs joins a string slice with space
+func JoinArgs(args []string) string {
 	return strings.Join(args, " ")
 }
 
-// splitPaths splits a path string by comma or space separator.
+// SplitPaths splits a path string by comma or space separator.
 // Returns error if complex paths (containing '/' or '\') are space-separated.
 // name identifies which parameter for error messages (e.g., "local" or "remote").
-func splitPaths(s, name string) ([]string, error) {
+func SplitPaths(s, name string) ([]string, error) {
 	var paths []string
 	if strings.Contains(s, ",") {
 		for _, p := range strings.Split(s, ",") {
@@ -75,21 +76,22 @@ func isWindowsLocalPath(p string) bool {
 		((p[0] >= 'A' && p[0] <= 'Z') || (p[0] >= 'a' && p[0] <= 'z'))
 }
 
-// cleanRemotePath normalizes a remote path for SFTP use.
+// CleanRemotePath normalizes a remote path for SFTP use.
 //   - Strips the leading "/" from "//" prefix used to bypass Git Bash path conversion
 //     (e.g. "//tmp/file" -> "/tmp/file")
-//   - Detects Windows local paths caused by Git Bash conversion and exits with a hint
-func cleanRemotePath(p string) string {
+//   - Returns an error when the path looks like a Windows local path caused by Git
+//     Bash path conversion, instead of terminating the process.
+func CleanRemotePath(p string) (string, error) {
 	// "//" prefix: user intentionally used it to bypass Git Bash conversion
 	// e.g. "//tmp/file" should become "/tmp/file"
 	if strings.HasPrefix(p, "//") {
-		return p[1:]
+		return p[1:], nil
 	}
 	// detect Git Bash path conversion: /tmp/file became C:/Users/.../tmp/file
 	if isWindowsLocalPath(p) {
-		fatalError("Error: remote path '%s' looks like a Windows local path (Git Bash path conversion).\n  Hint: Use '//' prefix to avoid conversion, e.g. //tmp/file instead of /tmp/file", p)
+		return "", fmt.Errorf("remote path %q looks like a Windows local path (Git Bash path conversion); use '//' prefix to avoid conversion, e.g. //tmp/file instead of /tmp/file", p)
 	}
-	return p
+	return p, nil
 }
 
 // joinRemotePath joins remote path elements using Unix-style / separator
@@ -129,9 +131,9 @@ func toSlash(p string) string {
 
 // --- String parsing ---
 
-// parseUserHostPath parses user@host:path format, supporting IPv6
-// returns user, host, path
-func parseUserHostPath(arg string) (user, host, remotePath string) {
+// ParseUserHostPath parses user@host:path format, supporting IPv6.
+// Returns user, host, path.
+func ParseUserHostPath(arg string) (user, host, remotePath string) {
 	atIdx := strings.Index(arg, "@")
 	if atIdx <= 0 {
 		return "", "", ""
@@ -165,13 +167,15 @@ func parseUserHostPath(arg string) (user, host, remotePath string) {
 
 // --- Timeout helpers ---
 
-// setupOperationTimeout creates a timer that calls closeFn after the given timeout.
-// Returns a reset function to extend the deadline and a stop function to cancel the timer.
-func setupOperationTimeout(closeFn func(), timeout int) (reset func(), stop func()) {
+// setupOperationTimeout creates a timer that calls closeFn after the given
+// timeout. out receives the "Operation timed out" notice. It returns a reset
+// function to extend the deadline and a stop function to cancel the timer.
+// When timeout <= 0, no timer is created and the returned stop is a no-op.
+func setupOperationTimeout(out io.Writer, closeFn func(), timeout int) (reset func(), stop func()) {
 	if timeout > 0 {
 		dur := time.Duration(timeout) * time.Second
 		timer := time.AfterFunc(dur, func() {
-			fmt.Fprintln(os.Stderr, "Operation timed out")
+			fmt.Fprintln(out, "Operation timed out")
 			closeFn()
 		})
 		reset = func() {
@@ -191,7 +195,8 @@ type exitStatusError interface {
 	ExitStatus() int
 }
 
-func exitCodeFromError(err error) (int, bool) {
+// ExitCodeFromError extracts the remote command exit code from err, if present.
+func ExitCodeFromError(err error) (int, bool) {
 	var exitErr exitStatusError
 	if errors.As(err, &exitErr) {
 		return exitErr.ExitStatus(), true
@@ -199,22 +204,29 @@ func exitCodeFromError(err error) (int, bool) {
 	return 0, false
 }
 
-// fatalError prints an error message to stderr and exits with code 1
-func fatalError(format string, args ...any) {
-	fmt.Fprintf(os.Stderr, format+"\n", args...)
-	os.Exit(1)
-}
-
-// onInterrupt sets up a one-shot handler that calls cleanup when the process
-// receives an interrupt signal (Ctrl+C). The cleanup should close the underlying
+// onInterrupt sets up a handler that calls cleanup when the process receives
+// an interrupt signal (Ctrl+C). The cleanup should close the underlying
 // connection so the main goroutine unblocks and exits through the normal path
-// (running deferred functions). Safe to call multiple times — only the first
-// signal is honored.
-func onInterrupt(cleanup func()) {
+// (running deferred functions). Only the first signal is honored.
+//
+// The returned stop function unregisters the handler and releases the
+// goroutine; it must be called when the owning resource is closed (e.g. in
+// Client.Close) to avoid leaking the goroutine in long-running processes. The
+// library does not register any signal handler unless explicitly requested via
+// WithSignalHandler.
+func onInterrupt(cleanup func()) (stop func()) {
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, os.Interrupt)
+	done := make(chan struct{})
 	go func() {
-		<-ch
-		cleanup()
+		select {
+		case <-ch:
+			cleanup()
+		case <-done:
+		}
 	}()
+	return func() {
+		signal.Stop(ch)
+		close(done)
+	}
 }

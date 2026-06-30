@@ -1,4 +1,4 @@
-package main
+package sshpass
 
 import (
 	"fmt"
@@ -20,7 +20,7 @@ func (e testExitStatusError) ExitStatus() int {
 func TestExitCodeFromError(t *testing.T) {
 	err := fmt.Errorf("wrapped: %w", testExitStatusError{code: 7})
 
-	code, ok := exitCodeFromError(err)
+	code, ok := ExitCodeFromError(err)
 	if !ok {
 		t.Fatal("expected exit status error to be detected")
 	}
@@ -30,7 +30,7 @@ func TestExitCodeFromError(t *testing.T) {
 }
 
 func TestExitCodeFromErrorNotMatched(t *testing.T) {
-	code, ok := exitCodeFromError(fmt.Errorf("plain error"))
+	code, ok := ExitCodeFromError(fmt.Errorf("plain error"))
 	if ok {
 		t.Fatal("should not match plain error")
 	}
@@ -94,7 +94,7 @@ func TestIsWindowsLocalPath(t *testing.T) {
 		{"D:\\data\\file.txt", true},
 		{"c:/path", true},
 		{"/tmp/file", false},
-		{"C:", false},       // too short
+		{"C:", false},         // too short
 		{"1:/invalid", false}, // digit drive letter
 		{"", false},
 		{"ab", false},
@@ -120,20 +120,33 @@ func TestCleanRemotePath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := cleanRemotePath(tt.input); got != tt.want {
-				t.Errorf("cleanRemotePath(%q) = %q, want %q", tt.input, got, tt.want)
+			got, err := CleanRemotePath(tt.input)
+			if err != nil {
+				t.Fatalf("CleanRemotePath(%q) error = %v", tt.input, err)
+			}
+			if got != tt.want {
+				t.Errorf("CleanRemotePath(%q) = %q, want %q", tt.input, got, tt.want)
 			}
 		})
 	}
 }
 
+func TestCleanRemotePathWindowsError(t *testing.T) {
+	// A Windows-style local path (Git Bash conversion) should return an error
+	// instead of terminating the process.
+	_, err := CleanRemotePath("C:/Users/someone/tmp/file")
+	if err == nil {
+		t.Fatal("expected error for Windows-looking remote path")
+	}
+}
+
 func TestParseUserHostPath(t *testing.T) {
 	tests := []struct {
-		name       string
-		input      string
-		wantUser   string
-		wantHost   string
-		wantPath   string
+		name     string
+		input    string
+		wantUser string
+		wantHost string
+		wantPath string
 	}{
 		{"simple", "root@host:/tmp/file", "root", "host", "/tmp/file"},
 		{"no path", "root@host", "root", "host", ""},
@@ -145,7 +158,7 @@ func TestParseUserHostPath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			user, host, p := parseUserHostPath(tt.input)
+			user, host, p := ParseUserHostPath(tt.input)
 			if user != tt.wantUser {
 				t.Errorf("user = %q, want %q", user, tt.wantUser)
 			}
@@ -173,17 +186,17 @@ func TestSplitPaths(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := splitPaths(tt.input, "local")
+			got, err := SplitPaths(tt.input, "local")
 			if (err != nil) != tt.wantErr {
-				t.Fatalf("splitPaths() error = %v, wantErr %v", err, tt.wantErr)
+				t.Fatalf("SplitPaths() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if !tt.wantErr {
 				if len(got) != len(tt.want) {
-					t.Fatalf("splitPaths() = %v, want %v", got, tt.want)
+					t.Fatalf("SplitPaths() = %v, want %v", got, tt.want)
 				}
 				for i := range got {
 					if got[i] != tt.want[i] {
-						t.Errorf("splitPaths()[%d] = %q, want %q", i, got[i], tt.want[i])
+						t.Errorf("SplitPaths()[%d] = %q, want %q", i, got[i], tt.want[i])
 					}
 				}
 			}

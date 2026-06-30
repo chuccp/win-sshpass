@@ -1,13 +1,15 @@
-package main
+package sshpass
 
 import (
 	"fmt"
 	"strings"
 )
 
-// runSCP executes the scp command (file transfer over SSH)
-func runSCP(config *Config, args []string) error {
-	conn, err := connectSFTP(config)
+// RunSCP executes the scp command (file transfer over SSH) using the given
+// Client's SFTP sub-channel. args are the scp arguments (after the scp command
+// itself may or may not be present).
+func RunSCP(c *Client, args []string) error {
+	conn, err := c.SFTP()
 	if err != nil {
 		return err
 	}
@@ -31,7 +33,7 @@ func runSCP(config *Config, args []string) error {
 	for i, arg := range nonFlagArgs {
 		if strings.Contains(arg, "@") && strings.Contains(arg, ":") {
 			// remote path user@host:path (supports IPv6)
-			_, _, remotePath = parseUserHostPath(arg)
+			_, _, remotePath = ParseUserHostPath(arg)
 			remoteIdx = i
 			remoteCount++
 		} else if arg != "scp" {
@@ -52,7 +54,10 @@ func runSCP(config *Config, args []string) error {
 	isUpload := (remoteIdx == len(nonFlagArgs)-1)
 
 	// clean remote path (handle Git Bash // prefix and path conversion)
-	remotePath = cleanRemotePath(remotePath)
+	remotePath, err = CleanRemotePath(remotePath)
+	if err != nil {
+		return err
+	}
 
 	if isUpload {
 		for _, lf := range localFiles {
@@ -71,8 +76,9 @@ func runSCP(config *Config, args []string) error {
 	return nil
 }
 
-// runRsync executes rsync command (file sync over SSH)
-func runRsync(config *Config, args []string) error {
+// RunRsync executes an rsync-style file sync over SSH using the given Client's
+// SFTP sub-channel. args are the rsync arguments.
+func RunRsync(c *Client, args []string) error {
 	// simple implementation: parse source and target
 	var remoteArg string
 	var remoteCount int
@@ -109,7 +115,7 @@ func runRsync(config *Config, args []string) error {
 		break
 	}
 
-	conn, err := connectSFTP(config)
+	conn, err := c.SFTP()
 	if err != nil {
 		return err
 	}
@@ -117,8 +123,11 @@ func runRsync(config *Config, args []string) error {
 
 	if isUpload {
 		// local to remote (upload)
-		_, _, remotePath := parseUserHostPath(remoteArg)
-		rPath := cleanRemotePath(remotePath)
+		_, _, remotePath := ParseUserHostPath(remoteArg)
+		rPath, err := CleanRemotePath(remotePath)
+		if err != nil {
+			return err
+		}
 		for _, lf := range localArgs {
 			if err := conn.Upload(lf, rPath); err != nil {
 				return err
@@ -127,8 +136,11 @@ func runRsync(config *Config, args []string) error {
 		return nil
 	}
 	// remote to local (download)
-	_, _, remotePath := parseUserHostPath(remoteArg)
-	rPath := cleanRemotePath(remotePath)
+	_, _, remotePath := ParseUserHostPath(remoteArg)
+	rPath, err := CleanRemotePath(remotePath)
+	if err != nil {
+		return err
+	}
 	for _, lf := range localArgs {
 		if err := conn.Download(rPath, lf); err != nil {
 			return err

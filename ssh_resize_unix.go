@@ -1,6 +1,6 @@
 //go:build !windows
 
-package main
+package sshpass
 
 import (
 	"os"
@@ -10,8 +10,10 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// watchTerminalResize monitors terminal resize on Unix using SIGWINCH
-func watchTerminalResize(session *ssh.Session, done <-chan struct{}) {
+// watchTerminalResize monitors terminal resize on Unix using SIGWINCH.
+// fd is the terminal file descriptor whose size changes are reported to the
+// remote session.
+func watchTerminalResize(session *ssh.Session, done <-chan struct{}, fd int) {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGWINCH)
 	go func() {
@@ -21,7 +23,7 @@ func watchTerminalResize(session *ssh.Session, done <-chan struct{}) {
 			case <-done:
 				return
 			case <-sigChan:
-				sendWindowChange(session)
+				sendWindowChange(session, fd)
 			}
 		}
 	}()

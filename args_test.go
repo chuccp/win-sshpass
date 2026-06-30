@@ -1,4 +1,4 @@
-package main
+package sshpass
 
 import "testing"
 
@@ -17,8 +17,8 @@ func TestDetectCommandTypeOnlyUsesLeadingCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := detectCommandType(tt.args); got != tt.want {
-				t.Fatalf("detectCommandType(%v) = %v, want %v", tt.args, got, tt.want)
+			if got := DetectCommandType(tt.args); got != tt.want {
+				t.Fatalf("DetectCommandType(%v) = %v, want %v", tt.args, got, tt.want)
 			}
 		})
 	}
@@ -74,7 +74,7 @@ func TestParseSSHArgs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg, cmd := parseSSHArgs(tt.args)
+			cfg, cmd := ParseSSHArgs(tt.args)
 			if cfg.User != tt.wantUser {
 				t.Errorf("User = %q, want %q", cfg.User, tt.wantUser)
 			}
@@ -104,35 +104,35 @@ func TestParseSCPArgs(t *testing.T) {
 		wantNArg int // number of scp args remaining
 	}{
 		{
-			name: "upload file",
-			args: []string{"scp", "file.txt", "root@host:/tmp/"},
+			name:     "upload file",
+			args:     []string{"scp", "file.txt", "root@host:/tmp/"},
 			wantUser: "root", wantHost: "host", wantPort: "", wantNArg: 2,
 		},
 		{
-			name: "with -P port",
-			args: []string{"scp", "-P", "2222", "file.txt", "root@host:/tmp/"},
+			name:     "with -P port",
+			args:     []string{"scp", "-P", "2222", "file.txt", "root@host:/tmp/"},
 			wantUser: "root", wantHost: "host", wantPort: "2222", wantNArg: 2,
 		},
 		{
-			name: "with -r flag skipped",
-			args: []string{"scp", "-r", "dir/", "root@host:/tmp/"},
+			name:     "with -r flag skipped",
+			args:     []string{"scp", "-r", "dir/", "root@host:/tmp/"},
 			wantUser: "root", wantHost: "host", wantPort: "", wantNArg: 2,
 		},
 		{
-			name: "with -q and -C flags skipped",
-			args: []string{"scp", "-q", "-C", "file.txt", "root@host:/tmp/"},
+			name:     "with -q and -C flags skipped",
+			args:     []string{"scp", "-q", "-C", "file.txt", "root@host:/tmp/"},
 			wantUser: "root", wantHost: "host", wantPort: "", wantNArg: 2,
 		},
 		{
-			name: "with -i key",
-			args: []string{"scp", "-i", "/key", "file.txt", "root@host:/tmp/"},
+			name:     "with -i key",
+			args:     []string{"scp", "-i", "/key", "file.txt", "root@host:/tmp/"},
 			wantUser: "root", wantHost: "host", wantPort: "", wantNArg: 2,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg, scpArgs := parseSCPArgs(tt.args)
+			cfg, scpArgs := ParseSCPArgs(tt.args)
 			if cfg.User != tt.wantUser {
 				t.Errorf("User = %q, want %q", cfg.User, tt.wantUser)
 			}
@@ -158,30 +158,30 @@ func TestParseRsyncArgs(t *testing.T) {
 		wantPort string
 	}{
 		{
-			name: "upload",
-			args: []string{"rsync", "-avz", "./", "root@host:/backup/"},
+			name:     "upload",
+			args:     []string{"rsync", "-avz", "./", "root@host:/backup/"},
 			wantUser: "root", wantHost: "host", wantPort: "",
 		},
 		{
-			name: "with -e ssh",
-			args: []string{"rsync", "-e", "ssh", "./", "root@host:/backup/"},
+			name:     "with -e ssh",
+			args:     []string{"rsync", "-e", "ssh", "./", "root@host:/backup/"},
 			wantUser: "root", wantHost: "host", wantPort: "",
 		},
 		{
-			name: "with --rsh=ssh",
-			args: []string{"rsync", "--rsh=ssh", "./", "root@host:/backup/"},
+			name:     "with --rsh=ssh",
+			args:     []string{"rsync", "--rsh=ssh", "./", "root@host:/backup/"},
 			wantUser: "root", wantHost: "host", wantPort: "",
 		},
 		{
-			name: "with --port=2222",
-			args: []string{"rsync", "--port=2222", "./", "root@host:/backup/"},
+			name:     "with --port=2222",
+			args:     []string{"rsync", "--port=2222", "./", "root@host:/backup/"},
 			wantUser: "root", wantHost: "host", wantPort: "2222",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg, _ := parseRsyncArgs(tt.args)
+			cfg, _ := ParseRsyncArgs(tt.args)
 			if cfg.User != tt.wantUser {
 				t.Errorf("User = %q, want %q", cfg.User, tt.wantUser)
 			}

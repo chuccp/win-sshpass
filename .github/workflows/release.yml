@@ -36,11 +36,11 @@ jobs:
       - name: Set version from tag
         run: |
           $tag = "${{ github.ref_name }}"
-          $content = "package main`n`nvar (`n`tversion = `"$tag`"`n)`n"
+          $content = "package sshpass`n`nvar (`n`tVersion = `"$tag`"`n)`n"
           Set-Content -Path version.go -Value $content -Encoding UTF8 -NoNewline
 
       - name: Build
-        run: go build -ldflags="-s -w" -o win-sshpass.exe .
+        run: go build -ldflags="-s -w" -o win-sshpass.exe ./cmd/sshpass
         env:
           GOARCH: ${{ matrix.goarch }}
 

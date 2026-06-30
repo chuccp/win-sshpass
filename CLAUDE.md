@@ -5,18 +5,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build
 
 ```bash
-go build -o win-sshpass.exe .
+go build -o win-sshpass.exe ./cmd/sshpass
 ```
 
 ## Architecture
 
-Single-package Go application split by functionality:
+The project is a reusable Go SDK (`package sshpass`) plus a CLI entry point.
 
-- `main.go` - Entry point, flag parsing, connection flow
-- `config.go` - `Config` struct and config file parsing
-- `ssh.go` - SSH client connection, shell session, command execution
-- `sftp.go` - File upload/download via SFTP
-- `args.go` - sshpass-style argument parsing (`user@host` format)
+- `cmd/sshpass/main.go` - CLI entry point: flag parsing, config merging, command dispatch. Built into `win-sshpass.exe`.
+- `client.go` - `Client` object: `NewClient`, `Exec`, `Shell`, `SFTP`, `Close`, `TimedOut`.
+- `options.go` - Functional options (`WithStdin`, `WithStdout`, `WithStderr`, `WithProgress`, `WithFileSelector`, `WithSignalHandler`) and the `ProgressFunc`/`FileSelector` abstractions. The SDK ships **no UI implementations**; CLI-side adapters (progressbar, zenity) live in `cmd/sshpass/ui.go`.
+- `config.go` - `Config` struct, `NewConfig`, `LoadConfig`, `LoadConfigOrPasswordFile`, merge/validate/normalize methods.
+- `ssh.go` - `Dial` (exported, alias `SSHClient`), retry/timeout/known_hosts, `runShell`/`executeCommand` (use injected I/O).
+- `sftp.go` - `SFTPClient` with `Upload`/`Download`, timeout-aware readers/writers, progress reporting.
+- `scp.go` - `RunSCP`/`RunRsync` over a `*Client`.
+- `args.go` - `ParseSSHArgs`/`ParseSCPArgs`/`ParseRsyncArgs`/`DetectCommandType`.
+- `shell_transfer.go` - rz/sz monitor using `FileSelector` and injected I/O.
+- `util.go` - path helpers, `ParseUserHostPath`, `CleanRemotePath` (returns error), `SplitPaths`, `ExitCodeFromError`, `setupOperationTimeout`.
+- `version.go` - exported `Version`.
+
+The library avoids process-level side effects: no `os.Exit`, no global signal
+registration (unless `WithSignalHandler` is used), and all I/O streams are
+injectable via options.
 
 ## Dependencies
 
