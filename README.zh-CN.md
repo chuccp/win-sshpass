@@ -18,6 +18,7 @@ Windows 版 sshpass 工具，实现类似 Linux sshpass 的功能。
 - Git Bash 路径转换检测与自动修复
 - 支持 IPv6 地址
 - 支持 x64 (amd64) 和 ARM64 架构
+- **可复用 Go SDK** — 作为库引入（`package sshpass`），在自有应用中嵌入 SSH/SFTP/Shell 能力，支持注入 I/O 流与进度回调
 
 ## 下载
 
@@ -246,10 +247,77 @@ win-sshpass ... -remote /tmp/file.txt
 win-sshpass ... -remote //tmp/file.txt
 ```
 
+## 作为 Go SDK 使用
+
+`win-sshpass` 也是一个可复用的 Go 库（`package sshpass`）。引入它即可在自有应用中嵌入 SSH/SFTP/Shell 能力：
+
+```bash
+go get github.com/chuccp/win-sshpass
+```
+
+```go
+package main
+
+import (
+	"log"
+
+	sshpass "github.com/chuccp/win-sshpass"
+)
+
+func main() {
+	cfg := sshpass.NewConfig()
+	cfg.Host = "example.com"
+	cfg.User = "root"
+	cfg.Password = "secret"
+
+	// NewClient 拨号并返回一个即开即用的客户端。
+	client, err := sshpass.NewClient(cfg, sshpass.WithSignalHandler())
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer client.Close()
+
+	// 执行命令（输出默认流向 os.Stdout/os.Stderr）。
+	if err := client.Exec("uname -a"); err != nil {
+		log.Fatal(err)
+	}
+
+	// 通过 SFTP 上传文件。
+	sftp, err := client.SFTP()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer sftp.Close()
+	if err := sftp.Upload("./local.txt", "/tmp/remote.txt"); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+### 自定义选项
+
+通过传入 `NewClient` 的函数式选项配置行为：
+
+| 选项 | 用途 |
+|------|------|
+| `WithStdin(r)` / `WithStdout(w)` / `WithStderr(w)` | 重定向 I/O 流（默认 `os.Stdin`/`os.Stdout`/`os.Stderr`）。 |
+| `WithProgress(fn)` | 设置 `ProgressFunc` 回调，在 SFTP 传输时接收 `(description string, sent, total int64)`。SDK 自身不做任何渲染，由调用方决定如何展示进度。默认不设置（适合无头环境）。 |
+| `WithFileSelector(s)` | 设置 rz/sz 文件传输回退用的 `FileSelector`。SDK 不提供默认实现；未设置时 rz/sz 从 stdin 读取路径。 |
+| `WithSignalHandler()` | 注册 Ctrl+C 处理器以关闭连接。默认不注册，库不会干扰宿主进程的信号处理。 |
+
+SDK 有意**不内置任何 UI 代码**（无进度条、无文件对话框）。这些职责位于 CLI 包
+（`cmd/sshpass/ui.go`），它将基于 progressbar 的 `ProgressFunc` 和基于 zenity 的
+`FileSelector` 接入客户端。库用户需自行提供。
+
+底层辅助函数也已导出供高级使用：`Dial`、`NewConfig`、`LoadConfig`、
+`LoadConfigOrPasswordFile`、`ParseSSHArgs`、`ParseSCPArgs`、`ParseRsyncArgs`、
+`DetectCommandType`、`RunSCP`、`RunRsync`、`CleanRemotePath`、`SplitPaths`、
+`ParseUserHostPath`、`ExitCodeFromError`。
+
 ## 编译
 
 ```bash
-go build -o win-sshpass.exe .
+go build -o win-sshpass.exe ./cmd/sshpass
 ```
 
 ## 依赖
@@ -257,7 +325,8 @@ go build -o win-sshpass.exe .
 - Go 1.23+
 - golang.org/x/crypto/ssh
 - github.com/pkg/sftp
-- github.com/schollz/progressbar/v3
+- github.com/schollz/progressbar/v3（仅 CLI 进度条）
+- github.com/ncruces/zenity（仅 CLI 文件对话框）
 
 ## 相关项目
 

@@ -18,6 +18,7 @@ Windows 版 sshpass 工具，實現類似 Linux sshpass 的功能。
 - Git Bash 路徑轉換偵測與自動修復
 - 支援 IPv6 位址
 - 支援 x64 (amd64) 和 ARM64 架構
+- **可複用 Go SDK** — 作為函式庫引入（`package sshpass`），在自有應用中嵌入 SSH/SFTP/Shell 能力，支援注入 I/O 串流與進度回呼
 
 ## 下載
 
@@ -246,10 +247,77 @@ win-sshpass ... -remote /tmp/file.txt
 win-sshpass ... -remote //tmp/file.txt
 ```
 
+## 作為 Go SDK 使用
+
+`win-sshpass` 也是一個可複用的 Go 函式庫（`package sshpass`）。引入它即可在自有應用中嵌入 SSH/SFTP/Shell 能力：
+
+```bash
+go get github.com/chuccp/win-sshpass
+```
+
+```go
+package main
+
+import (
+	"log"
+
+	sshpass "github.com/chuccp/win-sshpass"
+)
+
+func main() {
+	cfg := sshpass.NewConfig()
+	cfg.Host = "example.com"
+	cfg.User = "root"
+	cfg.Password = "secret"
+
+	// NewClient 撥號並回傳一個即開即用的客戶端。
+	client, err := sshpass.NewClient(cfg, sshpass.WithSignalHandler())
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer client.Close()
+
+	// 執行命令（輸出預設流向 os.Stdout/os.Stderr）。
+	if err := client.Exec("uname -a"); err != nil {
+		log.Fatal(err)
+	}
+
+	// 透過 SFTP 上傳檔案。
+	sftp, err := client.SFTP()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer sftp.Close()
+	if err := sftp.Upload("./local.txt", "/tmp/remote.txt"); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+### 自訂選項
+
+透過傳入 `NewClient` 的函數式選項設定行為：
+
+| 選項 | 用途 |
+|------|------|
+| `WithStdin(r)` / `WithStdout(w)` / `WithStderr(w)` | 重定向 I/O 串流（預設 `os.Stdin`/`os.Stdout`/`os.Stderr`）。 |
+| `WithProgress(fn)` | 設定 `ProgressFunc` 回呼，在 SFTP 傳輸時接收 `(description string, sent, total int64)`。SDK 自身不做任何渲染，由呼叫方決定如何展示進度。預設不設定（適合無頭環境）。 |
+| `WithFileSelector(s)` | 設定 rz/sz 檔案傳輸回退用的 `FileSelector`。SDK 不提供預設實作；未設定時 rz/sz 從 stdin 讀取路徑。 |
+| `WithSignalHandler()` | 註冊 Ctrl+C 處理器以關閉連線。預設不註冊，函式庫不會干擾宿主程序的訊號處理。 |
+
+SDK 有意**不內建任何 UI 程式碼**（無進度條、無檔案對話框）。這些職責位於 CLI 套件
+（`cmd/sshpass/ui.go`），它將基於 progressbar 的 `ProgressFunc` 和基於 zenity 的
+`FileSelector` 接入客戶端。函式庫使用者需自行提供。
+
+底層輔助函式也已匯出供進階使用：`Dial`、`NewConfig`、`LoadConfig`、
+`LoadConfigOrPasswordFile`、`ParseSSHArgs`、`ParseSCPArgs`、`ParseRsyncArgs`、
+`DetectCommandType`、`RunSCP`、`RunRsync`、`CleanRemotePath`、`SplitPaths`、
+`ParseUserHostPath`、`ExitCodeFromError`。
+
 ## 編譯
 
 ```bash
-go build -o win-sshpass.exe .
+go build -o win-sshpass.exe ./cmd/sshpass
 ```
 
 ## 相依套件
@@ -257,7 +325,8 @@ go build -o win-sshpass.exe .
 - Go 1.23+
 - golang.org/x/crypto/ssh
 - github.com/pkg/sftp
-- github.com/schollz/progressbar/v3
+- github.com/schollz/progressbar/v3（僅 CLI 進度條）
+- github.com/ncruces/zenity（僅 CLI 檔案對話框）
 
 ## 相關專案
 

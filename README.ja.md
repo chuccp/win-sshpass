@@ -18,6 +18,7 @@ Windows 版 sshpass ツール。Linux の sshpass と同様の機能を提供し
 - Git Bash パス変換の検出と自動修正
 - IPv6 アドレス対応
 - x64 (amd64) および ARM64 アーキテクチャ対応
+- **再利用可能な Go SDK** — ライブラリとしてインポート（`package sshpass`）して、SSH/SFTP/Shell 機能を独自アプリに組み込み可能。I/O ストリームと進行コールバックの注入に対応
 
 ## ダウンロード
 
@@ -246,10 +247,78 @@ win-sshpass ... -remote /tmp/file.txt
 win-sshpass ... -remote //tmp/file.txt
 ```
 
+## Go SDK としての利用
+
+`win-sshpass` は再利用可能な Go ライブラリ（`package sshpass`）でもあります。インポートして、SSH/SFTP/Shell 機能を独自アプリに組み込めます：
+
+```bash
+go get github.com/chuccp/win-sshpass
+```
+
+```go
+package main
+
+import (
+	"log"
+
+	sshpass "github.com/chuccp/win-sshpass"
+)
+
+func main() {
+	cfg := sshpass.NewConfig()
+	cfg.Host = "example.com"
+	cfg.User = "root"
+	cfg.Password = "secret"
+
+	// NewClient がダイヤルし、すぐに使えるクライアントを返します。
+	client, err := sshpass.NewClient(cfg, sshpass.WithSignalHandler())
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer client.Close()
+
+	// コマンドを実行（出力はデフォルトで os.Stdout/os.Stderr に流れます）。
+	if err := client.Exec("uname -a"); err != nil {
+		log.Fatal(err)
+	}
+
+	// SFTP でファイルをアップロード。
+	sftp, err := client.SFTP()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer sftp.Close()
+	if err := sftp.Upload("./local.txt", "/tmp/remote.txt"); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+### カスタマイズオプション
+
+`NewClient` に渡す関数型オプションで動作を設定します：
+
+| オプション | 用途 |
+|-----------|------|
+| `WithStdin(r)` / `WithStdout(w)` / `WithStderr(w)` | I/O ストリームのリダイレクト（デフォルト `os.Stdin`/`os.Stdout`/`os.Stderr`）。 |
+| `WithProgress(fn)` | SFTP 転送中に `(description string, sent, total int64)` を受け取る `ProgressFunc` コールバックを設定。SDK 自身はレンダリングを行わず、進行の表示方法は呼び出し側に委ねられます。デフォルトは未設定（ヘッドレス環境向け）。 |
+| `WithFileSelector(s)` | rz/sz ファイル転送フォールバックで使用する `FileSelector` を設定。SDK はデフォルト実装を提供せず、未設定時は rz/sz が stdin からパスを読み取ります。 |
+| `WithSignalHandler()` | Ctrl+C ハンドラを登録して接続を閉じる。デフォルトでは登録されず、ライブラリはホストプロセスのシグナル処理に干渉しません。 |
+
+SDK は意図的に **UI コードを一切内蔵していません**（プログレスバーやファイルダイアログなし）。
+これらは CLI パッケージ（`cmd/sshpass/ui.go`）に実装され、progressbar ベースの
+`ProgressFunc` と zenity ベースの `FileSelector` をクライアントに組み込んでいます。
+ライブラリ利用者は独自に提供する必要があります。
+
+低レベルヘルパー関数も高度な用途向けにエクスポートされています：`Dial`、`NewConfig`、
+`LoadConfig`、`LoadConfigOrPasswordFile`、`ParseSSHArgs`、`ParseSCPArgs`、`ParseRsyncArgs`、
+`DetectCommandType`、`RunSCP`、`RunRsync`、`CleanRemotePath`、`SplitPaths`、
+`ParseUserHostPath`、`ExitCodeFromError`。
+
 ## ビルド
 
 ```bash
-go build -o win-sshpass.exe .
+go build -o win-sshpass.exe ./cmd/sshpass
 ```
 
 ## 依存関係
@@ -257,7 +326,8 @@ go build -o win-sshpass.exe .
 - Go 1.23+
 - golang.org/x/crypto/ssh
 - github.com/pkg/sftp
-- github.com/schollz/progressbar/v3
+- github.com/schollz/progressbar/v3（CLI プログレスバーのみ）
+- github.com/ncruces/zenity（CLI ファイルダイアログのみ）
 
 ## 関連プロジェクト
 

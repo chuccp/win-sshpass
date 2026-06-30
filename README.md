@@ -24,6 +24,7 @@ A Windows implementation of sshpass, providing similar functionality to the Linu
 - Git Bash path conversion detection and auto-fix
 - IPv6 address support
 - Support for both x64 (amd64) and ARM64 architectures
+- **Reusable Go SDK** — import as a library (`package sshpass`) to embed SSH/SFTP/shell in your own app, with injectable I/O streams and progress callbacks
 
 ## Download
 
@@ -332,7 +333,8 @@ go build -o win-sshpass.exe ./cmd/sshpass
 - Go 1.23+
 - golang.org/x/crypto/ssh
 - github.com/pkg/sftp
-- github.com/schollz/progressbar/v3
+- github.com/schollz/progressbar/v3 (CLI progress bar only)
+- github.com/ncruces/zenity (CLI file dialogs only)
 
 ## Related Project
 
