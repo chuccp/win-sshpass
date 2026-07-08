@@ -1,3 +1,7 @@
+## Related Project
+
+[**go-web-frame**](https://github.com/chuccp/go-web-frame) — Effortless auth: declare required permissions on routes, verify once in a Filter, keep handlers clean. Generic Model for full-stack CRUD: define a struct, and create/read/update/delete just works. Lightweight, install only the components you need. No code generation, no CI tooling required — the most elegant Go web full-stack framework.
+
 # win-sshpass
 
 [![GitHub release](https://badgen.net/github/release/chuccp/win-sshpass/include-prereleases)](https://github.com/chuccp/win-sshpass/releases)
@@ -336,6 +340,3 @@ go build -o win-sshpass.exe ./cmd/sshpass
 - github.com/schollz/progressbar/v3 (CLI progress bar only)
 - github.com/ncruces/zenity (CLI file dialogs only)
 
-## Related Project
-
-[**go-web-frame**](https://github.com/chuccp/go-web-frame) — A Go web framework with dependency injection, generics-based data access, and production-ready utilities. Ships with HTTP routing, caching, logging, Redis, and more out of the box.

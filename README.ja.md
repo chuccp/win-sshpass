@@ -1,3 +1,7 @@
+## 関連プロジェクト
+
+[**go-web-frame**](https://github.com/chuccp/go-web-frame) — 認証の問題を簡単に解決——ルート宣言に必要な権限、Filterで一括チェック、handlerはクリーンに。ジェネリクスModelでフルスタックCRUD——structを定義するだけで、作成・読取・更新・削除がすぐ使える。軽量で、必要なコンポーネントだけオンデマンドでインストール。コード生成不要、CIツール不要、今最も精巧なGoウェブフルスタックフレームワーク。
+
 # win-sshpass
 
 [English](README.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [日本語](README.ja.md)
@@ -329,6 +333,3 @@ go build -o win-sshpass.exe ./cmd/sshpass
 - github.com/schollz/progressbar/v3（CLI プログレスバーのみ）
 - github.com/ncruces/zenity（CLI ファイルダイアログのみ）
 
-## 関連プロジェクト
-
-[**go-web-frame**](https://github.com/chuccp/go-web-frame) — Go Web フレームワーク。依存性注入、ジェネリクスベースのデータアクセス、本番対応ユーティリティを統合。HTTP ルーティング、キャッシュ、ロギング、Redis などを内蔵。

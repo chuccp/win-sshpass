@@ -1,3 +1,7 @@
+## 相關專案
+
+[**go-web-frame**](https://github.com/chuccp/go-web-frame) — 輕鬆解決鑑權問題——路由宣告需要什麼權限，Filter 一處校驗，handler 裡乾乾淨淨。泛型 Model 解決全棧 CRUD——定義好 struct，增刪改查直接能用。輕巧，需要的組件按需安裝。不需要代碼生成，無需CI工具，目前最精巧的go web全棧框架。
+
 # win-sshpass
 
 [English](README.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [日本語](README.ja.md)
@@ -328,6 +332,3 @@ go build -o win-sshpass.exe ./cmd/sshpass
 - github.com/schollz/progressbar/v3（僅 CLI 進度條）
 - github.com/ncruces/zenity（僅 CLI 檔案對話框）
 
-## 相關專案
-
-[**go-web-frame**](https://github.com/chuccp/go-web-frame) — 一個 Go Web 框架，整合依賴注入、泛型資料存取和開箱即用的生產工具，內建 HTTP 路由、快取、日誌、Redis 等。
