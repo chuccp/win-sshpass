@@ -37,3 +37,10 @@ go.work.sum
 /test_dir
 /dltest
 *.txt
+
+# MkDocs build output
+docs-site/site-zh/
+docs-site/site-en/
+docs-site/site-ja/
+docs-site/site-tw/
+docs-site/_site/

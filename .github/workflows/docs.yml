@@ -1,0 +1,81 @@
+name: Deploy Docs to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs-site/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: pip install mkdocs-material
+
+      - name: Build Chinese (Simplified) docs
+        working-directory: docs-site
+        run: mkdocs build -f mkdocs-zh.yml
+
+      - name: Build English docs
+        working-directory: docs-site
+        run: mkdocs build -f mkdocs-en.yml
+
+      - name: Build Japanese docs
+        working-directory: docs-site
+        run: mkdocs build -f mkdocs-ja.yml
+
+      - name: Build Chinese (Traditional) docs
+        working-directory: docs-site
+        run: mkdocs build -f mkdocs-tw.yml
+
+      - name: Merge sites
+        working-directory: docs-site
+        run: |
+          mkdir -p _site/zh _site/en _site/ja _site/tw
+          cp -r site-zh/* _site/zh/
+          cp -r site-en/* _site/en/
+          cp -r site-ja/* _site/ja/
+          cp -r site-tw/* _site/tw/
+          # Root redirect to Chinese docs
+          cat > _site/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head><meta http-equiv="refresh" content="0; url=zh/"></head>
+          <body><a href="zh/">Go to documentation</a></body>
+          </html>
+          EOF
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs-site/_site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
