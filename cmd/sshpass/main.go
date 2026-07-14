@@ -98,6 +98,36 @@ func main() {
 		config.MergeConfig(nil, cliOverride)
 	}
 
+	// --- hash/verify subcommands (local file operations, no SSH connection) ---
+	if len(remainingArgs) > 0 {
+		switch remainingArgs[0] {
+		case "hash":
+			if len(remainingArgs) != 3 {
+				fatalError("Usage: sshpass hash <algorithm> <file>\nAlgorithms: md5, sha1, sha256, sha512")
+			}
+			result, err := sshpass.HashFile(remainingArgs[2], remainingArgs[1])
+			if err != nil {
+				fatalError("Error: %v", err)
+			}
+			fmt.Println(result)
+			return
+		case "verify":
+			if len(remainingArgs) != 4 {
+				fatalError("Usage: sshpass verify <algorithm> <hash> <file>\nAlgorithms: md5, sha1, sha256, sha512")
+			}
+			ok, err := sshpass.VerifyFile(remainingArgs[3], remainingArgs[1], remainingArgs[2])
+			if err != nil {
+				fatalError("Error: %v", err)
+			}
+			if ok {
+				fmt.Println("OK")
+			} else {
+				fmt.Println("FAILED")
+			}
+			return
+		}
+	}
+
 	// detect command type
 	cmdType := sshpass.DetectCommandType(remainingArgs)
 
