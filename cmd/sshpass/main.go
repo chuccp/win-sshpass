@@ -25,6 +25,7 @@ func main() {
 	timeout := flag.Int("t", 0, "total operation timeout in seconds (0 = no limit)")
 	connectTimeout := flag.Int("ct", 10, "TCP connection timeout in seconds")
 	retries := flag.Int("retry", 3, "total connection attempts (default 3)")
+	resume := flag.Bool("resume", false, "resume interrupted file transfer from breakpoint")
 	showVersion := flag.Bool("v", false, "show version")
 	showHelp := flag.Bool("help", false, "show help")
 	flag.Parse()
@@ -35,6 +36,9 @@ func main() {
 		sshpass.WithProgress(newCLIProgress(os.Stderr).progress),
 		sshpass.WithFileSelector(cliFileSelector{}),
 		sshpass.WithSignalHandler(),
+	}
+	if *resume {
+		cliOpts = append(cliOpts, sshpass.WithResume())
 	}
 
 	// display help
@@ -342,6 +346,7 @@ func printUsage() {
 	fmt.Println("  -t <seconds>       total operation timeout in seconds (0 = no limit, default: 0)")
 	fmt.Println("  -ct <seconds>      TCP connection timeout in seconds (default: 10)")
 	fmt.Println("  -retry <n>         total connection attempts (default: 3, 0 = no retry)")
+	fmt.Println("  -resume            resume interrupted file transfer from breakpoint")
 	fmt.Println("  -local <path>      local file path(s), comma-separated for multiple files")
 	fmt.Println("  -remote <path>     remote file path (for upload/download)")
 	fmt.Println("  -d                 download mode (remote to local)")
@@ -356,6 +361,7 @@ func printUsage() {
 	fmt.Println("  win-sshpass -p 'pass' rsync -avz ./ user@example.com:/backup/")
 	fmt.Println("  win-sshpass -p 'pass' -h example.com -local file1.txt,file2.txt -remote /tmp/")
 	fmt.Println("  win-sshpass -p 'pass' -h example.com -local ./backup -remote /data/file.tar.gz -d")
+	fmt.Println("  win-sshpass -p 'pass' -h example.com -local ./bigfile.iso -remote /data/bigfile.iso -resume")
 	fmt.Println("\nSDK usage (as a Go library):")
 	fmt.Println("  import \"github.com/chuccp/win-sshpass\"  // package sshpass")
 	fmt.Println("  client, err := sshpass.NewClient(cfg)")

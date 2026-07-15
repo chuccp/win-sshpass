@@ -279,7 +279,7 @@ func (m *rzszMonitor) handleRZ(localPath string) {
 	}
 
 	fmt.Fprintf(m.stdout, "Uploading %s -> %s...\n", localPath, remoteCwd)
-	if err := uploadFile(m.sftpClient, localPath, remoteCwd, m.resetTimeout, m.progress); err != nil {
+	if err := uploadFile(m.sftpClient, localPath, remoteCwd, m.resetTimeout, m.progress, false); err != nil {
 		fmt.Fprintf(m.stderr, "Upload failed: %v\n", err)
 	} else {
 		fmt.Fprintln(m.stdout, "Upload complete")
@@ -312,7 +312,7 @@ func (m *rzszMonitor) handleSZ(remotePath, localPath string) {
 	}
 
 	fmt.Fprintf(m.stdout, "Downloading %s -> %s...\n", remotePath, localPath)
-	if err := downloadFile(m.sftpClient, remotePath, localPath, m.resetTimeout, m.progress); err != nil {
+	if err := downloadFile(m.sftpClient, remotePath, localPath, m.resetTimeout, m.progress, false); err != nil {
 		fmt.Fprintf(m.stderr, "Download failed: %v\n", err)
 	} else {
 		fmt.Fprintln(m.stdout, "Download complete")

@@ -68,3 +68,15 @@ func WithFileSelector(s FileSelector) Option {
 func WithSignalHandler() Option {
 	return func(c *Client) { c.signal = true }
 }
+
+// WithResume enables breakpoint-resume for file transfers. When set, Upload
+// and Download check whether the destination file already exists and is
+// partially transferred; if so, the transfer resumes from the last byte
+// instead of starting over. When the destination file already has the full
+// size, the transfer is skipped entirely.
+//
+// Resume is opt-in: without this option, transfers always start from the
+// beginning, overwriting any existing destination file.
+func WithResume() Option {
+	return func(c *Client) { c.resume = true }
+}

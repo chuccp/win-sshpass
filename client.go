@@ -24,6 +24,7 @@ type Client struct {
 	progress ProgressFunc
 	selector FileSelector
 	signal   bool
+	resume   bool
 
 	// operation-timeout machinery
 	resetTimeout func()
@@ -119,6 +120,7 @@ func (c *Client) SFTP() (*SFTPClient, error) {
 		sftpClient:   sftpClient,
 		resetTimeout: c.resetTimeout,
 		progress:     c.progress,
+		resume:       c.resume,
 	}, nil
 }
 
