@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime"
 
 	sshpass "github.com/chuccp/win-sshpass"
 )
@@ -376,5 +377,5 @@ func printUsage() {
 
 // printVersion prints version info.
 func printVersion() {
-	fmt.Printf("win-sshpass version %s (Windows)\n", sshpass.Version)
+	fmt.Printf("win-sshpass version %s (%s/%s)\n", sshpass.Version, runtime.GOOS, runtime.GOARCH)
 }

@@ -5,18 +5,32 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build
 
 ```bash
+# Windows
 go build -o win-sshpass.exe ./cmd/sshpass
+
+# Linux / macOS
+go build -o win-sshpass ./cmd/sshpass
+
+# Cross-compile
+GOOS=linux   GOARCH=amd64 CGO_ENABLED=0 go build -o win-sshpass ./cmd/sshpass
+GOOS=windows GOARCH=amd64               go build -o win-sshpass.exe ./cmd/sshpass
+GOOS=darwin  GOARCH=arm64               go build -o win-sshpass ./cmd/sshpass
 ```
 
 ## Architecture
 
 The project is a reusable Go SDK (`package sshpass`) plus a CLI entry point.
 
-- `cmd/sshpass/main.go` - CLI entry point: flag parsing, config merging, command dispatch. Built into `win-sshpass.exe`.
+- `cmd/sshpass/main.go` - CLI entry point: flag parsing, config merging, command dispatch.
+- `cmd/sshpass/ui.go` - CLI progress bar adapter (shared, all platforms).
+- `cmd/sshpass/ui_windows.go` - rz/sz file dialog via zenity (Windows only).
+- `cmd/sshpass/ui_other.go` - rz/sz no-op file selector, falls back to stdin prompt (Linux/macOS).
 - `client.go` - `Client` object: `NewClient`, `Exec`, `Shell`, `SFTP`, `Close`, `TimedOut`.
-- `options.go` - Functional options (`WithStdin`, `WithStdout`, `WithStderr`, `WithProgress`, `WithFileSelector`, `WithSignalHandler`) and the `ProgressFunc`/`FileSelector` abstractions. The SDK ships **no UI implementations**; CLI-side adapters (progressbar, zenity) live in `cmd/sshpass/ui.go`.
+- `options.go` - Functional options (`WithStdin`, `WithStdout`, `WithStderr`, `WithProgress`, `WithFileSelector`, `WithSignalHandler`) and the `ProgressFunc`/`FileSelector` abstractions. The SDK ships **no UI implementations**; CLI-side adapters (progressbar, zenity) live in `cmd/sshpass/ui*.go`.
 - `config.go` - `Config` struct, `NewConfig`, `LoadConfig`, `LoadConfigOrPasswordFile`, merge/validate/normalize methods.
 - `ssh.go` - `Dial` (exported, alias `SSHClient`), retry/timeout/known_hosts, `runShell`/`executeCommand` (use injected I/O).
+- `ssh_resize_unix.go` - terminal resize via SIGWINCH (Linux/macOS).
+- `ssh_resize_windows.go` - terminal resize via polling (Windows).
 - `sftp.go` - `SFTPClient` with `Upload`/`Download`, timeout-aware readers/writers, progress reporting.
 - `scp.go` - `RunSCP`/`RunRsync` over a `*Client`.
 - `args.go` - `ParseSSHArgs`/`ParseSCPArgs`/`ParseRsyncArgs`/`DetectCommandType`.
@@ -28,14 +42,25 @@ The library avoids process-level side effects: no `os.Exit`, no global signal
 registration (unless `WithSignalHandler` is used), and all I/O streams are
 injectable via options.
 
+## Platform Support
+
+- **Windows**: full support including zenity file dialogs for rz/sz.
+- **Linux/macOS**: full support; rz/sz falls back to stdin path input (no GUI dialog).
+- Terminal resize uses SIGWINCH on Unix, polling on Windows.
+- SDK (`package sshpass`) is fully cross-platform; platform-specific code is
+  isolated behind build tags in `cmd/sshpass/` and `ssh_resize_*.go`.
+
 ## Dependencies
 
 - `golang.org/x/crypto/ssh` - SSH protocol
 - `github.com/pkg/sftp` - SFTP file transfer
+- `github.com/ncruces/zenity` - file dialogs (Windows only, build-tagged)
+- `github.com/schollz/progressbar/v3` - CLI progress bar (all platforms)
 
 ## Release
 
-Push a `v*` tag to trigger GitHub Actions workflow that builds `sshpass.exe` and creates a release:
+Push a `v*` tag to trigger GitHub Actions workflow that builds Windows (zip + MSI)
+and Linux (tar.gz) binaries and creates a release:
 
 ```bash
 git tag v1.0.0

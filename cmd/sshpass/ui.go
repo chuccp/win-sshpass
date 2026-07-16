@@ -1,12 +1,10 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"sync"
 
-	"github.com/ncruces/zenity"
 	"github.com/schollz/progressbar/v3"
 )
 
@@ -52,27 +50,4 @@ func (p *cliProgress) progress(description string, sent, total int64) {
 
 	// Update existing bar to the cumulative byte count.
 	p.bar.Set64(sent)
-}
-
-// cliFileSelector implements sshpass.FileSelector using zenity dialogs.
-type cliFileSelector struct{}
-
-func (cliFileSelector) OpenFile() (string, error) {
-	path, err := zenity.SelectFile(zenity.Title("Select file to upload"))
-	if errors.Is(err, zenity.ErrCanceled) {
-		return "", nil
-	}
-	return path, err
-}
-
-func (cliFileSelector) SaveFile(defaultName string) (string, error) {
-	path, err := zenity.SelectFileSave(
-		zenity.Title("Save downloaded file"),
-		zenity.Filename(defaultName),
-		zenity.ConfirmOverwrite(),
-	)
-	if errors.Is(err, zenity.ErrCanceled) {
-		return "", nil
-	}
-	return path, err
 }
