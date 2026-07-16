@@ -48,7 +48,7 @@ jobs:
         run: |
           $tag = "${{ github.ref_name }}"
           $arch = "${{ matrix.arch }}"
-          Compress-Archive -Path win-sshpass.exe,README.md,README.zh-CN.md,README.zh-TW.md,README.ja.md -DestinationPath "win-sshpass-$tag-windows-$arch.zip"
+          Compress-Archive -Path win-sshpass.exe,README.md,README.zh-CN.md,README.zh-TW.md,README.ja.md -DestinationPath "win-sshpass-$tag-$arch.zip"
 
       - name: Install WiX Toolset
         run: |
@@ -56,15 +56,15 @@ jobs:
           wix eula accept wix7
 
       - name: Build MSI
-        run: wix build -arch ${{ matrix.wix_arch }} -d Version=${{ github.ref_name }} -out win-sshpass-${{ github.ref_name }}-windows-${{ matrix.arch }}.msi .github/workflows/win-sshpass.wxs
+        run: wix build -arch ${{ matrix.wix_arch }} -d Version=${{ github.ref_name }} -out win-sshpass-${{ github.ref_name }}-${{ matrix.arch }}.msi .github/workflows/win-sshpass.wxs
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: artifacts-windows-${{ matrix.arch }}
           path: |
-            win-sshpass-*-windows-${{ matrix.arch }}.zip
-            win-sshpass-*-windows-${{ matrix.arch }}.msi
+            win-sshpass-*-${{ matrix.arch }}.zip
+            win-sshpass-*-${{ matrix.arch }}.msi
 
   build-linux:
     runs-on: ubuntu-latest
@@ -159,8 +159,8 @@ jobs:
           BASE_URL="https://github.com/chuccp/win-sshpass/releases/download/${TAG}"
 
           # Compute SHA-256 hashes
-          HASH_AMD64=$(sha256sum artifacts/win-sshpass-${TAG}-windows-amd64.zip | awk '{print $1}')
-          HASH_ARM64=$(sha256sum artifacts/win-sshpass-${TAG}-windows-arm64.zip | awk '{print $1}')
+          HASH_AMD64=$(sha256sum artifacts/win-sshpass-${TAG}-amd64.zip | awk '{print $1}')
+          HASH_ARM64=$(sha256sum artifacts/win-sshpass-${TAG}-arm64.zip | awk '{print $1}')
 
           # Generate Scoop manifest JSON
           cat > win-sshpass.json <<EOF
@@ -171,11 +171,11 @@ jobs:
               "license": "Apache-2.0",
               "architecture": {
                   "64bit": {
-                      "url": "${BASE_URL}/win-sshpass-${TAG}-windows-amd64.zip",
+                      "url": "${BASE_URL}/win-sshpass-${TAG}-amd64.zip",
                       "hash": "${HASH_AMD64}"
                   },
                   "arm64": {
-                      "url": "${BASE_URL}/win-sshpass-${TAG}-windows-arm64.zip",
+                      "url": "${BASE_URL}/win-sshpass-${TAG}-arm64.zip",
                       "hash": "${HASH_ARM64}"
                   }
               },
@@ -187,10 +187,10 @@ jobs:
               "autoupdate": {
                   "architecture": {
                       "64bit": {
-                          "url": "https://github.com/chuccp/win-sshpass/releases/download/v\$version/win-sshpass-v\$version-windows-amd64.zip"
+                          "url": "https://github.com/chuccp/win-sshpass/releases/download/v\$version/win-sshpass-v\$version-amd64.zip"
                       },
                       "arm64": {
-                          "url": "https://github.com/chuccp/win-sshpass/releases/download/v\$version/win-sshpass-v\$version-windows-arm64.zip"
+                          "url": "https://github.com/chuccp/win-sshpass/releases/download/v\$version/win-sshpass-v\$version-arm64.zip"
                       }
                   }
               }
@@ -237,6 +237,6 @@ jobs:
   #
   #         wingetcreate update chuccp.win-sshpass \
   #           --version "${VERSION}" \
-  #           --urls "${BASE_URL}/win-sshpass-${TAG}-windows-amd64.msi,${BASE_URL}/win-sshpass-${TAG}-windows-arm64.msi" \
+  #           --urls "${BASE_URL}/win-sshpass-${TAG}-amd64.msi,${BASE_URL}/win-sshpass-${TAG}-arm64.msi" \
   #           --submit \
   #           --token "${WINGET_TOKEN}"
