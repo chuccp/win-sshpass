@@ -299,6 +299,45 @@ func TestValidate(t *testing.T) {
 	})
 }
 
+func TestParseConfigFileProxyURL(t *testing.T) {
+	path := writeTempFile(t, "host: h\nproxy: socks5://127.0.0.1:1080\n")
+	cfg, err := LoadConfig(path)
+	if err != nil {
+		t.Fatalf("LoadConfig returned error: %v", err)
+	}
+	if cfg.ProxyURL != "socks5://127.0.0.1:1080" {
+		t.Errorf("ProxyURL = %q, want %q", cfg.ProxyURL, "socks5://127.0.0.1:1080")
+	}
+}
+
+func TestMergeConfigProxyURL(t *testing.T) {
+	t.Run("proxy from src overrides dst", func(t *testing.T) {
+		dst := NewConfig()
+		src := &Config{Host: "h", ProxyURL: "http://proxy:8080"}
+		dst.MergeConfig(src, nil)
+		if dst.ProxyURL != "http://proxy:8080" {
+			t.Errorf("ProxyURL = %q, want %q", dst.ProxyURL, "http://proxy:8080")
+		}
+	})
+	t.Run("proxy from override takes priority", func(t *testing.T) {
+		dst := NewConfig()
+		src := &Config{Host: "h", ProxyURL: "socks5://a:1080"}
+		override := &Config{ProxyURL: "socks5://b:1080"}
+		dst.MergeConfig(src, override)
+		if dst.ProxyURL != "socks5://b:1080" {
+			t.Errorf("ProxyURL = %q, want %q", dst.ProxyURL, "socks5://b:1080")
+		}
+	})
+	t.Run("empty proxy preserves src", func(t *testing.T) {
+		dst := NewConfig()
+		src := &Config{Host: "h", ProxyURL: "http://p:8080"}
+		dst.MergeConfig(src, &Config{})
+		if dst.ProxyURL != "http://p:8080" {
+			t.Errorf("ProxyURL = %q, want %q", dst.ProxyURL, "http://p:8080")
+		}
+	})
+}
+
 func TestParseBoolValue(t *testing.T) {
 	tests := []struct {
 		input string

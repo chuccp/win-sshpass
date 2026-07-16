@@ -26,6 +26,7 @@ func main() {
 	connectTimeout := flag.Int("ct", 10, "TCP connection timeout in seconds")
 	retries := flag.Int("retry", 3, "total connection attempts (default 3)")
 	resume := flag.Bool("resume", false, "resume interrupted file transfer from breakpoint")
+	proxyURL := flag.String("proxy", "", "proxy URL for SSH connection (socks5://[user:pass@]host:port, socks4://, http://, https://)")
 	showVersion := flag.Bool("v", false, "show version")
 	showHelp := flag.Bool("help", false, "show help")
 	flag.Parse()
@@ -76,6 +77,7 @@ func main() {
 		KeyPath:        *keyPath,
 		Host:           *host,
 		User:           *user,
+		ProxyURL:       *proxyURL,
 		Timeout:        -1, // -1 = not set; allows explicit 0 to override config file
 		ConnectTimeout: -1, // -1 = not set; allows explicit 0 to override config file
 		Retries:        -1, // -1 = not set; allows explicit 0 to override config file
@@ -347,6 +349,7 @@ func printUsage() {
 	fmt.Println("  -ct <seconds>      TCP connection timeout in seconds (default: 10)")
 	fmt.Println("  -retry <n>         total connection attempts (default: 3, 0 = no retry)")
 	fmt.Println("  -resume            resume interrupted file transfer from breakpoint")
+	fmt.Println("  -proxy <url>       connect via proxy (socks5://[user:pass@]host:port, socks4://, http://, https://)")
 	fmt.Println("  -local <path>      local file path(s), comma-separated for multiple files")
 	fmt.Println("  -remote <path>     remote file path (for upload/download)")
 	fmt.Println("  -d                 download mode (remote to local)")
@@ -362,6 +365,8 @@ func printUsage() {
 	fmt.Println("  win-sshpass -p 'pass' -h example.com -local file1.txt,file2.txt -remote /tmp/")
 	fmt.Println("  win-sshpass -p 'pass' -h example.com -local ./backup -remote /data/file.tar.gz -d")
 	fmt.Println("  win-sshpass -p 'pass' -h example.com -local ./bigfile.iso -remote /data/bigfile.iso -resume")
+	fmt.Println("  win-sshpass -p 'pass' -proxy socks5://127.0.0.1:1080 ssh user@example.com")
+	fmt.Println("  win-sshpass -p 'pass' -proxy http://user:pass@proxy.local:8080 ssh user@example.com")
 	fmt.Println("\nSDK usage (as a Go library):")
 	fmt.Println("  import \"github.com/chuccp/win-sshpass\"  // package sshpass")
 	fmt.Println("  client, err := sshpass.NewClient(cfg)")

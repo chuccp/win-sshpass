@@ -19,6 +19,7 @@ type Config struct {
 	Timeout        int    // total operation deadline in seconds, 0 = no limit
 	ConnectTimeout int    // TCP connection timeout in seconds
 	Retries        int    // total connection attempts (default 1 = single attempt, no retry)
+	ProxyURL       string // optional proxy URL (socks5://, socks5h://, socks4://, http://, https://)
 }
 
 // NewConfig creates a Config with default values.
@@ -99,6 +100,9 @@ func (dst *Config) MergeFrom(src *Config) {
 	}
 	if src.StrictHostKey {
 		dst.StrictHostKey = true
+	}
+	if src.ProxyURL != "" {
+		dst.ProxyURL = src.ProxyURL
 	}
 }
 
@@ -211,6 +215,9 @@ func LoadConfig(filename string) (*Config, error) {
 			hasKeys = true
 		case "strict_host_key":
 			config.StrictHostKey = parseBoolValue(value)
+			hasKeys = true
+		case "proxy", "proxy_url":
+			config.ProxyURL = value
 			hasKeys = true
 		}
 	}

@@ -98,7 +98,7 @@ func dial(config *Config, stderr io.Writer) (*ssh.Client, error) {
 			time.Sleep(delay)
 		}
 
-		client, err := dialAndHandshake(address, sshConfig, config.ConnectTimeout)
+		client, err := dialAndHandshake(address, sshConfig, config.ConnectTimeout, config.ProxyURL)
 		if err == nil {
 			return client, nil
 		}
@@ -120,13 +120,21 @@ func SSHClient(config *Config) (*ssh.Client, error) {
 	return Dial(config)
 }
 
-// dialAndHandshake performs a single TCP dial + SSH handshake.
-func dialAndHandshake(address string, sshConfig *ssh.ClientConfig, connectTimeout int) (*ssh.Client, error) {
-	var dialer net.Dialer
-	if connectTimeout > 0 {
-		dialer.Timeout = time.Duration(connectTimeout) * time.Second
+// dialAndHandshake performs a single TCP dial + SSH handshake. When proxyURL
+// is non-empty, the TCP connection is tunneled through the specified proxy
+// (SOCKS4/5 or HTTP CONNECT) before the SSH handshake begins.
+func dialAndHandshake(address string, sshConfig *ssh.ClientConfig, connectTimeout int, proxyURL string) (*ssh.Client, error) {
+	var conn net.Conn
+	var err error
+	if proxyURL != "" {
+		conn, err = proxyDial(proxyURL, address, connectTimeout)
+	} else {
+		var dialer net.Dialer
+		if connectTimeout > 0 {
+			dialer.Timeout = time.Duration(connectTimeout) * time.Second
+		}
+		conn, err = dialer.Dial("tcp", address)
 	}
-	conn, err := dialer.Dial("tcp", address)
 	if err != nil {
 		return nil, fmt.Errorf("connection failed: %w", err)
 	}
