@@ -194,3 +194,55 @@ func TestParseRsyncArgs(t *testing.T) {
 		})
 	}
 }
+
+func TestParseSCPArgsContent(t *testing.T) {
+	// Verify the scpArgs slice content, not just length.
+	cfg, scpArgs := ParseSCPArgs([]string{"scp", "-r", "-P", "2222", "file.txt", "dir/", "root@host:/tmp/"})
+	_ = cfg
+	// -r and -P should be stripped; file.txt, dir/, root@host:/tmp/ remain.
+	want := []string{"file.txt", "dir/", "root@host:/tmp/"}
+	if len(scpArgs) != len(want) {
+		t.Fatalf("scpArgs = %v, want %v", scpArgs, want)
+	}
+	for i, a := range scpArgs {
+		if a != want[i] {
+			t.Errorf("scpArgs[%d] = %q, want %q", i, a, want[i])
+		}
+	}
+}
+
+func TestParseRsyncArgsContent(t *testing.T) {
+	cfg, rsyncArgs := ParseRsyncArgs([]string{"rsync", "-avz", "-e", "ssh", "--port=2222", "./", "root@host:/backup/"})
+	_ = cfg
+	// -e ssh and --port=2222 should be stripped; -avz, ./, root@host:/backup/ remain.
+	want := []string{"-avz", "./", "root@host:/backup/"}
+	if len(rsyncArgs) != len(want) {
+		t.Fatalf("rsyncArgs = %v, want %v", rsyncArgs, want)
+	}
+	for i, a := range rsyncArgs {
+		if a != want[i] {
+			t.Errorf("rsyncArgs[%d] = %q, want %q", i, a, want[i])
+		}
+	}
+}
+
+func TestParseSSHArgsIPv6(t *testing.T) {
+	cfg, cmd := ParseSSHArgs([]string{"ssh", "root@[::1]", "whoami"})
+	if cfg.User != "root" || cfg.Host != "[::1]" {
+		t.Errorf("User=%q Host=%q, want root/[::1]", cfg.User, cfg.Host)
+	}
+	if cmd != "whoami" {
+		t.Errorf("cmd = %q, want whoami", cmd)
+	}
+}
+
+func TestParseSSHArgsCommandOnly(t *testing.T) {
+	// Args without user@host — command only after host is found.
+	cfg, cmd := ParseSSHArgs([]string{"ssh", "root@host", "ls", "-la", "/tmp"})
+	if cfg.Host != "host" {
+		t.Errorf("Host = %q, want host", cfg.Host)
+	}
+	if cmd != "ls -la /tmp" {
+		t.Errorf("cmd = %q, want %q", cmd, "ls -la /tmp")
+	}
+}

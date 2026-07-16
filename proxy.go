@@ -58,7 +58,10 @@ func socksDial(u *url.URL, address string, timeout int) (net.Conn, error) {
 	return socks5Dial(proxyAddr, u, address, timeout)
 }
 
-// socks5Dial creates a SOCKS5 dialer via golang.org/x/net/proxy.
+// socks5Dial creates a SOCKS5 dialer via golang.org/x/net/proxy. The timeout
+// covers both the TCP connection to the proxy AND the SOCKS5 protocol handshake
+// (auth + CONNECT request/response), so a proxy that accepts the TCP connection
+// but never responds to SOCKS5 negotiation won't hang forever.
 func socks5Dial(proxyAddr string, u *url.URL, address string, timeout int) (net.Conn, error) {
 	var forward proxy.Dialer = &net.Dialer{}
 	if timeout > 0 {
@@ -77,11 +80,40 @@ func socks5Dial(proxyAddr string, u *url.URL, address string, timeout int) (net.
 		return nil, fmt.Errorf("failed to create SOCKS5 dialer: %w", err)
 	}
 
-	conn, err := dialer.Dial("tcp", address)
-	if err != nil {
-		return nil, fmt.Errorf("SOCKS5 proxy connection failed: %w", err)
+	// proxy.Dialer.Dial does not accept a context, so when a timeout is
+	// configured we run the dial in a goroutine and race it against a timer.
+	// This ensures a SOCKS5 proxy that hangs during negotiation (after the TCP
+	// connection is established) is still subject to the deadline.
+	type dialResult struct {
+		conn net.Conn
+		err  error
 	}
-	return conn, nil
+	if timeout <= 0 {
+		conn, err := dialer.Dial("tcp", address)
+		if err != nil {
+			return nil, fmt.Errorf("SOCKS5 proxy connection failed: %w", err)
+		}
+		return conn, nil
+	}
+
+	resultCh := make(chan dialResult, 1)
+	go func() {
+		conn, err := dialer.Dial("tcp", address)
+		resultCh <- dialResult{conn, err}
+	}()
+
+	select {
+	case res := <-resultCh:
+		if res.err != nil {
+			return nil, fmt.Errorf("SOCKS5 proxy connection failed: %w", res.err)
+		}
+		return res.conn, nil
+	case <-time.After(time.Duration(timeout) * time.Second):
+		// Best-effort: the goroutine may still complete and write to resultCh
+		// (buffered, so no leak); the connection it created (if any) will be
+		// GC'd or closed by the proxy dialer's internal cleanup.
+		return nil, fmt.Errorf("SOCKS5 proxy connection timed out after %ds", timeout)
+	}
 }
 
 // socks4Dial implements the SOCKS4/SOCKS4A CONNECT command. When the target
@@ -210,6 +242,9 @@ func httpConnectDial(u *url.URL, scheme, address string, timeout int) (net.Conn,
 	}
 
 	// Read and validate the proxy's HTTP response status line + headers.
+	// Use a bufio.Reader for efficient line reads; any bytes it buffers beyond
+	// the headers (e.g. the start of the SSH handshake pushed by the server)
+	// must be preserved — see bufferedConn below.
 	br := bufio.NewReader(conn)
 	statusLine, err := br.ReadString('\n')
 	if err != nil {
@@ -244,5 +279,26 @@ func httpConnectDial(u *url.URL, scheme, address string, timeout int) (net.Conn,
 		}
 	}
 
+	// If the bufio.Reader has buffered bytes beyond the headers (the server
+	// may have already started sending SSH handshake data), wrap the connection
+	// so those bytes are served first before reading fresh data from conn.
+	if br.Buffered() > 0 {
+		return &bufferedConn{r: br, Conn: conn}, nil
+	}
 	return conn, nil
+}
+
+// bufferedConn wraps a net.Conn with a bufio.Reader so that any bytes already
+// buffered in the reader are returned first on Read, before delegating to the
+// underlying connection. This is necessary after reading HTTP CONNECT response
+// headers with a bufio.Reader: the proxy (or the SSH server behind it) may push
+// data immediately after the headers, and that data would be stuck in the
+// bufio buffer if we returned the raw conn.
+type bufferedConn struct {
+	r *bufio.Reader
+	net.Conn
+}
+
+func (c *bufferedConn) Read(p []byte) (int, error) {
+	return c.r.Read(p)
 }

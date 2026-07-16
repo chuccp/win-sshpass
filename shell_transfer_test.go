@@ -250,3 +250,99 @@ func TestOutputWriterPassthrough(t *testing.T) {
 		t.Errorf("Output = %q, want %q", outBuf.String(), "ls -la\r\ntotal 0\r\n")
 	}
 }
+
+func TestContainsNotFoundChinese(t *testing.T) {
+	// Chinese locale "未找到命令" should be detected.
+	if !containsNotFound([]byte("-bash: rz: 未找到命令\r\n")) {
+		t.Error("expected '未找到命令' to be detected as not-found")
+	}
+}
+
+func TestContainsNotFoundNoSuchFile(t *testing.T) {
+	// "No such file or directory" should be detected (covers sh fallback).
+	if !containsNotFound([]byte("sh: rz: No such file or directory\r\n")) {
+		t.Error("expected 'No such file or directory' to be detected")
+	}
+}
+
+func TestExtractCommandFromNotFoundShFormat(t *testing.T) {
+	// sh format: "sh: rz: not found"
+	cmd, args := extractCommandFromNotFound([]byte("sh: rz: not found\r\n"))
+	if cmd != "rz" {
+		t.Errorf("cmd = %q, want rz", cmd)
+	}
+	if len(args) != 0 {
+		t.Errorf("args = %v, want empty", args)
+	}
+}
+
+func TestExtractCommandFromNotFoundNotInBuffer(t *testing.T) {
+	// "not found" present but no rz/sz command.
+	cmd, _ := extractCommandFromNotFound([]byte("-bash: ls: command not found\r\n"))
+	if cmd != "" {
+		t.Errorf("cmd = %q, want empty (ls is not rz/sz)", cmd)
+	}
+}
+
+func TestReadLineFromStdin(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"simple", "hello\n", "hello"},
+		{"carriage return", "world\r\n", "world"},
+		{"empty", "\n", ""},
+		{"no newline", "noline", "noline"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := bytes.NewBufferString(tt.input)
+			got := readLineFromStdin(r)
+			if got != tt.want {
+				t.Errorf("readLineFromStdin(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestOutputWriterHandledFlagResets(t *testing.T) {
+	// After handling rz, the Handled flag should reset to false, allowing a
+	// subsequent rz/sz to be handled again.
+	monitor := &rzszMonitor{}
+	var outBuf bytes.Buffer
+	writer := &outputWriter{monitor: monitor, out: &outBuf}
+
+	callCount := 0
+	monitor.onRZ = func(path string) { callCount++ }
+
+	// First rz.
+	writer.Write([]byte("rz\r\n"))
+	writer.Write([]byte("-bash: rz: command not found\r\n"))
+	if callCount != 1 {
+		t.Fatalf("expected 1 call after first rz, got %d", callCount)
+	}
+
+	// Second rz should also trigger (Handled was reset).
+	writer.Write([]byte("rz\r\n"))
+	writer.Write([]byte("-bash: rz: command not found\r\n"))
+	if callCount != 2 {
+		t.Fatalf("expected 2 calls after second rz, got %d", callCount)
+	}
+}
+
+func TestOutputWriterLargeOutputDoesNotPanic(t *testing.T) {
+	// Writing a large chunk (> 4096 rolling buffer) should not panic.
+	monitor := &rzszMonitor{}
+	var outBuf bytes.Buffer
+	writer := &outputWriter{monitor: monitor, out: &outBuf}
+
+	large := make([]byte, 8192)
+	for i := range large {
+		large[i] = 'x'
+	}
+	writer.Write(large)
+	if outBuf.Len() != 8192 {
+		t.Errorf("output len = %d, want 8192", outBuf.Len())
+	}
+}

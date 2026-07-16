@@ -1,8 +1,13 @@
 package sshpass
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 )
 
 type testExitStatusError struct {
@@ -155,6 +160,8 @@ func TestParseUserHostPath(t *testing.T) {
 		{"no at sign", "host:path", "", "", ""},
 		{"empty", "", "", "", ""},
 		{"@ at start", "@host:path", "", "", ""},
+		{"ipv6 with path no trailing", "user@[::1]:/var/log", "user", "[::1]", "/var/log"},
+		{"user host with colon in path", "root@host:/a:b", "root", "host", "/a:b"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -172,6 +179,90 @@ func TestParseUserHostPath(t *testing.T) {
 	}
 }
 
+func TestJoinArgs(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"multiple", []string{"a", "b", "c"}, "a b c"},
+		{"single", []string{"only"}, "only"},
+		{"empty", []string{}, ""},
+		{"with flags", []string{"-la", "/tmp"}, "-la /tmp"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := JoinArgs(tt.args); got != tt.want {
+				t.Errorf("JoinArgs(%v) = %q, want %q", tt.args, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSetupOperationTimeoutFires(t *testing.T) {
+	var triggered atomic.Bool
+	closeFn := func() { triggered.Store(true) }
+
+	var buf bytes.Buffer
+	reset, stop := setupOperationTimeout(&buf, closeFn, 1)
+	_ = reset
+	defer stop()
+
+	// Wait for the timer to fire (1 second + margin).
+	time.Sleep(1500 * time.Millisecond)
+
+	if !triggered.Load() {
+		t.Fatal("expected timeout to trigger closeFn")
+	}
+	if !strings.Contains(buf.String(), "Operation timed out") {
+		t.Errorf("expected timeout notice in output, got %q", buf.String())
+	}
+}
+
+func TestSetupOperationTimeoutNoTimeout(t *testing.T) {
+	// timeout <= 0: no timer, stop is a no-op, reset is nil.
+	var triggered atomic.Bool
+	reset, stop := setupOperationTimeout(io.Discard, func() { triggered.Store(true) }, 0)
+	defer stop()
+	if reset != nil {
+		t.Errorf("reset should be nil when timeout <= 0, got non-nil")
+	}
+	// Wait briefly; should not fire.
+	time.Sleep(200 * time.Millisecond)
+	if triggered.Load() {
+		t.Fatal("closeFn should not fire when timeout <= 0")
+	}
+}
+
+func TestSetupOperationTimeoutReset(t *testing.T) {
+	var triggered atomic.Bool
+	reset, stop := setupOperationTimeout(io.Discard, func() { triggered.Store(true) }, 1)
+	defer stop()
+
+	// Reset multiple times within the window to keep it alive.
+	for i := 0; i < 3; i++ {
+		reset()
+		time.Sleep(600 * time.Millisecond)
+	}
+	if triggered.Load() {
+		t.Fatal("closeFn should not fire while being reset")
+	}
+}
+
+func TestOnInterruptStopReleasesGoroutine(t *testing.T) {
+	var called atomic.Bool
+	stop := onInterrupt(func() { called.Store(true) })
+
+	// Stopping should unregister the handler without calling cleanup.
+	stop()
+
+	// Give the goroutine time to exit.
+	time.Sleep(100 * time.Millisecond)
+	if called.Load() {
+		t.Fatal("cleanup should not be called on stop")
+	}
+}
+
 func TestSplitPaths(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -183,6 +274,9 @@ func TestSplitPaths(t *testing.T) {
 		{"comma separated", "/a.txt,/b.txt", []string{"/a.txt", "/b.txt"}, false},
 		{"space separated simple", "a.txt b.txt", []string{"a.txt", "b.txt"}, false},
 		{"space separated with slash errors", "/a.txt /b.txt", nil, true},
+		{"comma with spaces trimmed", " a.txt , b.txt ", []string{"a.txt", "b.txt"}, false},
+		{"comma trailing empty", "a.txt,,b.txt", []string{"a.txt", "b.txt"}, false},
+		{"empty string", "", []string{""}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

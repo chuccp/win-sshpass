@@ -310,6 +310,35 @@ func TestParseConfigFileProxyURL(t *testing.T) {
 	}
 }
 
+func TestParseConfigFileProxyURLAlias(t *testing.T) {
+	// "proxy_url" should be accepted as an alias for "proxy".
+	path := writeTempFile(t, "host: h\nproxy_url: http://proxy:8080\n")
+	cfg, err := LoadConfig(path)
+	if err != nil {
+		t.Fatalf("LoadConfig returned error: %v", err)
+	}
+	if cfg.ProxyURL != "http://proxy:8080" {
+		t.Errorf("ProxyURL = %q, want %q", cfg.ProxyURL, "http://proxy:8080")
+	}
+}
+
+func TestValidateAllowsEmptyProxyURL(t *testing.T) {
+	// ProxyURL is optional; an empty value should pass validation.
+	cfg := &Config{Host: "h", Port: "22", Password: "p"}
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate with empty ProxyURL should not error: %v", err)
+	}
+}
+
+func TestValidateAllowsProxyURL(t *testing.T) {
+	// A non-empty ProxyURL should not cause validation to fail (the URL is
+	// only validated at dial time).
+	cfg := &Config{Host: "h", Port: "22", Password: "p", ProxyURL: "socks5://x:1080"}
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate with ProxyURL should not error: %v", err)
+	}
+}
+
 func TestMergeConfigProxyURL(t *testing.T) {
 	t.Run("proxy from src overrides dst", func(t *testing.T) {
 		dst := NewConfig()
@@ -354,5 +383,103 @@ func TestParseBoolValue(t *testing.T) {
 				t.Errorf("parseBoolValue(%q) = %v, want %v", tt.input, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestApplyUserDefault(t *testing.T) {
+	t.Run("sets root when empty", func(t *testing.T) {
+		cfg := &Config{User: ""}
+		cfg.ApplyUserDefault()
+		if cfg.User != "root" {
+			t.Errorf("User = %q, want root", cfg.User)
+		}
+	})
+	t.Run("preserves existing user", func(t *testing.T) {
+		cfg := &Config{User: "ubuntu"}
+		cfg.ApplyUserDefault()
+		if cfg.User != "ubuntu" {
+			t.Errorf("User = %q, want ubuntu", cfg.User)
+		}
+	})
+}
+
+func TestSetUserHostFromArg(t *testing.T) {
+	t.Run("parses user@host", func(t *testing.T) {
+		cfg := NewConfig()
+		cfg.SetUserHostFromArg("deploy@example.com")
+		if cfg.User != "deploy" || cfg.Host != "example.com" {
+			t.Errorf("User=%q Host=%q, want deploy/example.com", cfg.User, cfg.Host)
+		}
+	})
+	t.Run("no at sign does nothing", func(t *testing.T) {
+		cfg := NewConfig()
+		cfg.Host = "original"
+		cfg.SetUserHostFromArg("justhost")
+		if cfg.Host != "original" {
+			t.Errorf("Host = %q, want original (unchanged)", cfg.Host)
+		}
+	})
+	t.Run("ipv6 host", func(t *testing.T) {
+		cfg := NewConfig()
+		cfg.SetUserHostFromArg("root@[::1]:/tmp")
+		if cfg.User != "root" || cfg.Host != "[::1]" {
+			t.Errorf("User=%q Host=%q, want root/[::1]", cfg.User, cfg.Host)
+		}
+	})
+}
+
+func TestNormalizeEdgeCases(t *testing.T) {
+	t.Run("timeout 0 does not adjust connect", func(t *testing.T) {
+		cfg := &Config{Timeout: 0, ConnectTimeout: 10}
+		cfg.Normalize()
+		if cfg.ConnectTimeout != 10 {
+			t.Errorf("ConnectTimeout = %d, want 10", cfg.ConnectTimeout)
+		}
+	})
+	t.Run("connect < timeout unchanged", func(t *testing.T) {
+		cfg := &Config{Timeout: 30, ConnectTimeout: 5}
+		cfg.Normalize()
+		if cfg.ConnectTimeout != 5 {
+			t.Errorf("ConnectTimeout = %d, want 5", cfg.ConnectTimeout)
+		}
+	})
+	t.Run("connect equals timeout clamps", func(t *testing.T) {
+		cfg := &Config{Timeout: 10, ConnectTimeout: 10}
+		cfg.Normalize()
+		if cfg.ConnectTimeout != 9 {
+			t.Errorf("ConnectTimeout = %d, want 9", cfg.ConnectTimeout)
+		}
+	})
+	t.Run("timeout 1 connect 10 clamps to 1", func(t *testing.T) {
+		cfg := &Config{Timeout: 1, ConnectTimeout: 10}
+		cfg.Normalize()
+		if cfg.ConnectTimeout != 1 {
+			t.Errorf("ConnectTimeout = %d, want 1", cfg.ConnectTimeout)
+		}
+	})
+}
+
+func TestMergeFromNilIsNoop(t *testing.T) {
+	dst := NewConfig()
+	dst.Host = "original"
+	dst.MergeFrom(nil)
+	if dst.Host != "original" {
+		t.Errorf("MergeFrom(nil) should not change dst, Host=%q", dst.Host)
+	}
+}
+
+func TestNewConfigDefaults(t *testing.T) {
+	cfg := NewConfig()
+	if cfg.User != "root" {
+		t.Errorf("default User = %q, want root", cfg.User)
+	}
+	if cfg.Port != "22" {
+		t.Errorf("default Port = %q, want 22", cfg.Port)
+	}
+	if cfg.ConnectTimeout != 10 {
+		t.Errorf("default ConnectTimeout = %d, want 10", cfg.ConnectTimeout)
+	}
+	if cfg.Retries != 3 {
+		t.Errorf("default Retries = %d, want 3", cfg.Retries)
 	}
 }
