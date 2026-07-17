@@ -2,6 +2,12 @@
 
 ## v0.3.2
 
+- Linux 対応追加（amd64、arm64）
+- プロキシ対応追加：SOCKS5/SOCKS4/HTTP/HTTPS プロキシトンネル
+- SFTP ブレークポイントレジューム追加（`-resume` フラグ）
+- hash および verify サブコマンド追加（md5、sha1、sha256、sha512）
+- WinGet インストール対応追加
+- プロキシタイムアウト処理の改善
 - 初回ドキュメントサイト
 
 ## v0.3.1

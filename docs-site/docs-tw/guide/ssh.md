@@ -126,6 +126,60 @@ win-sshpass -p 'pass' ssh user@2001:db8::1
 win-sshpass -p 'pass' ssh user@[2001:db8::1]
 ```
 
+## 代理支援
+
+透過代理伺服器建立 SSH 通道連線：
+
+```bash
+# SOCKS5 代理
+win-sshpass -p 'pass' -proxy socks5://127.0.0.1:1080 ssh user@host
+
+# SOCKS5 帶認證
+win-sshpass -p 'pass' -proxy socks5://proxyuser:proxypass@127.0.0.1:1080 ssh user@host
+
+# SOCKS4 代理
+win-sshpass -p 'pass' -proxy socks4://192.168.1.1:1080 ssh user@host
+
+# HTTP CONNECT 代理
+win-sshpass -p 'pass' -proxy http://proxy.local:8080 ssh user@host
+
+# HTTPS CONNECT 代理（帶認證）
+win-sshpass -p 'pass' -proxy https://user:pass@proxy.local:8443 ssh user@host
+
+# 代理 + 檔案傳輸
+win-sshpass -p 'pass' -proxy socks5://127.0.0.1:1080 -h host -local ./file.txt -remote /tmp/file.txt
+
+# 代理 + SCP
+win-sshpass -p 'pass' -proxy socks5://127.0.0.1:1080 scp ./app.jar user@host:/opt/app/
+
+# 設定檔中設定代理
+# proxy: socks5://user:pass@127.0.0.1:1080
+```
+
+!!! info "支援的代理協定"
+    支援 SOCKS5（可選使用者名稱/密碼認證）、SOCKS4、SOCKS4A、HTTP CONNECT 和 HTTPS CONNECT 代理。
+
+## 檔案雜湊與校驗
+
+無需 SSH 連線即可計算和校驗本地檔案雜湊：
+
+```bash
+# 計算雜湊
+win-sshpass hash md5 ./download.iso
+win-sshpass hash sha1 ./download.iso
+win-sshpass hash sha256 ./download.iso
+win-sshpass hash sha512 ./download.iso
+
+# 校驗檔案完整性
+win-sshpass verify sha256 d1dc38f6dfb1e4c8e7a1b2c3d4e5f6a7b8c9d0e1f2 ./download.iso
+# 輸出: OK
+
+win-sshpass verify sha256 wronghash123... ./download.iso
+# 輸出: FAILED
+```
+
+支援的演算法：`md5`、`sha1`、`sha256`、`sha512`。
+
 ## 下一步
 
 - [互動式 Shell](shell.md) - 不指定命令時的互動模式

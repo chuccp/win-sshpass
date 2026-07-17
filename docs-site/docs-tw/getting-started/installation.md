@@ -2,44 +2,65 @@
 
 ## 系統需求
 
-- **作業系統**：Windows 10/11（x64 或 ARM64）
+- **作業系統**：Windows 10/11（x64、ARM64）或 Linux（amd64、arm64）
 - **零依賴**：無需安裝 OpenSSH 或其他軟體
 
 ## 安裝方式
 
-### 方式一：Scoop 安裝（推薦）
+### 方式一：WinGet 安裝（推薦）
+
+```bash
+winget install chuccp.win-sshpass
+```
+
+### 方式二：Scoop 安裝
 
 ```bash
 scoop bucket add chuccp https://github.com/chuccp/scoop-bucket
 scoop install win-sshpass
 ```
 
-### 方式二：下載發行包
+### 方式三：下載發行包
 
 從 [GitHub Releases](https://github.com/chuccp/win-sshpass/releases) 下載最新版本：
+
+**Windows**
 
 | 架構 | Zip 包 | MSI 安裝包 |
 |------|--------|------------|
 | **x64 (amd64)** | `win-sshpass-*-amd64.zip` | `win-sshpass-*-amd64.msi` |
 | **ARM64** | `win-sshpass-*-arm64.zip` | `win-sshpass-*-arm64.msi` |
 
-1. 前往 [Releases](https://github.com/chuccp/win-sshpass/releases) 頁面
-2. 下載對應架構的 zip 或 MSI 檔案
-3. 如果使用 MSI：執行安裝程式，會自動將安裝目錄新增到系統 PATH
+**Linux**
 
-### 方式三：從原始碼建構
+| 架構 | Tarball |
+|------|---------|
+| **amd64** | `win-sshpass-*-linux-amd64.tar.gz` |
+| **arm64** | `win-sshpass-*-linux-arm64.tar.gz` |
+
+1. 前往 [Releases](https://github.com/chuccp/win-sshpass/releases) 頁面
+2. 下載對應平台和架構的安裝包
+3. **Windows MSI**：執行安裝程式，會自動新增到系統 PATH
+4. **Windows Zip / Linux tar.gz**：解壓後將二進位檔案放入 PATH 目錄
+
+### 方式四：從原始碼建構
 
 ```bash
 git clone https://github.com/chuccp/win-sshpass.git
 cd win-sshpass
+
+# Windows
 go build -o win-sshpass.exe ./cmd/sshpass
+
+# Linux / macOS
+go build -o win-sshpass ./cmd/sshpass
 ```
 
 ## 驗證安裝
 
 ```bash
 win-sshpass -v
-# 輸出: sshpass version v0.3.2 (Windows)
+# 輸出: win-sshpass version v0.3.2 (windows/amd64)
 ```
 
 ## 依賴說明

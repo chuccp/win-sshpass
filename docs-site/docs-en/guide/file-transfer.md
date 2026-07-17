@@ -96,6 +96,21 @@ When the remote shell reports `rz`/`sz: command not found`, win-sshpass intercep
 !!! info "No Remote Installation Needed"
     rz/sz transfer is implemented via SFTP — no need to install the lrzsz package on the remote server.
 
+## Breakpoint Resume
+
+When transferring large files, you can use the `-resume` flag to resume interrupted transfers from where they left off:
+
+```bash
+# Resume interrupted upload
+win-sshpass -p 'pass' -h host -local ./bigfile.iso -remote /data/bigfile.iso -resume
+
+# Resume interrupted download
+win-sshpass -p 'pass' -h host -d -remote /data/bigfile.iso -local ./bigfile.iso -resume
+```
+
+!!! info "How It Works"
+    With `-resume`, win-sshpass checks if the destination file already exists. If it does and is smaller than the source, the transfer resumes from the last byte. If the file is already complete, the transfer is skipped entirely. Without `-resume`, transfers always start from the beginning.
+
 ## Git Bash Path Note
 
 When using Git Bash, remote paths starting with `/` are automatically converted to Windows paths. Use the `//` prefix to avoid this:

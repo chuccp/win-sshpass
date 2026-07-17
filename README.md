@@ -11,7 +11,7 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [日本語](README.ja.md)
 
-A Windows implementation of sshpass, providing similar functionality to the Linux sshpass tool.
+A cross-platform implementation of sshpass (Windows & Linux), providing similar functionality to the Linux sshpass tool.
 
 > 💡 **Like this project?** Give it a ⭐ Star — it helps others discover the tool!
 
@@ -26,21 +26,34 @@ A Windows implementation of sshpass, providing similar functionality to the Linu
 - Dynamic terminal resizing in interactive shell mode
 - Git Bash path conversion detection and auto-fix
 - IPv6 address support
-- Support for both x64 (amd64) and ARM64 architectures
+- Support for Windows (x64, ARM64) and Linux (amd64, arm64)
 - **Reusable Go SDK** — import as a library (`package sshpass`) to embed SSH/SFTP/shell in your own app, with injectable I/O streams and progress callbacks
+- **Proxy support** — tunnel SSH connections through SOCKS5/SOCKS4/HTTP/HTTPS proxies
+- **Breakpoint resume** — resume interrupted SFTP file transfers from where they left off
+- **File hash & verify** — compute and verify local file hashes (MD5, SHA-1, SHA-256, SHA-512)
 
 ## Download
 
 Download the latest release from [GitHub Releases](https://github.com/chuccp/win-sshpass/releases):
+
+### Windows
 
 | Architecture | Zip | MSI Installer |
 |--------------|-----|---------------|
 | **x64 (amd64)** | `win-sshpass-*-amd64.zip` | `win-sshpass-*-amd64.msi` |
 | **ARM64** | `win-sshpass-*-arm64.zip` | `win-sshpass-*-arm64.msi` |
 
+### Linux
+
+| Architecture | Tarball |
+|--------------|---------|
+| **amd64** | `win-sshpass-*-linux-amd64.tar.gz` |
+| **arm64** | `win-sshpass-*-linux-arm64.tar.gz` |
+
 1. Go to [Releases](https://github.com/chuccp/win-sshpass/releases) page
-2. Download the zip or MSI for your architecture (x64 or ARM64)
-3. If using MSI: run the installer — it will add the install directory to your system PATH automatically
+2. Download the package for your platform and architecture
+3. **Windows MSI**: run the installer — it will add the install directory to your system PATH automatically
+4. **Windows Zip / Linux tar.gz**: extract and place the binary in your PATH
 
 > **Zero dependencies**: `win-sshpass.exe` is a standalone binary. No need to install OpenSSH or any other software. Download it, put it in your PATH, and you're ready to go.
 
@@ -49,6 +62,12 @@ Download the latest release from [GitHub Releases](https://github.com/chuccp/win
 ```bash
 scoop bucket add chuccp https://github.com/chuccp/scoop-bucket
 scoop install win-sshpass
+```
+
+### Install via WinGet
+
+```bash
+winget install chuccp.win-sshpass
 ```
 
 ## Quick Start
@@ -194,8 +213,26 @@ win-sshpass -p <password> rsync -avz user@host:<remote_path> <local_path>
 | `-t` | Total operation timeout in seconds (0 = no limit) | `-t 30` |
 | `-ct` | TCP connection timeout in seconds (default: 10) | `-ct 5` |
 | `-retry` | Total connection attempts (default: 3) | `-retry 5` |
+| `-resume` | Resume interrupted file transfer from breakpoint | `-resume` |
+| `-proxy` | Proxy URL (socks5/socks4/http/https) | `-proxy socks5://127.0.0.1:1080` |
 | `-v` | Show version | `-v` |
 | `-help` | Show help message | `-help` |
+
+## Hash & Verify
+
+Compute and verify local file hashes without needing an SSH connection:
+
+```bash
+# Compute hash
+win-sshpass hash md5 ./file.iso
+win-sshpass hash sha256 ./file.iso
+
+# Verify file against expected hash
+win-sshpass verify sha256 d1dc38f6df... ./file.iso
+# Output: OK  (or: FAILED)
+```
+
+Supported algorithms: `md5`, `sha1`, `sha256`, `sha512`.
 
 ## Configuration File Format
 
@@ -208,6 +245,7 @@ port: 22
 # timeout: 0              # optional, total operation timeout in seconds (0 = no limit)
 # connect_timeout: 10     # optional, TCP connection timeout in seconds
 # strict_host_key: false  # optional, enable strict host key verification
+# proxy: socks5://user:pass@127.0.0.1:1080  # optional, proxy URL (socks5/socks4/http/https)
 ```
 
 Usage:
@@ -243,6 +281,45 @@ win-sshpass -p 'mypass' -t 30 ssh user@server.com 'long-running-command'
 
 # 8. Config file with positional command
 win-sshpass -f server.config 'docker ps'
+
+# 9. Resume interrupted upload
+win-sshpass -p 'mypass' -h server.com -local ./bigfile.iso -remote //data/bigfile.iso -resume
+
+# 10. Compute file hash
+win-sshpass hash sha256 ./download.iso
+
+# 11. Verify file integrity
+win-sshpass verify sha256 d1dc38f6dfb1e4c8... ./download.iso
+```
+
+## Proxy Support
+
+Tunnel SSH connections through a proxy server. Supported protocols: SOCKS5, SOCKS4, SOCKS4A, HTTP CONNECT, and HTTPS CONNECT.
+
+```bash
+# SOCKS5 proxy
+win-sshpass -p 'pass' -proxy socks5://127.0.0.1:1080 ssh user@host
+
+# SOCKS5 with authentication
+win-sshpass -p 'pass' -proxy socks5://proxyuser:proxypass@127.0.0.1:1080 ssh user@host
+
+# SOCKS4 proxy
+win-sshpass -p 'pass' -proxy socks4://192.168.1.1:1080 ssh user@host
+
+# HTTP CONNECT proxy
+win-sshpass -p 'pass' -proxy http://proxy.local:8080 ssh user@host
+
+# HTTPS CONNECT proxy with authentication
+win-sshpass -p 'pass' -proxy https://user:pass@proxy.local:8443 ssh user@host
+
+# Proxy with file transfer
+win-sshpass -p 'pass' -proxy socks5://127.0.0.1:1080 -h host -local ./file.txt -remote /tmp/file.txt
+
+# Proxy with SCP
+win-sshpass -p 'pass' -proxy socks5://127.0.0.1:1080 scp ./app.jar user@host:/opt/app/
+
+# Proxy via config file
+# proxy: socks5://user:pass@127.0.0.1:1080
 ```
 
 ## Git Bash Notes
@@ -320,6 +397,19 @@ Those concerns live in the CLI package (`cmd/sshpass/ui.go`), which wires a
 progressbar-based `ProgressFunc` and a zenity-based `FileSelector` into the
 client. Library users provide their own.
 
+To tunnel the SSH connection through a proxy, set `Config.ProxyURL` before
+calling `NewClient`:
+
+```go
+cfg := sshpass.NewConfig()
+cfg.Host = "example.com"
+cfg.User = "root"
+cfg.Password = "secret"
+cfg.ProxyURL = "socks5://user:pass@127.0.0.1:1080" // or http://, https://, socks4://
+
+client, err := sshpass.NewClient(cfg)
+```
+
 Lower-level helpers are also exported for advanced use: `Dial`, `NewConfig`,
 `LoadConfig`, `LoadConfigOrPasswordFile`, `ParseSSHArgs`, `ParseSCPArgs`,
 `ParseRsyncArgs`, `DetectCommandType`, `RunSCP`, `RunRsync`, `CleanRemotePath`,
@@ -328,7 +418,16 @@ Lower-level helpers are also exported for advanced use: `Dial`, `NewConfig`,
 ## Build
 
 ```bash
+# Windows
 go build -o win-sshpass.exe ./cmd/sshpass
+
+# Linux / macOS
+go build -o win-sshpass ./cmd/sshpass
+
+# Cross-compile
+GOOS=linux   GOARCH=amd64 CGO_ENABLED=0 go build -o win-sshpass ./cmd/sshpass
+GOOS=windows GOARCH=amd64               go build -o win-sshpass.exe ./cmd/sshpass
+GOOS=darwin  GOARCH=arm64               go build -o win-sshpass ./cmd/sshpass
 ```
 
 ## Dependencies

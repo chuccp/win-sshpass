@@ -36,6 +36,7 @@ The project is a reusable Go SDK (`package sshpass`) plus a CLI entry point.
 - `args.go` - `ParseSSHArgs`/`ParseSCPArgs`/`ParseRsyncArgs`/`DetectCommandType`.
 - `shell_transfer.go` - rz/sz monitor using `FileSelector` and injected I/O.
 - `util.go` - path helpers, `ParseUserHostPath`, `CleanRemotePath` (returns error), `SplitPaths`, `ExitCodeFromError`, `setupOperationTimeout`.
+- `proxy.go` - `proxyDial`: SOCKS5 (via golang.org/x/net/proxy), SOCKS4/SOCKS4A (inline), and HTTP/HTTPS CONNECT proxy tunneling. Used by `dialAndHandshake` when `Config.ProxyURL` is set.
 - `version.go` - exported `Version`.
 
 The library avoids process-level side effects: no `os.Exit`, no global signal

@@ -2,6 +2,12 @@
 
 ## v0.3.2
 
+- 新增 Linux 支援（amd64、arm64）
+- 新增代理支援：SOCKS5/SOCKS4/HTTP/HTTPS 代理通道
+- 新增 SFTP 斷點續傳（`-resume` 參數）
+- 新增 hash 和 verify 子命令（md5、sha1、sha256、sha512）
+- 新增 WinGet 安裝支援
+- 改進代理逾時處理
 - 初始文件網站
 
 ## v0.3.1

@@ -2,6 +2,12 @@
 
 ## v0.3.2
 
+- Add Linux support (amd64, arm64)
+- Add proxy support: SOCKS5/SOCKS4/HTTP/HTTPS proxy tunneling
+- Add breakpoint-resume for SFTP file transfers (`-resume` flag)
+- Add hash and verify subcommands (md5, sha1, sha256, sha512)
+- Add WinGet installation support
+- Improve proxy timeout handling
 - Initial documentation site
 
 ## v0.3.1

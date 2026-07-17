@@ -2,44 +2,65 @@
 
 ## Requirements
 
-- **OS**: Windows 10/11 (x64 or ARM64)
+- **OS**: Windows 10/11 (x64, ARM64) or Linux (amd64, arm64)
 - **Zero dependencies**: No need to install OpenSSH or any other software
 
 ## Install
 
-### Option 1: Scoop (Recommended)
+### Option 1: WinGet (Recommended)
+
+```bash
+winget install chuccp.win-sshpass
+```
+
+### Option 2: Scoop
 
 ```bash
 scoop bucket add chuccp https://github.com/chuccp/scoop-bucket
 scoop install win-sshpass
 ```
 
-### Option 2: Download Release
+### Option 3: Download Release
 
 Download the latest release from [GitHub Releases](https://github.com/chuccp/win-sshpass/releases):
+
+**Windows**
 
 | Architecture | Zip | MSI Installer |
 |--------------|-----|---------------|
 | **x64 (amd64)** | `win-sshpass-*-amd64.zip` | `win-sshpass-*-amd64.msi` |
 | **ARM64** | `win-sshpass-*-arm64.zip` | `win-sshpass-*-arm64.msi` |
 
-1. Go to [Releases](https://github.com/chuccp/win-sshpass/releases) page
-2. Download the zip or MSI for your architecture (x64 or ARM64)
-3. If using MSI: run the installer — it will add the install directory to your system PATH automatically
+**Linux**
 
-### Option 3: Build from Source
+| Architecture | Tarball |
+|--------------|---------|
+| **amd64** | `win-sshpass-*-linux-amd64.tar.gz` |
+| **arm64** | `win-sshpass-*-linux-arm64.tar.gz` |
+
+1. Go to [Releases](https://github.com/chuccp/win-sshpass/releases) page
+2. Download the package for your platform and architecture
+3. **Windows MSI**: run the installer — it will add the install directory to your system PATH
+4. **Windows Zip / Linux tar.gz**: extract and place the binary in your PATH
+
+### Option 4: Build from Source
 
 ```bash
 git clone https://github.com/chuccp/win-sshpass.git
 cd win-sshpass
+
+# Windows
 go build -o win-sshpass.exe ./cmd/sshpass
+
+# Linux / macOS
+go build -o win-sshpass ./cmd/sshpass
 ```
 
 ## Verify Installation
 
 ```bash
 win-sshpass -v
-# Output: sshpass version v0.3.2 (Windows)
+# Output: win-sshpass version v0.3.2 (windows/amd64)
 ```
 
 ## Dependencies

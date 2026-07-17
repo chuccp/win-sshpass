@@ -1,10 +1,10 @@
 # win-sshpass User Guide
 
-> A Windows implementation of sshpass: password/key SSH login, interactive shell, SFTP file transfer, SCP/Rsync-style transfer, and a reusable Go SDK.
+> A cross-platform implementation of sshpass (Windows & Linux): password/key SSH login, interactive shell, SFTP file transfer, SCP/Rsync-style transfer, proxy tunneling, breakpoint-resume, file hash/verify, and a reusable Go SDK.
 
 ## What is win-sshpass?
 
-win-sshpass is a Windows implementation of the Linux sshpass tool. It is a standalone executable with no dependencies — no need to install OpenSSH or any other software. Download it and you're ready to go.
+win-sshpass is a cross-platform implementation of the Linux sshpass tool. It runs on Windows and Linux as a standalone executable with no dependencies — no need to install OpenSSH or any other software. Download it and you're ready to go.
 
 It supports both **command-line tool** and **Go SDK** usage:
 
@@ -12,11 +12,17 @@ It supports both **command-line tool** and **Go SDK** usage:
 - **Interactive shell**: Raw terminal mode with proper echo, Ctrl+C, full-screen apps (vim, top), and dynamic terminal resizing.
 - **SFTP file transfer**: Upload/download files and directories with progress bars.
 - **SCP/Rsync style**: Compatible with scp and rsync command syntax.
+- **Proxy support**: Tunnel SSH connections through SOCKS5/SOCKS4/HTTP/HTTPS proxies.
+- **Breakpoint resume**: Resume interrupted SFTP file transfers from where they left off.
+- **File hash & verify**: Compute and verify local file hashes (MD5, SHA-1, SHA-256, SHA-512).
 - **Reusable Go SDK**: Import as a Go library to embed SSH/SFTP/shell capabilities in your own application with injectable I/O streams and progress callbacks.
 
 ## 30-Second Quick Start
 
 ```bash
+# Install via WinGet
+winget install chuccp.win-sshpass
+
 # Install via Scoop
 scoop bucket add chuccp https://github.com/chuccp/scoop-bucket
 scoop install win-sshpass
@@ -142,6 +148,7 @@ The SDK ships **no UI code** (no progress bar, no file dialog). Behavior is conf
 | `WithStdin(r)` / `WithStdout(w)` / `WithStderr(w)` | Redirect I/O streams |
 | `WithProgress(fn)` | Set transfer progress callback |
 | `WithFileSelector(s)` | Set rz/sz file selector |
+| `WithResume()` | Enable breakpoint-resume for file transfers |
 | `WithSignalHandler()` | Register Ctrl+C signal handler |
 
 ## Parameters
@@ -163,6 +170,8 @@ The SDK ships **no UI code** (no progress bar, no file dialog). Behavior is conf
 | `-t` | Total operation timeout in seconds (0 = no limit) | `-t 30` |
 | `-ct` | TCP connection timeout in seconds (default: 10) | `-ct 5` |
 | `-retry` | Total connection attempts (default: 3) | `-retry 5` |
+| `-resume` | Resume interrupted file transfer from breakpoint | `-resume` |
+| `-proxy` | Proxy URL (socks5/socks4/http/https) | `-proxy socks5://127.0.0.1:1080` |
 | `-v` | Show version | `-v` |
 | `-help` | Show help | `-help` |
 

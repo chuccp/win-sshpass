@@ -96,6 +96,21 @@ sz /remote/path/to/file /local  # 下載到指定本地路徑
 !!! info "無需遠端安裝"
     rz/sz 傳輸基於 SFTP 實作，不需要遠端伺服器安裝 lrzsz 套件。
 
+## 斷點續傳
+
+傳輸大檔案時，可使用 `-resume` 參數從中斷處恢復：
+
+```bash
+# 恢復中斷的上傳
+win-sshpass -p 'pass' -h host -local ./bigfile.iso -remote /data/bigfile.iso -resume
+
+# 恢復中斷的下載
+win-sshpass -p 'pass' -h host -d -remote /data/bigfile.iso -local ./bigfile.iso -resume
+```
+
+!!! info "工作原理"
+    使用 `-resume` 時，win-sshpass 會檢查目標檔案是否已存在。如果存在且小於來源檔案，則從最後一個位元組處繼續傳輸。如果檔案已完整，則跳過傳輸。不使用 `-resume` 時，傳輸始終從頭開始。
+
 ## Git Bash 路徑注意
 
 在 Git Bash 中使用時，以 `/` 開頭的遠端路徑會被自動轉換為 Windows 路徑。使用 `//` 前綴避免此問題：

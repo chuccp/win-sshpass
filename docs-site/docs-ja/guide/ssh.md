@@ -126,6 +126,60 @@ win-sshpass -p 'pass' ssh user@2001:db8::1
 win-sshpass -p 'pass' ssh user@[2001:db8::1]
 ```
 
+## プロキシ対応
+
+プロキシサーバー経由で SSH 接続をトンネル：
+
+```bash
+# SOCKS5 プロキシ
+win-sshpass -p 'pass' -proxy socks5://127.0.0.1:1080 ssh user@host
+
+# SOCKS5（認証付き）
+win-sshpass -p 'pass' -proxy socks5://proxyuser:proxypass@127.0.0.1:1080 ssh user@host
+
+# SOCKS4 プロキシ
+win-sshpass -p 'pass' -proxy socks4://192.168.1.1:1080 ssh user@host
+
+# HTTP CONNECT プロキシ
+win-sshpass -p 'pass' -proxy http://proxy.local:8080 ssh user@host
+
+# HTTPS CONNECT プロキシ（認証付き）
+win-sshpass -p 'pass' -proxy https://user:pass@proxy.local:8443 ssh user@host
+
+# プロキシ + ファイル転送
+win-sshpass -p 'pass' -proxy socks5://127.0.0.1:1080 -h host -local ./file.txt -remote /tmp/file.txt
+
+# プロキシ + SCP
+win-sshpass -p 'pass' -proxy socks5://127.0.0.1:1080 scp ./app.jar user@host:/opt/app/
+
+# 設定ファイルでプロキシを指定
+# proxy: socks5://user:pass@127.0.0.1:1080
+```
+
+!!! info "対応プロキシプロトコル"
+    SOCKS5（オプションのユーザー名/パスワード認証）、SOCKS4、SOCKS4A、HTTP CONNECT、HTTPS CONNECT プロキシに対応しています。
+
+## ファイルハッシュと検証
+
+SSH 接続なしでローカルファイルのハッシュを計算・検証：
+
+```bash
+# ハッシュを計算
+win-sshpass hash md5 ./download.iso
+win-sshpass hash sha1 ./download.iso
+win-sshpass hash sha256 ./download.iso
+win-sshpass hash sha512 ./download.iso
+
+# ファイルの整合性を検証
+win-sshpass verify sha256 d1dc38f6dfb1e4c8e7a1b2c3d4e5f6a7b8c9d0e1f2 ./download.iso
+# 出力: OK
+
+win-sshpass verify sha256 wronghash123... ./download.iso
+# 出力: FAILED
+```
+
+対応アルゴリズム: `md5`、`sha1`、`sha256`、`sha512`。
+
 ## 次のステップ
 
 - [インタラクティブシェル](shell.md) - コマンド未指定時のインタラクティブモード
