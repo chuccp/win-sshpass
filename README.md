@@ -7,7 +7,7 @@
 [![GitHub release](https://badgen.net/github/release/chuccp/win-sshpass/include-prereleases)](https://github.com/chuccp/win-sshpass/releases)
 [![License](https://badgen.net/badge/License/Apache%202.0/blue)](LICENSE)
 [![Go Version](https://badgen.net/badge/Go/1.26.0/00ADD8?icon=go)](go.mod)
-[![Downloads](https://raw.githubusercontent.com/chuccp/win-sshpass/main/badges/downloads.svg)](https://github.com/chuccp/win-sshpass/releases)
+[![Downloads](./badges/downloads.svg)](https://github.com/chuccp/win-sshpass/releases)
 
 [English](README.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [日本語](README.ja.md)
 
