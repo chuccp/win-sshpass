@@ -1,8 +1,8 @@
-//go:build !windows
+//go:build !windows && !darwin
 
 package main
 
-// cliFileSelector is a no-op FileSelector for Linux and macOS.
+// cliFileSelector is a no-op FileSelector for Linux.
 // rz/sz file transfers fall back to reading a path from stdin instead of
 // showing a GUI file dialog.
 type cliFileSelector struct{}

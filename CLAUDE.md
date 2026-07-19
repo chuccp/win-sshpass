@@ -23,8 +23,9 @@ The project is a reusable Go SDK (`package sshpass`) plus a CLI entry point.
 
 - `cmd/sshpass/main.go` - CLI entry point: flag parsing, config merging, command dispatch.
 - `cmd/sshpass/ui.go` - CLI progress bar adapter (shared, all platforms).
-- `cmd/sshpass/ui_windows.go` - rz/sz file dialog via zenity (Windows only).
-- `cmd/sshpass/ui_other.go` - rz/sz no-op file selector, falls back to stdin prompt (Linux/macOS).
+- `cmd/sshpass/ui_windows.go` - rz/sz file dialog via zenity (Windows).
+- `cmd/sshpass/ui_darwin.go` - rz/sz file dialog via zenity/osascript (macOS, Finder native).
+- `cmd/sshpass/ui_other.go` - rz/sz no-op file selector, falls back to stdin prompt (Linux).
 - `client.go` - `Client` object: `NewClient`, `Exec`, `Shell`, `SFTP`, `Close`, `TimedOut`.
 - `options.go` - Functional options (`WithStdin`, `WithStdout`, `WithStderr`, `WithProgress`, `WithFileSelector`, `WithSignalHandler`) and the `ProgressFunc`/`FileSelector` abstractions. The SDK ships **no UI implementations**; CLI-side adapters (progressbar, zenity) live in `cmd/sshpass/ui*.go`.
 - `config.go` - `Config` struct, `NewConfig`, `LoadConfig`, `LoadConfigOrPasswordFile`, merge/validate/normalize methods.
@@ -46,7 +47,8 @@ injectable via options.
 ## Platform Support
 
 - **Windows**: full support including zenity file dialogs for rz/sz.
-- **Linux/macOS**: full support; rz/sz falls back to stdin path input (no GUI dialog).
+- **macOS**: full support including native Finder file dialogs for rz/sz (via zenity/osascript).
+- **Linux**: full support; rz/sz falls back to stdin path input (no GUI dialog).
 - Terminal resize uses SIGWINCH on Unix, polling on Windows.
 - SDK (`package sshpass`) is fully cross-platform; platform-specific code is
   isolated behind build tags in `cmd/sshpass/` and `ssh_resize_*.go`.
@@ -55,13 +57,13 @@ injectable via options.
 
 - `golang.org/x/crypto/ssh` - SSH protocol
 - `github.com/pkg/sftp` - SFTP file transfer
-- `github.com/ncruces/zenity` - file dialogs (Windows only, build-tagged)
+- `github.com/ncruces/zenity` - file dialogs (Windows/macOS, build-tagged)
 - `github.com/schollz/progressbar/v3` - CLI progress bar (all platforms)
 
 ## Release
 
-Push a `v*` tag to trigger GitHub Actions workflow that builds Windows (zip + MSI)
-and Linux (tar.gz) binaries and creates a release:
+Push a `v*` tag to trigger GitHub Actions workflow that builds Windows (zip + MSI),
+Linux (tar.gz), and macOS (tar.gz) binaries and creates a release:
 
 ```bash
 git tag v1.0.0
