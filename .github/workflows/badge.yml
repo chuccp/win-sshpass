@@ -1,0 +1,69 @@
+name: Update Badges
+
+on:
+  schedule:
+    - cron: '17 3 * * *'  # daily at 03:17 UTC (off-peak)
+  workflow_dispatch:       # manual trigger
+  push:
+    tags:
+      - 'v*'               # new release
+
+permissions:
+  contents: write
+
+jobs:
+  downloads:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate downloads badge
+        shell: python3 {0}
+        run: |
+          import json, urllib.request, os, re
+
+          url = "https://api.github.com/repos/chuccp/win-sshpass/releases?per_page=100"
+          req = urllib.request.Request(url, headers={"User-Agent": "badge-updater"})
+          data = json.loads(urllib.request.urlopen(req).read())
+          total = sum(a["download_count"] for r in data for a in r.get("assets", []))
+
+          display = str(total)
+
+          label = "downloads"
+          # Approximate pixel widths for 11px DejaVu Sans
+          char_w = 6.5
+          lw = max(int(len(label) * char_w + 11), 40)
+          vw = max(int(len(display) * char_w + 11), 30)
+          tw = lw + vw
+
+          svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{tw}" height="20">
+            <linearGradient id="s" x2="0" y2="100%">
+              <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+              <stop offset="1" stop-opacity=".1"/>
+            </linearGradient>
+            <clipPath id="r">
+              <rect width="{tw}" height="20" rx="3" fill="#fff"/>
+            </clipPath>
+            <g clip-path="url(#r)">
+              <rect width="{lw}" height="20" fill="#555"/>
+              <rect x="{lw}" width="{vw}" height="20" fill="#007ec6"/>
+              <rect width="{tw}" height="20" fill="url(#s)"/>
+            </g>
+            <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">
+              <text x="{lw//2}" y="14">{label}</text>
+              <text x="{lw + vw//2}" y="14">{display}</text>
+            </g>
+          </svg>'''
+
+          os.makedirs("badges", exist_ok=True)
+          with open("badges/downloads.svg", "w") as f:
+              f.write(svg)
+          print(f"Badge: {display} ({total} total downloads)")
+
+      - name: Commit badge if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add badges/downloads.svg
+          git diff --cached --quiet || git commit -m "chore: update downloads badge"
+          git push
