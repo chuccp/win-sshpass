@@ -21,7 +21,7 @@ type keygenGlobalFlags struct {
 // locally and saves it to disk. Deployment of the public key to a remote
 // server is intentionally NOT automated — server environments vary widely and
 // automatic deployment can cause issues. Users should deploy the public key
-// manually (e.g. via ssh-copy-id or by appending it to authorized_keys).
+// manually.
 //
 // Both "flags-before-subcommand" (win-sshpass -out k keygen) and
 // "flags-after-subcommand" (win-sshpass keygen -out k) styles are supported.
@@ -36,8 +36,8 @@ func runKeygen(args []string, gf keygenGlobalFlags) {
 		fmt.Fprintln(os.Stderr, "  -comment <string>      comment for the public key (default: user@hostname)")
 		fmt.Fprintln(os.Stderr, "  -out <path>            output path for private key (default: ~/.ssh/id_ed25519 or ~/.ssh/id_rsa)")
 		fmt.Fprintln(os.Stderr, "\nThe public key is written to <path>.pub alongside the private key.")
-		fmt.Fprintln(os.Stderr, "Deploy the public key to the server manually, e.g.:")
-		fmt.Fprintln(os.Stderr, "  ssh-copy-id -i ~/.ssh/id_ed25519.pub user@host")
+		fmt.Fprintln(os.Stderr, "Deploy the public key to the server, e.g.:")
+		fmt.Fprintln(os.Stderr, `  cat ~/.ssh/id_ed25519.pub | ssh user@host "cat >> ~/.ssh/authorized_keys"`)
 	}
 	algo := fs.String("algo", gf.algo, "key algorithm (ed25519 or rsa)")
 	comment := fs.String("comment", gf.comment, "public key comment")
@@ -86,8 +86,7 @@ func runKeygen(args []string, gf keygenGlobalFlags) {
 		fmt.Fprintf(os.Stderr, "  Public key line: %s", pubLine)
 	}
 	fmt.Fprintf(os.Stderr, "\nTo enable password-less login, deploy the public key to the server:\n")
-	fmt.Fprintf(os.Stderr, "  ssh-copy-id -i %s.pub user@host\n", actualPath)
-	fmt.Fprintf(os.Stderr, "Or manually append the public key to ~/.ssh/authorized_keys on the server.\n")
+	fmt.Fprintf(os.Stderr, `  cat %s.pub | ssh user@host "cat >> ~/.ssh/authorized_keys"`+"\n", actualPath)
 }
 
 // defaultKeyComment builds a default comment string for the generated key
