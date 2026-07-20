@@ -28,6 +28,9 @@ func main() {
 	retries := flag.Int("retry", 3, "total connection attempts (default 3)")
 	resume := flag.Bool("resume", false, "resume interrupted file transfer from breakpoint")
 	proxyURL := flag.String("proxy", "", "proxy URL for SSH connection (socks5://[user:pass@]host:port, socks4://, http://, https://)")
+	keyAlgo := flag.String("algo", "ed25519", "key algorithm for keygen subcommand (ed25519 or rsa)")
+	keyComment := flag.String("comment", "", "comment embedded in the generated public key (default: user@host)")
+	keyOutPath := flag.String("out", "", "output path for the generated private key (keygen subcommand; default: ~/.ssh/id_ed25519 or ~/.ssh/id_rsa)")
 	showVersion := flag.Bool("v", false, "show version")
 	showHelp := flag.Bool("help", false, "show help")
 	flag.Parse()
@@ -133,6 +136,18 @@ func main() {
 			}
 			return
 		}
+	}
+
+	// --- keygen subcommand (SSH key generation, local only) ---
+	// keygen generates a key pair locally. Deployment to a remote server is
+	// NOT automated — users deploy the public key manually.
+	if len(remainingArgs) > 0 && remainingArgs[0] == "keygen" {
+		runKeygen(remainingArgs[1:], keygenGlobalFlags{
+			algo:    *keyAlgo,
+			comment: *keyComment,
+			outPath: *keyOutPath,
+		})
+		return
 	}
 
 	// detect command type
@@ -339,6 +354,7 @@ func printUsage() {
 	fmt.Println("  win-sshpass -h <host> -p <password> [-u <user>] [-P <port>]")
 	fmt.Println("  win-sshpass -h <host> -p <password> -local <file> -remote <path>  (upload)")
 	fmt.Println("  win-sshpass -h <host> -p <password> -local <path> -remote <file> -d (download)")
+	fmt.Println("  win-sshpass keygen [-algo <ed25519|rsa>] [-out <keypath>]  (generate key pair locally)")
 	fmt.Println("\nOptions:")
 	fmt.Println("  -p <password>      specify password directly")
 	fmt.Println("  -f <file>          read password from file (single line) or config file")
@@ -354,6 +370,9 @@ func printUsage() {
 	fmt.Println("  -local <path>      local file path(s), comma-separated for multiple files")
 	fmt.Println("  -remote <path>     remote file path (for upload/download)")
 	fmt.Println("  -d                 download mode (remote to local)")
+	fmt.Println("  -algo <type>       key algorithm for keygen (ed25519 or rsa, default: ed25519)")
+	fmt.Println("  -comment <string>  comment for generated key (default: user@host)")
+	fmt.Println("  -out <path>        output path for generated private key (keygen; default: ~/.ssh/id_ed25519)")
 	fmt.Println("  -v                 show version")
 	fmt.Println("  -help              show this help message")
 	fmt.Println("\nExamples:")
@@ -368,6 +387,8 @@ func printUsage() {
 	fmt.Println("  win-sshpass -p 'pass' -h example.com -local ./bigfile.iso -remote /data/bigfile.iso -resume")
 	fmt.Println("  win-sshpass -p 'pass' -proxy socks5://127.0.0.1:1080 ssh user@example.com")
 	fmt.Println("  win-sshpass -p 'pass' -proxy http://user:pass@proxy.local:8080 ssh user@example.com")
+	fmt.Println("  win-sshpass keygen                                  # generate ed25519 key to ~/.ssh/id_ed25519")
+	fmt.Println("  win-sshpass keygen -algo rsa -out ~/.ssh/mykey      # generate RSA key to custom path")
 	fmt.Println("\nSDK usage (as a Go library):")
 	fmt.Println("  import \"github.com/chuccp/win-sshpass\"  // package sshpass")
 	fmt.Println("  client, err := sshpass.NewClient(cfg)")
