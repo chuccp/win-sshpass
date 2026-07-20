@@ -53,6 +53,57 @@ win-sshpass -i ~/.ssh/id_ed25519 ssh user@host 'uname -a'
 !!! note "注意"
     win-sshpass 不支援加密（有密碼保護）的私鑰。如果私鑰有密碼保護，請先解密或使用 ssh-agent。
 
+## 金鑰生成
+
+win-sshpass 內建了 SSH 金鑰對生成功能，可以在本地生成客戶端金鑰對（私鑰 + 公鑰）。
+
+```bash
+# 生成 Ed25519 金鑰（推薦，更快更安全）
+win-sshpass keygen
+
+# 生成 RSA 金鑰（4096 位元）
+win-sshpass keygen -algo rsa
+
+# 指定輸出路徑
+win-sshpass keygen -out ~/.ssh/mykey
+
+# 指定公鑰註釋
+win-sshpass keygen -comment "my-laptop"
+```
+
+預設輸出到 `~/.ssh/id_ed25519`（Ed25519）或 `~/.ssh/id_rsa`（RSA），公鑰檔案自動新增 `.pub` 後綴。
+
+生成後，將公鑰部署到服務端即可實現無密碼登入（見下文）。
+
+### 手動部署公鑰實現無密碼登入
+
+出於安全考量，win-sshpass **不會自動連接伺服器部署公鑰**。請手動將公鑰部署到服務端：
+
+```bash
+# 方法一：用 win-sshpass 手動追加公鑰到 authorized_keys
+win-sshpass -p 'mypassword' ssh user@host 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo "$(cat)" >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys' < ~/.ssh/id_ed25519.pub
+
+# 方法二：手動複製公鑰內容，登入伺服器後追加
+cat ~/.ssh/id_ed25519.pub
+# 然後登入伺服器，將公鑰追加到 ~/.ssh/authorized_keys
+```
+
+部署完成後，即可使用私鑰進行無密碼登入：
+
+```bash
+# 無密碼登入
+win-sshpass -i ~/.ssh/id_ed25519 ssh user@host
+
+# 無密碼執行命令
+win-sshpass -i ~/.ssh/id_ed25519 ssh user@host 'whoami'
+
+# 無密碼傳輸檔案
+win-sshpass -i ~/.ssh/id_ed25519 scp file.txt user@host:/tmp/
+```
+
+!!! tip "authorized_keys 權限要求"
+    服務端 `~/.ssh` 目錄權限應為 700，`~/.ssh/authorized_keys` 權限應為 600。權限不正確會導致金鑰認證失敗。
+
 ## 指定使用者和連接埠
 
 ```bash

@@ -53,6 +53,57 @@ win-sshpass -i ~/.ssh/id_ed25519 ssh user@host 'uname -a'
 !!! note "注意"
     win-sshpass は暗号化された（パスフレーズで保護された）秘密鍵をサポートしていません。鍵がパスフレーズで保護されている場合は、先に復号化するか ssh-agent を使用してください。
 
+## 鍵生成
+
+win-sshpass には SSH 鍵ペア生成機能が組み込まれています。クライアント側の鍵ペア（秘密鍵 + 公開鍵）をローカルで生成できます。
+
+```bash
+# Ed25519 鍵を生成（推奨 — 高速でより安全）
+win-sshpass keygen
+
+# RSA 鍵を生成（4096 ビット）
+win-sshpass keygen -algo rsa
+
+# 出力パスを指定
+win-sshpass keygen -out ~/.ssh/mykey
+
+# 公開鍵のコメントを指定
+win-sshpass keygen -comment "my-laptop"
+```
+
+デフォルトで `~/.ssh/id_ed25519`（Ed25519）または `~/.ssh/id_rsa`（RSA）に保存されます。公開鍵ファイルには自動的に `.pub` 接尾辞が付きます。
+
+生成後、公開鍵をサーバーにデプロイすればパスワードレスログインが可能になります（下記参照）。
+
+### 公開鍵の手動デプロイ
+
+セキュリティ上の理由から、win-sshpass はサーバーへの公開鍵の自動デプロイを行いません。手動でデプロイしてください：
+
+```bash
+# 方法 1: win-sshpass を使って公開鍵を authorized_keys に追記
+win-sshpass -p 'mypassword' ssh user@host 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo "$(cat)" >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys' < ~/.ssh/id_ed25519.pub
+
+# 方法 2: 公開鍵の内容をコピーし、サーバーにログインして追記
+cat ~/.ssh/id_ed25519.pub
+# その後サーバーにログインし、公開鍵を ~/.ssh/authorized_keys に追記
+```
+
+デプロイ完了後、秘密鍵でパスワードなしログインが可能になります：
+
+```bash
+# パスワードレスログイン
+win-sshpass -i ~/.ssh/id_ed25519 ssh user@host
+
+# パスワードなしコマンド実行
+win-sshpass -i ~/.ssh/id_ed25519 ssh user@host 'whoami'
+
+# パスワードなしファイル転送
+win-sshpass -i ~/.ssh/id_ed25519 scp file.txt user@host:/tmp/
+```
+
+!!! tip "authorized_keys の権限"
+    サーバーの `~/.ssh` ディレクトリは権限 700、`~/.ssh/authorized_keys` は権限 600 にする必要があります。権限が正しくないと鍵認証が失敗します。
+
 ## ユーザーとポートの指定
 
 ```bash

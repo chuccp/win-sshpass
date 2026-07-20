@@ -53,6 +53,57 @@ win-sshpass -i ~/.ssh/id_ed25519 ssh user@host 'uname -a'
 !!! note "注意"
     win-sshpass 不支持加密（有密码保护）的私钥。如果私钥有密码保护，请先解密或使用 ssh-agent。
 
+## 密钥生成
+
+win-sshpass 内置了 SSH 密钥对生成功能，可以在本地生成客户端密钥对（私钥 + 公钥）。
+
+```bash
+# 生成 Ed25519 密钥（推荐，更快更安全）
+win-sshpass keygen
+
+# 生成 RSA 密钥（4096 位）
+win-sshpass keygen -algo rsa
+
+# 指定输出路径
+win-sshpass keygen -out ~/.ssh/mykey
+
+# 指定公钥注释
+win-sshpass keygen -comment "my-laptop"
+```
+
+默认输出到 `~/.ssh/id_ed25519`（Ed25519）或 `~/.ssh/id_rsa`（RSA），公钥文件自动添加 `.pub` 后缀。
+
+生成后，将公钥部署到服务端即可实现无密码登录（见下文）。
+
+### 手动部署公钥实现无密码登录
+
+出于安全考虑，win-sshpass **不会自动连接服务器部署公钥**。请手动将公钥部署到服务端：
+
+```bash
+# 方法一：用 win-sshpass 手动追加公钥到 authorized_keys
+win-sshpass -p 'mypassword' ssh user@host 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo "$(cat)" >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys' < ~/.ssh/id_ed25519.pub
+
+# 方法二：手动复制公钥内容，登录服务器后追加
+cat ~/.ssh/id_ed25519.pub
+# 然后登录服务器，将公钥追加到 ~/.ssh/authorized_keys
+```
+
+部署完成后，即可使用私钥进行无密码登录：
+
+```bash
+# 无密码登录
+win-sshpass -i ~/.ssh/id_ed25519 ssh user@host
+
+# 无密码执行命令
+win-sshpass -i ~/.ssh/id_ed25519 ssh user@host 'whoami'
+
+# 无密码传输文件
+win-sshpass -i ~/.ssh/id_ed25519 scp file.txt user@host:/tmp/
+```
+
+!!! tip "authorized_keys 权限要求"
+    服务端 `~/.ssh` 目录权限应为 700，`~/.ssh/authorized_keys` 权限应为 600。权限不正确会导致密钥认证失败。
+
 ## 指定用户和端口
 
 ```bash

@@ -53,6 +53,57 @@ win-sshpass -i ~/.ssh/id_ed25519 ssh user@host 'uname -a'
 !!! note "Note"
     win-sshpass does not support encrypted (passphrase-protected) private keys. If your key is passphrase-protected, decrypt it first or use ssh-agent.
 
+## Key Generation
+
+win-sshpass has built-in SSH key pair generation. It creates a client-side key pair (private key + public key) locally.
+
+```bash
+# Generate Ed25519 key (recommended — faster and more secure)
+win-sshpass keygen
+
+# Generate RSA key (4096-bit)
+win-sshpass keygen -algo rsa
+
+# Specify output path
+win-sshpass keygen -out ~/.ssh/mykey
+
+# Specify public key comment
+win-sshpass keygen -comment "my-laptop"
+```
+
+Keys are saved to `~/.ssh/id_ed25519` (Ed25519) or `~/.ssh/id_rsa` (RSA) by default. The public key file is automatically given a `.pub` suffix.
+
+After generation, deploy the public key to the server to enable password-less login (see below).
+
+### Deploying the Public Key Manually
+
+For security reasons, win-sshpass does **NOT** automatically connect to the server to deploy the public key. Deploy it manually:
+
+```bash
+# Method 1: use win-sshpass to append the public key to authorized_keys
+win-sshpass -p 'mypassword' ssh user@host 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo "$(cat)" >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys' < ~/.ssh/id_ed25519.pub
+
+# Method 2: copy the public key content, log in to the server, and append it
+cat ~/.ssh/id_ed25519.pub
+# Then log in to the server and append the public key to ~/.ssh/authorized_keys
+```
+
+After deployment, you can log in without a password using the private key:
+
+```bash
+# Password-less login
+win-sshpass -i ~/.ssh/id_ed25519 ssh user@host
+
+# Password-less command execution
+win-sshpass -i ~/.ssh/id_ed25519 ssh user@host 'whoami'
+
+# Password-less file transfer
+win-sshpass -i ~/.ssh/id_ed25519 scp file.txt user@host:/tmp/
+```
+
+!!! tip "authorized_keys Permissions"
+    The server's `~/.ssh` directory should be mode 700 and `~/.ssh/authorized_keys` should be mode 600. Incorrect permissions will cause key authentication to fail.
+
 ## Specifying User and Port
 
 ```bash
