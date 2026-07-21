@@ -55,3 +55,5 @@ docs-site/site-tw/
 docs-site/_site/
 /docs
 /docs
+/.qoder
+sshpass
