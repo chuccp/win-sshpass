@@ -1,6 +1,9 @@
 package sshpass
 
-import "io"
+import (
+	"io"
+	"log/slog"
+)
 
 // ProgressFunc is a callback invoked during file transfers to report progress
 // as plain numbers. description identifies the transfer (e.g. "Uploading
@@ -42,10 +45,25 @@ func WithStdout(w io.Writer) Option {
 	return func(c *Client) { c.stdout = w }
 }
 
-// WithStderr sets the error/diagnostic stream used for retry messages and the
-// operation-timeout notice. Defaults to os.Stderr.
+// WithStderr sets the error/diagnostic stream used for user-facing messages
+// (shell-transfer status, upload/download failure notices). Defaults to
+// os.Stderr.
+//
+// For structured diagnostic logging (retry attempts, timeouts, file-dialog
+// errors) use WithLogger instead. When WithLogger is not called, a default
+// text-format logger writing to stderr is created automatically.
 func WithStderr(w io.Writer) Option {
 	return func(c *Client) { c.stderr = w }
+}
+
+// WithLogger sets the structured logger for diagnostic messages (connection
+// retries, operation timeouts, file-dialog errors). Defaults to a text-format
+// slog.Logger writing to the configured stderr stream.
+//
+// Pass a JSON handler for machine-readable output, a custom handler for log
+// routing, or slog.Default() to use the process-wide default logger.
+func WithLogger(l *slog.Logger) Option {
+	return func(c *Client) { c.logger = l }
 }
 
 // WithProgress sets the callback used to report SFTP transfer progress as

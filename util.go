@@ -3,7 +3,7 @@ package sshpass
 import (
 	"errors"
 	"fmt"
-	"io"
+	"log/slog"
 	"os"
 	"os/signal"
 	"path"
@@ -168,14 +168,15 @@ func ParseUserHostPath(arg string) (user, host, remotePath string) {
 // --- Timeout helpers ---
 
 // setupOperationTimeout creates a timer that calls closeFn after the given
-// timeout. out receives the "Operation timed out" notice. It returns a reset
-// function to extend the deadline and a stop function to cancel the timer.
-// When timeout <= 0, no timer is created and the returned stop is a no-op.
-func setupOperationTimeout(out io.Writer, closeFn func(), timeout int) (reset func(), stop func()) {
+// timeout. The logger receives a warning when the deadline fires. It returns
+// a reset function to extend the deadline and a stop function to cancel the
+// timer. When timeout <= 0, no timer is created and the returned stop is a
+// no-op.
+func setupOperationTimeout(logger *slog.Logger, closeFn func(), timeout int) (reset func(), stop func()) {
 	if timeout > 0 {
 		dur := time.Duration(timeout) * time.Second
 		timer := time.AfterFunc(dur, func() {
-			fmt.Fprintln(out, "Operation timed out")
+			logger.Warn("operation timed out", "timeout", timeout)
 			closeFn()
 		})
 		reset = func() {

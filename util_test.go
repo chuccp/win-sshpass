@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log/slog"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -204,7 +205,8 @@ func TestSetupOperationTimeoutFires(t *testing.T) {
 	closeFn := func() { triggered.Store(true) }
 
 	var buf bytes.Buffer
-	reset, stop := setupOperationTimeout(&buf, closeFn, 1)
+	logger := slog.New(slog.NewTextHandler(&buf, nil))
+	reset, stop := setupOperationTimeout(logger, closeFn, 1)
 	_ = reset
 	defer stop()
 
@@ -214,15 +216,16 @@ func TestSetupOperationTimeoutFires(t *testing.T) {
 	if !triggered.Load() {
 		t.Fatal("expected timeout to trigger closeFn")
 	}
-	if !strings.Contains(buf.String(), "Operation timed out") {
-		t.Errorf("expected timeout notice in output, got %q", buf.String())
+	if !strings.Contains(buf.String(), "operation timed out") {
+		t.Errorf("expected timeout notice in log output, got %q", buf.String())
 	}
 }
 
 func TestSetupOperationTimeoutNoTimeout(t *testing.T) {
 	// timeout <= 0: no timer, stop is a no-op, reset is nil.
 	var triggered atomic.Bool
-	reset, stop := setupOperationTimeout(io.Discard, func() { triggered.Store(true) }, 0)
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	reset, stop := setupOperationTimeout(logger, func() { triggered.Store(true) }, 0)
 	defer stop()
 	if reset != nil {
 		t.Errorf("reset should be nil when timeout <= 0, got non-nil")
@@ -236,7 +239,8 @@ func TestSetupOperationTimeoutNoTimeout(t *testing.T) {
 
 func TestSetupOperationTimeoutReset(t *testing.T) {
 	var triggered atomic.Bool
-	reset, stop := setupOperationTimeout(io.Discard, func() { triggered.Store(true) }, 1)
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	reset, stop := setupOperationTimeout(logger, func() { triggered.Store(true) }, 1)
 	defer stop()
 
 	// Reset multiple times within the window to keep it alive.

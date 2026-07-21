@@ -2,7 +2,7 @@ package sshpass
 
 import (
 	"fmt"
-	"io"
+	"log/slog"
 	"net"
 	"os"
 	"strings"
@@ -18,15 +18,16 @@ import (
 // failures. It honors the Config's authentication methods (private key and/or
 // password), host key verification, connect timeout, and retry settings.
 //
-// Retry/backoff status messages are written to os.Stderr. NewClient routes
-// these messages to the configured stderr stream (see WithStderr) instead.
+// Diagnostic messages (retry attempts, backoff delays) are logged via a
+// text-format slog.Logger writing to os.Stderr. Use NewClient with WithLogger
+// to inject a custom structured logger.
 func Dial(config *Config) (*ssh.Client, error) {
-	return dial(config, os.Stderr)
+	return dial(config, slog.New(slog.NewTextHandler(os.Stderr, nil)))
 }
 
-// dial is the implementation of Dial that writes retry/backoff messages to the
-// given writer, so NewClient can honor WithStderr for retry output.
-func dial(config *Config, stderr io.Writer) (*ssh.Client, error) {
+// dial is the implementation of Dial that logs retry/backoff messages via the
+// given logger, so NewClient can honor WithLogger for diagnostic output.
+func dial(config *Config, logger *slog.Logger) (*ssh.Client, error) {
 	var authMethods []ssh.AuthMethod
 
 	// use private key authentication first
@@ -98,7 +99,7 @@ func dial(config *Config, stderr io.Writer) (*ssh.Client, error) {
 			if delay > 30*time.Second {
 				delay = 30 * time.Second
 			}
-			fmt.Fprintf(stderr, "Retrying connection (attempt %d/%d) in %v...\n", i+1, attempts, delay)
+			logger.Info("retrying connection", "attempt", i+1, "total", attempts, "delay", delay)
 			time.Sleep(delay)
 		}
 
@@ -264,7 +265,7 @@ func runShell(c *Client) error {
 			session.Stdout = c.stdout
 		} else {
 			defer sftpClient.Close()
-			monitor := newRzszMonitor(stdinFile, sftpClient, oldState, c.selector, c.stdout, c.stderr, c.resetTimeout, c.progress)
+			monitor := newRzszMonitor(stdinFile, sftpClient, oldState, c.selector, c.stdout, c.stderr, c.logger, c.resetTimeout, c.progress)
 			session.Stdin = stdinFile
 			session.Stdout = &outputWriter{monitor: monitor, out: c.stdout}
 		}

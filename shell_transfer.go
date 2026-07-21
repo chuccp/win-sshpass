@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"strings"
 	"sync"
@@ -28,6 +29,7 @@ type rzszMonitor struct {
 	selector     FileSelector
 	stdout       io.Writer
 	stderr       io.Writer
+	logger       *slog.Logger
 	resetTimeout func()
 	progress     ProgressFunc
 
@@ -39,7 +41,7 @@ type rzszMonitor struct {
 	onSZ func(remotePath, localPath string)
 }
 
-func newRzszMonitor(stdin *os.File, sftpClient *sftp.Client, oldState *term.State, selector FileSelector, stdout, stderr io.Writer, resetTimeout func(), progress ProgressFunc) *rzszMonitor {
+func newRzszMonitor(stdin *os.File, sftpClient *sftp.Client, oldState *term.State, selector FileSelector, stdout, stderr io.Writer, logger *slog.Logger, resetTimeout func(), progress ProgressFunc) *rzszMonitor {
 	return &rzszMonitor{
 		stdin:        stdin,
 		sftpClient:   sftpClient,
@@ -47,6 +49,7 @@ func newRzszMonitor(stdin *os.File, sftpClient *sftp.Client, oldState *term.Stat
 		selector:     selector,
 		stdout:       stdout,
 		stderr:       stderr,
+		logger:       logger,
 		resetTimeout: resetTimeout,
 		progress:     progress,
 	}
@@ -258,7 +261,7 @@ func (m *rzszMonitor) handleRZ(localPath string) {
 	if localPath == "" && m.selector != nil {
 		path, err := m.selector.OpenFile()
 		if err != nil {
-			fmt.Fprintf(m.stderr, "File dialog error: %v\n", err)
+			m.logger.Error("file dialog error", "op", "open", "err", err)
 		} else {
 			localPath = path
 		}
@@ -298,7 +301,7 @@ func (m *rzszMonitor) handleSZ(remotePath, localPath string) {
 		defaultName := remoteBaseName(remotePath)
 		path, err := m.selector.SaveFile(defaultName)
 		if err != nil {
-			fmt.Fprintf(m.stderr, "File dialog error: %v\n", err)
+			m.logger.Error("file dialog error", "op", "save", "err", err)
 			localPath = defaultName
 		} else if path != "" {
 			localPath = path
