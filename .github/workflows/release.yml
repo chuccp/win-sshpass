@@ -166,12 +166,19 @@ jobs:
             --version "$TAG" \
             "$PKG_NAME"
 
+      - name: Create tar.gz package
+        run: |
+          TAG="${{ github.ref_name }}"
+          ARCH="${{ matrix.arch }}"
+          tar -czf "win-sshpass-$TAG-darwin-$ARCH.tar.gz" win-sshpass README.md README.zh-CN.md README.zh-TW.md README.ja.md
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: artifacts-darwin-${{ matrix.arch }}
           path: |
             win-sshpass-*-darwin-${{ matrix.arch }}.pkg
+            win-sshpass-*-darwin-${{ matrix.arch }}.tar.gz
 
   release:
     needs: [build-windows, build-linux, build-macos]
