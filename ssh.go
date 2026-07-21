@@ -80,7 +80,11 @@ func dial(config *Config, stderr io.Writer) (*ssh.Client, error) {
 
 	attempts := max(1, config.Retries)
 
-	address := net.JoinHostPort(config.Host, config.Port)
+	// Strip IPv6 brackets if present — ParseUserHostPath and ParseSSHArgs store
+	// IPv6 hosts as "[::1]" (with brackets), but net.JoinHostPort adds its own
+	// brackets, so without stripping we'd get "[[::1]]:22" which is invalid.
+	host := strings.TrimSuffix(strings.TrimPrefix(config.Host, "["), "]")
+	address := net.JoinHostPort(host, config.Port)
 	var lastErr error
 
 	for i := 0; i < attempts; i++ {
