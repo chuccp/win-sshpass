@@ -40,6 +40,13 @@ go.work.sum
 /dltest
 *.txt
 
+# macOS local packaging test artifacts
+/win-sshpass
+*.dmg
+*.pkg
+/payload/
+/dmg-staging/
+
 # MkDocs build output
 docs-site/site-zh/
 docs-site/site-en/
