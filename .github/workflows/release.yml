@@ -113,10 +113,15 @@ jobs:
             win-sshpass-*-linux-${{ matrix.arch }}.tar.gz
 
   build-macos:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     strategy:
       matrix:
         arch: [amd64, arm64]
+        include:
+          - arch: amd64
+            goarch: amd64
+          - arch: arm64
+            goarch: arm64
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -138,21 +143,52 @@ jobs:
         run: go build -ldflags="-s -w" -o win-sshpass ./cmd/sshpass
         env:
           GOOS: darwin
-          GOARCH: ${{ matrix.arch }}
+          GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 0
 
-      - name: Create tar.gz package
+      - name: Create PKG + DMG package
         run: |
           TAG="${{ github.ref_name }}"
           ARCH="${{ matrix.arch }}"
-          tar -czf "win-sshpass-$TAG-darwin-$ARCH.tar.gz" win-sshpass README.md README.zh-CN.md README.zh-TW.md README.ja.md
+          PKG_NAME="win-sshpass-$TAG-darwin-$ARCH.pkg"
+          DMG_NAME="win-sshpass-$TAG-darwin-$ARCH"
+          VOL_NAME="win-sshpass $TAG"
+
+          # Build payload: /usr/local/bin/win-sshpass
+          PAYLOAD="payload"
+          mkdir -p "$PAYLOAD/usr/local/bin"
+          cp win-sshpass "$PAYLOAD/usr/local/bin/"
+          chmod 755 "$PAYLOAD/usr/local/bin/win-sshpass"
+
+          # Build .pkg installer
+          pkgbuild \
+            --root "$PAYLOAD" \
+            --install-location / \
+            --identifier com.chuccp.win-sshpass \
+            --version "$TAG" \
+            "$PKG_NAME"
+
+          # Create DMG containing the .pkg and READMEs
+          DMG_DIR="dmg-staging"
+          mkdir -p "$DMG_DIR"
+          cp "$PKG_NAME" "$DMG_DIR/"
+          for f in README.md README.zh-CN.md README.zh-TW.md README.ja.md; do
+            [ -f "$f" ] && cp "$f" "$DMG_DIR/"
+          done
+
+          # Create compressed DMG
+          hdiutil create \
+            -volname "$VOL_NAME" \
+            -srcfolder "$DMG_DIR" \
+            -ov -format UDZO \
+            "$DMG_NAME.dmg"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: artifacts-darwin-${{ matrix.arch }}
           path: |
-            win-sshpass-*-darwin-${{ matrix.arch }}.tar.gz
+            win-sshpass-*-darwin-${{ matrix.arch }}.dmg
 
   release:
     needs: [build-windows, build-linux, build-macos]
