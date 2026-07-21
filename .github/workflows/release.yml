@@ -146,13 +146,11 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 0
 
-      - name: Create PKG + DMG package
+      - name: Create PKG package
         run: |
           TAG="${{ github.ref_name }}"
           ARCH="${{ matrix.arch }}"
           PKG_NAME="win-sshpass-$TAG-darwin-$ARCH.pkg"
-          DMG_NAME="win-sshpass-$TAG-darwin-$ARCH"
-          VOL_NAME="win-sshpass $TAG"
 
           # Build payload: /usr/local/bin/win-sshpass
           PAYLOAD="payload"
@@ -168,27 +166,12 @@ jobs:
             --version "$TAG" \
             "$PKG_NAME"
 
-          # Create DMG containing the .pkg and READMEs
-          DMG_DIR="dmg-staging"
-          mkdir -p "$DMG_DIR"
-          cp "$PKG_NAME" "$DMG_DIR/"
-          for f in README.md README.zh-CN.md README.zh-TW.md README.ja.md; do
-            [ -f "$f" ] && cp "$f" "$DMG_DIR/"
-          done
-
-          # Create compressed DMG
-          hdiutil create \
-            -volname "$VOL_NAME" \
-            -srcfolder "$DMG_DIR" \
-            -ov -format UDZO \
-            "$DMG_NAME.dmg"
-
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: artifacts-darwin-${{ matrix.arch }}
           path: |
-            win-sshpass-*-darwin-${{ matrix.arch }}.dmg
+            win-sshpass-*-darwin-${{ matrix.arch }}.pkg
 
   release:
     needs: [build-windows, build-linux, build-macos]
