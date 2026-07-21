@@ -2,8 +2,10 @@ package sshpass
 
 import (
 	"bufio"
+	"context"
 	"crypto/tls"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -62,11 +64,13 @@ func socksDial(u *url.URL, address string, timeout int) (net.Conn, error) {
 // covers both the TCP connection to the proxy AND the SOCKS5 protocol handshake
 // (auth + CONNECT request/response), so a proxy that accepts the TCP connection
 // but never responds to SOCKS5 negotiation won't hang forever.
+//
+// When a timeout is configured, a context.WithTimeout is used with
+// DialContext (the *socks.Dialer from proxy.SOCKS5 implements
+// proxy.ContextDialer). This properly cancels in-flight TCP dials and SOCKS5
+// handshakes on timeout — no goroutine or connection leaks.
 func socks5Dial(proxyAddr string, u *url.URL, address string, timeout int) (net.Conn, error) {
 	var forward proxy.Dialer = &net.Dialer{}
-	if timeout > 0 {
-		forward = &net.Dialer{Timeout: time.Duration(timeout) * time.Second}
-	}
 
 	var auth *proxy.Auth
 	if u.User != nil {
@@ -80,14 +84,6 @@ func socks5Dial(proxyAddr string, u *url.URL, address string, timeout int) (net.
 		return nil, fmt.Errorf("failed to create SOCKS5 dialer: %w", err)
 	}
 
-	// proxy.Dialer.Dial does not accept a context, so when a timeout is
-	// configured we run the dial in a goroutine and race it against a timer.
-	// This ensures a SOCKS5 proxy that hangs during negotiation (after the TCP
-	// connection is established) is still subject to the deadline.
-	type dialResult struct {
-		conn net.Conn
-		err  error
-	}
 	if timeout <= 0 {
 		conn, err := dialer.Dial("tcp", address)
 		if err != nil {
@@ -96,22 +92,53 @@ func socks5Dial(proxyAddr string, u *url.URL, address string, timeout int) (net.
 		return conn, nil
 	}
 
-	resultCh := make(chan dialResult, 1)
-	go func() {
-		conn, err := dialer.Dial("tcp", address)
-		resultCh <- dialResult{conn, err}
-	}()
+	// Use a context with timeout so that both the TCP connection to the proxy
+	// and the SOCKS5 handshake are properly cancelled when the deadline
+	// elapses. The *socks.Dialer implements proxy.ContextDialer, which sets
+	// connection deadlines from the context and aborts in-flight I/O on
+	// cancellation — no goroutine or connection leaks.
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
+	defer cancel()
 
-	select {
-	case res := <-resultCh:
-		if res.err != nil {
-			return nil, fmt.Errorf("SOCKS5 proxy connection failed: %w", res.err)
+	// Prefer DialContext (always available from proxy.SOCKS5's *socks.Dialer).
+	if cd, ok := dialer.(proxy.ContextDialer); ok {
+		conn, err := cd.DialContext(ctx, "tcp", address)
+		if err != nil {
+			// The SOCKS5 library sets a connection deadline from the context
+			// deadline, so the I/O may fail with "i/o timeout" before the
+			// context is marked as expired. Check both conditions.
+			if ctx.Err() == context.DeadlineExceeded {
+				return nil, fmt.Errorf("SOCKS5 proxy connection timed out after %ds", timeout)
+			}
+			var netErr net.Error
+			if errors.As(err, &netErr) && netErr.Timeout() {
+				return nil, fmt.Errorf("SOCKS5 proxy connection timed out after %ds", timeout)
+			}
+			return nil, fmt.Errorf("SOCKS5 proxy connection failed: %w", err)
 		}
-		return res.conn, nil
-	case <-time.After(time.Duration(timeout) * time.Second):
-		// Best-effort: the goroutine may still complete and write to resultCh
-		// (buffered, so no leak); the connection it created (if any) will be
-		// GC'd or closed by the proxy dialer's internal cleanup.
+		return conn, nil
+	}
+
+	// Fallback for non-ContextDialer dialers: race Dial against the context.
+	// If the context expires, any connection created by the goroutine is
+	// closed to prevent resource leaks.
+	var conn net.Conn
+	var dialErr error
+	done := make(chan struct{})
+	go func() {
+		conn, dialErr = dialer.Dial("tcp", address)
+		close(done)
+		if conn != nil && ctx.Err() != nil {
+			conn.Close()
+		}
+	}()
+	select {
+	case <-done:
+		if dialErr != nil {
+			return nil, fmt.Errorf("SOCKS5 proxy connection failed: %w", dialErr)
+		}
+		return conn, nil
+	case <-ctx.Done():
 		return nil, fmt.Errorf("SOCKS5 proxy connection timed out after %ds", timeout)
 	}
 }

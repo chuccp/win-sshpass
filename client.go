@@ -3,6 +3,7 @@ package sshpass
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -21,6 +22,7 @@ type Client struct {
 	stdin    io.Reader
 	stdout   io.Writer
 	stderr   io.Writer
+	logger   *slog.Logger
 	progress ProgressFunc
 	selector FileSelector
 	signal   bool
@@ -63,7 +65,14 @@ func NewClient(config *Config, opts ...Option) (*Client, error) {
 		opt(c)
 	}
 
-	sshClient, err := dial(config, c.stderr)
+	// Default logger: text-format on the configured stderr stream. This
+	// preserves backward behavior (retry/timeout messages on stderr) while
+	// allowing embedders to inject a structured logger via WithLogger.
+	if c.logger == nil {
+		c.logger = slog.New(slog.NewTextHandler(c.stderr, nil))
+	}
+
+	sshClient, err := dial(config, c.logger)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +80,7 @@ func NewClient(config *Config, opts ...Option) (*Client, error) {
 
 	// set up operation timeout (timer resets on each data transfer; closes the
 	// connection when it fires).
-	c.resetTimeout, c.stopTimer = setupOperationTimeout(c.stderr, func() {
+	c.resetTimeout, c.stopTimer = setupOperationTimeout(c.logger, func() {
 		c.timedOut.Store(true)
 		c.sshClient.Close()
 	}, config.Timeout)

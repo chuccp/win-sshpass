@@ -45,9 +45,12 @@ func (p *cliProgress) progress(description string, sent, total int64) {
 			progressbar.OptionFullWidth(),
 			progressbar.OptionUseANSICodes(true),
 		)
-		return
+		// Fall through to Set64 below — for resume transfers the initial
+		// sent > 0 and the bar must reflect the already-transferred bytes
+		// instead of starting from 0.
 	}
 
-	// Update existing bar to the cumulative byte count.
+	// Update the bar to the cumulative byte count. This covers both the
+	// initial position (including resume offset) and subsequent updates.
 	p.bar.Set64(sent)
 }
