@@ -3,10 +3,9 @@
 ## v0.8.1
 
 - Add SSH key pair generation subcommand (`keygen`) — Ed25519 and RSA, deploy public keys to enable password-less login
-- Add Docker-based integration test suite (71 tests covering all features)
 - Update documentation site to go-web-frame style with Material icons, styled buttons, and richer theme
 - Add key generation SDK functions: `GenerateKeyPair`, `GenerateRSAKeyPair`, `SaveKeyPair`, `DeployPublicKey`, `DefaultKeyPath`
-- Update all 4-language READMEs and docs-site with keygen, Docker testing, proxy, and hash/verify sections
+- Update all 4-language READMEs and docs-site with keygen, proxy, and hash/verify sections
 - Various documentation fixes and improvements
 
 ## v0.7.2

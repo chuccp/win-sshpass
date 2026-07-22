@@ -6,7 +6,7 @@ hide:
 
 # win-sshpass
 
-> A cross-platform implementation of sshpass (Windows & Linux): password/key SSH login, interactive shell, SFTP/SCP/Rsync file transfer, SOCKS5/SOCKS4/HTTP proxy tunneling, breakpoint resume, file hash/verify, key generation, Docker test suite, and a reusable Go SDK.
+> A cross-platform implementation of sshpass (Windows & Linux): password/key SSH login, interactive shell, SFTP/SCP/Rsync file transfer, SOCKS5/SOCKS4/HTTP proxy tunneling, breakpoint resume, file hash/verify, key generation, and a reusable Go SDK.
 
 [Quick Start](getting-started/quick-start.md){ .md-button .md-button--primary }
 [Installation](getting-started/installation.md){ .md-button }
@@ -23,7 +23,6 @@ hide:
 - **:material-lan-connect: Proxy Tunneling** — Tunnel SSH connections through SOCKS5 (with auth), SOCKS4, SOCKS4A, HTTP CONNECT, and HTTPS CONNECT proxies.
 - **:material-reload: Breakpoint Resume** — Resume interrupted SFTP uploads/downloads from where they left off with the `-resume` flag.
 - **:material-fingerprint: File Hash & Verify** — Compute and verify local file checksums (MD5, SHA-1, SHA-256, SHA-512) — no SSH connection needed.
-- **:material-docker: Docker Test Suite** — Comprehensive 71-test integration suite using local Docker containers covering every feature.
 - **:material-package-variant: Reusable Go SDK** — Import `package sshpass` to embed SSH/SFTP/shell in your own app with injectable I/O, progress callbacks, and zero UI dependencies.
 
 ---

@@ -27,7 +27,6 @@
 - **斷點續傳** — 中斷的 SFTP 檔案傳輸可從斷點處恢復
 - **檔案雜湊與校驗** — 計算和校驗本地檔案雜湊（MD5、SHA-1、SHA-256、SHA-512）
 - **金鑰產生** — SSH 金鑰對產生（Ed25519/RSA）
-- **Docker 測試** — 全面的整合測試套件
 
 ## 下載
 
@@ -264,27 +263,6 @@ win-sshpass -p 'password' ssh user@host "mkdir -p ~/.ssh && chmod 700 ~/.ssh && 
 win-sshpass -i ~/.ssh/id_ed25519 ssh user@host
 ```
 
-## Docker 測試
-
-專案包含完整的 Docker 整合測試套件，涵蓋所有核心功能：
-
-```bash
-# 啟動測試容器
-cd docker-test
-docker compose up -d
-
-# 執行全部測試
-./test_all.sh
-
-# 保留測試過程中產生的暫存檔案
-./test_all.sh --keep-files
-
-# 停止並清理容器
-docker compose down
-```
-
-測試涵蓋：SSH 命令執行、sshpass 風格參數解析、密碼認證（明文/環境變數/設定檔）、SFTP 上傳下載（文字/二進位/大檔案）、SCP 傳輸、Rsync 傳輸、SOCKS5 代理、逾時與重試、金鑰認證、金鑰產生、檔案雜湊校驗、錯誤處理。
-
 ## 設定檔格式
 
 ```yaml
@@ -347,9 +325,6 @@ win-sshpass keygen -out ~/.ssh/my_key -comment "my-work-laptop"
 
 # 13. 產生 RSA 金鑰對
 win-sshpass keygen -algo rsa -out ~/.ssh/my_rsa_key
-
-# 14. 使用 Docker 執行完整整合測試
-cd docker-test && docker compose up -d && ./test_all.sh
 ```
 
 ## 代理支援

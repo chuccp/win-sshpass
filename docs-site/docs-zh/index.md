@@ -6,7 +6,7 @@ hide:
 
 # win-sshpass
 
-> win-sshpass — 跨平台 sshpass 实现：密码/密钥 SSH 登录、交互式 Shell、SFTP/SCP/Rsync 文件传输、SOCKS5/SOCKS4/HTTP 代理隧道、断点续传、文件哈希校验、密钥生成、Docker 测试套件，以及可复用的 Go SDK。
+> win-sshpass — 跨平台 sshpass 实现：密码/密钥 SSH 登录、交互式 Shell、SFTP/SCP/Rsync 文件传输、SOCKS5/SOCKS4/HTTP 代理隧道、断点续传、文件哈希校验、密钥生成，以及可复用的 Go SDK。
 
 [快速开始](getting-started/quick-start.md){ .md-button .md-button--primary }
 [安装](getting-started/installation.md){ .md-button }
@@ -23,7 +23,6 @@ hide:
 - **:material-lan-connect: 代理隧道** — 通过 SOCKS5（含认证）、SOCKS4、SOCKS4A、HTTP CONNECT 和 HTTPS CONNECT 代理隧道化 SSH 连接。
 - **:material-reload: 断点续传** — 使用 `-resume` 标志从中断处恢复 SFTP 上传/下载。
 - **:material-fingerprint: 文件哈希与校验** — 计算并校验本地文件校验和（MD5、SHA-1、SHA-256、SHA-512）— 无需 SSH 连接。
-- **:material-docker: Docker 测试套件** — 使用本地 Docker 容器的 71 项全面集成测试，覆盖每个功能。
 - **:material-package-variant: 可复用 Go SDK** — 导入 `package sshpass`，将 SSH/SFTP/Shell 嵌入你自己的应用，支持注入 I/O、进度回调，零 UI 依赖。
 
 ---

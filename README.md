@@ -32,7 +32,6 @@ A cross-platform implementation of sshpass (Windows & Linux), providing similar 
 - **Breakpoint resume** — resume interrupted SFTP file transfers from where they left off
 - **File hash & verify** — compute and verify local file hashes (MD5, SHA-1, SHA-256, SHA-512)
 - **Key generation** — built-in SSH key pair generation (Ed25519 and RSA)
-- **Docker testing** — comprehensive integration test suite with local Docker containers
 
 ## Download
 
@@ -278,37 +277,6 @@ win-sshpass -p 'password' ssh user@host "mkdir -p ~/.ssh && chmod 700 ~/.ssh && 
 # Then log in with the private key
 win-sshpass -i ~/.ssh/id_ed25519 ssh user@host
 ```
-
-## Docker Testing
-
-A local integration test suite runs against Docker containers, covering all features:
-
-```bash
-# 1. Start the SSH test container
-cd docker-test
-docker compose up -d ssh-server
-
-# 2. Build the binary
-cd ..
-go build -o win-sshpass.exe ./cmd/sshpass
-
-# 3. Run all tests (71 tests: SSH, SFTP, SCP, Rsync, SOCKS5 proxy, key auth, keygen, hash/verify, timeout, error handling, etc.)
-./docker-test/test_all.sh
-
-# 4. Use custom SOCKS5 proxy (default: socks5://127.0.0.1:10809)
-SOCKS5_PROXY="socks5://127.0.0.1:1080" ./docker-test/test_all.sh
-
-# 5. Cleanup
-cd docker-test && docker compose down
-```
-
-The Docker image includes:
-- OpenSSH server with password and key authentication
-- lrzsz (rz/sz) for shell file transfer testing
-- rsync for rsync-style transfer testing
-- Pre-deployed test Ed25519 key pair (private: `docker-test/test_key`)
-- Test users: `testuser`/`testpass` and `root`/`rootpass`
-- Test data files in `/tmp/testdata/`
 
 ## Configuration File Format
 

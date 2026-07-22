@@ -27,7 +27,6 @@
 - **断点续传** — 中断的 SFTP 文件传输可从断点处恢复
 - **文件哈希与校验** — 计算和校验本地文件哈希（MD5、SHA-1、SHA-256、SHA-512）
 - **密钥生成** — SSH 密钥对生成（Ed25519/RSA）
-- **Docker 测试** — 全面的集成测试套件
 
 ## 下载
 
@@ -264,27 +263,6 @@ win-sshpass -p 'password' ssh user@host "mkdir -p ~/.ssh && chmod 700 ~/.ssh && 
 win-sshpass -i ~/.ssh/id_ed25519 ssh user@host
 ```
 
-## Docker 测试
-
-项目包含完整的 Docker 集成测试套件，覆盖所有核心功能：
-
-```bash
-# 启动测试容器
-cd docker-test
-docker compose up -d
-
-# 运行全部测试
-./test_all.sh
-
-# 保持测试过程中产生的临时文件
-./test_all.sh --keep-files
-
-# 停止并清理容器
-docker compose down
-```
-
-测试覆盖：SSH 命令执行、sshpass 风格参数解析、密码认证（明文/环境变量/配置文件）、SFTP 上传下载（文本/二进制/大文件）、SCP 传输、Rsync 传输、SOCKS5 代理、超时与重试、密钥认证、密钥生成、文件哈希校验、错误处理。
-
 ## 配置文件格式
 
 ```yaml
@@ -347,9 +325,6 @@ win-sshpass keygen -out ~/.ssh/my_key -comment "my-work-laptop"
 
 # 13. 生成 RSA 密钥对
 win-sshpass keygen -algo rsa -out ~/.ssh/my_rsa_key
-
-# 14. 使用 Docker 运行完整集成测试
-cd docker-test && docker compose up -d && ./test_all.sh
 ```
 
 ## 代理支持

@@ -57,3 +57,4 @@ docs-site/_site/
 /docs
 /.qoder
 sshpass
+/winget-manifests

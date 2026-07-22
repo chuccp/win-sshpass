@@ -46,27 +46,6 @@ The library avoids process-level side effects: no `os.Exit`, no global signal
 registration (unless `WithSignalHandler` is used), and all I/O streams are
 injectable via options.
 
-## Docker Testing
-
-A local Docker-based integration test suite is in `docker-test/`:
-
-```bash
-# Start the SSH test server
-cd docker-test
-docker compose up -d ssh-server
-
-# Build & run all integration tests (71 tests covering all features)
-cd ..
-go build -o win-sshpass.exe ./cmd/sshpass
-./docker-test/test_all.sh
-```
-
-The Docker image pre-deploys a test Ed25519 key pair (`docker-test/test_key` /
-`docker-test/test_key.pub`) into `testuser` and `root` authorized_keys.
-
-The test script uses `127.0.0.1:10809` as the SOCKS5 proxy endpoint
-(configurable via `SOCKS5_PROXY` env var).
-
 ## Platform Support
 
 - **Windows**: full support including zenity file dialogs for rz/sz.

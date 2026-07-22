@@ -3,10 +3,9 @@
 ## v0.8.1
 
 - 新增 SSH 金鑰對產生子命令（`keygen`）—— 支援 Ed25519 和 RSA，部署公鑰以實現免密碼登入
-- 新增基於 Docker 的整合測試套件（71 項測試涵蓋所有功能）
 - 文件網站更新為 go-web-frame 風格，支援 Material 圖示、樣式化按鈕和更豐富的主題
 - 新增金鑰產生 SDK 函式：`GenerateKeyPair`、`GenerateRSAKeyPair`、`SaveKeyPair`、`DeployPublicKey`、`DefaultKeyPath`
-- 更新 4 種語言的 README 和文件網站，新增 keygen、Docker 測試、代理和 hash/verify 章節
+- 更新 4 種語言的 README 和文件網站，新增 keygen、代理和 hash/verify 章節
 - 多項文件修復和改進
 
 ## v0.7.2

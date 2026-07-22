@@ -3,10 +3,9 @@
 ## v0.8.1
 
 - SSH 鍵ペア生成サブコマンド（`keygen`）を追加 — Ed25519 と RSA 対応、公開鍵を配置してパスワードなしログインを実現
-- Docker ベースの統合テストスイートを追加（全機能をカバーする 71 テスト）
 - ドキュメントサイトを go-web-frame スタイルに更新（Material アイコン、スタイル付きボタン、リッチなテーマ）
 - 鍵生成 SDK 関数を追加: `GenerateKeyPair`、`GenerateRSAKeyPair`、`SaveKeyPair`、`DeployPublicKey`、`DefaultKeyPath`
-- 4 言語の README とドキュメントサイトを更新（keygen、Docker テスト、プロキシ、hash/verify セクションを追加）
+- 4 言語の README とドキュメントサイトを更新（keygen、プロキシ、hash/verify セクションを追加）
 - ドキュメントの様々な修正と改善
 
 ## v0.7.2
