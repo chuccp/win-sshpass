@@ -75,18 +75,17 @@ Keys are saved to `~/.ssh/id_ed25519` (Ed25519) or `~/.ssh/id_rsa` (RSA) by defa
 
 After generation, deploy the public key to the server to enable password-less login (see below).
 
-### Deploying the Public Key Manually
+### Deploying the Public Key
 
-For security reasons, win-sshpass does **NOT** automatically connect to the server to deploy the public key. Deploy it manually:
+After generation, deploy the public key to the server to enable password-less login:
 
 ```bash
-# Method 1: use win-sshpass to append the public key to authorized_keys
-win-sshpass -p 'mypassword' ssh user@host 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo "$(cat)" >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys' < ~/.ssh/id_ed25519.pub
-
-# Method 2: copy the public key content, log in to the server, and append it
-cat ~/.ssh/id_ed25519.pub
-# Then log in to the server and append the public key to ~/.ssh/authorized_keys
+# Read the public key content into a variable, then deploy via SSH
+PUBKEY=$(cat ~/.ssh/id_ed25519.pub)
+win-sshpass -p 'mypassword' ssh user@host "mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo '$PUBKEY' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
 ```
+
+The shell expands `$PUBKEY` locally before passing the command to win-sshpass, so the actual public key string is embedded in the remote command. This avoids quoting and stdin-forwarding issues.
 
 After deployment, you can log in without a password using the private key:
 

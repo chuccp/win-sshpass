@@ -150,6 +150,33 @@ if cfg != nil {
 }
 ```
 
+## Key Generation
+
+Generate SSH key pairs programmatically:
+
+```go
+// Generate Ed25519 key pair (recommended)
+pair, err := sshpass.GenerateKeyPair(sshpass.KeyEd25519, "user@host")
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Private key:\n%s\n", pair.PrivateKey)
+fmt.Printf("Public key:\n%s\n", pair.PublicKey)
+
+// Generate RSA key pair (minimum 2048 bits)
+pair, err = sshpass.GenerateRSAKeyPair(4096, "user@host")
+
+// Save key pair to files
+err = sshpass.SaveKeyPair(pair, "~/.ssh/mykey")
+// Creates: ~/.ssh/mykey (private, 0600) and ~/.ssh/mykey.pub (public)
+
+// Get default key path
+path := sshpass.DefaultKeyPath(sshpass.KeyEd25519) // ~/.ssh/id_ed25519
+
+// Deploy public key to remote server (requires an existing client connection)
+err = sshpass.DeployPublicKey(client, pair.PublicKey)
+```
+
 ## Functional Options
 
 Configure Client behavior through functional options:
@@ -211,6 +238,28 @@ client, err := sshpass.NewClient(cfg,
 ```
 
 Registers a Ctrl+C handler that closes the connection. Off by default so the library never interferes with host signal handling.
+
+### Breakpoint Resume
+
+```go
+client, err := sshpass.NewClient(cfg,
+    sshpass.WithResume(),
+)
+```
+
+Enables breakpoint-resume for SFTP transfers — interrupted uploads/downloads continue from where they left off.
+
+### Proxy Configuration
+
+```go
+cfg := sshpass.NewConfig()
+cfg.Host = "example.com"
+cfg.User = "root"
+cfg.Password = "secret"
+cfg.ProxyURL = "socks5://user:pass@127.0.0.1:1080" // or http://, https://, socks4://
+```
+
+When `ProxyURL` is set, the SSH connection is tunneled through the specified proxy. Supported protocols: SOCKS5 (with optional auth), SOCKS4, SOCKS4A, HTTP CONNECT, HTTPS CONNECT.
 
 ## Low-Level API
 

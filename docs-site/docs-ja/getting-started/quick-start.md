@@ -89,6 +89,19 @@ win-sshpass -p 'pass' -t 30 ssh user@server 'long-running-command'
 
 # 複数ファイルのアップロード
 win-sshpass -h server -p 'pass' -local "a.txt,b.txt,c.txt" -remote /tmp/
+
+# SSH 鍵ペアを生成
+win-sshpass keygen
+
+# RSA 鍵をカスタム出力パスで生成
+win-sshpass keygen -algo rsa -out ~/.ssh/mykey -comment "my-servers"
+
+# 生成した鍵でログイン
+win-sshpass -i ~/.ssh/id_ed25519 ssh user@server
+
+# ローカルファイルのハッシュ計算と検証
+win-sshpass hash sha256 ./download.iso
+win-sshpass verify sha256 d1dc38f6dfb... ./download.iso
 ```
 
 ## 次のステップ

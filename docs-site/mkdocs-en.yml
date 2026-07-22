@@ -1,6 +1,6 @@
-site_name: win-sshpass User Guide
+site_name: win-sshpass
 site_url: https://chuccp.github.io/win-sshpass/en/
-site_description: win-sshpass official documentation (English)
+site_description: 'win-sshpass — A cross-platform sshpass implementation: SSH password/key login, interactive shell, SFTP/SCP/Rsync transfer, SOCKS5/SOCKS4/HTTP proxy tunneling, breakpoint resume, file hash/verify, key generation, Docker test suite, and a reusable Go SDK.'
 site_author: win-sshpass Team
 
 docs_dir: docs-en
@@ -9,63 +9,98 @@ site_dir: site-en
 theme:
   name: material
   language: en
+  font:
+    text: Noto Sans
+    code: JetBrains Mono
   palette:
     - scheme: default
+      primary: indigo
+      accent: teal
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - scheme: slate
+      primary: indigo
+      accent: teal
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
   features:
     - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.sections
-    - navigation.expand
+    - navigation.indexes
+    - navigation.top
+    - navigation.tracking
+    - navigation.path
+    - navigation.prune
+    - toc.follow
     - search.suggest
     - search.highlight
+    - search.share
     - content.code.copy
     - content.code.annotate
+    - content.code.select
     - content.tabs.link
+    - content.tooltips
+    - header.autohide
+  icon:
+    repo: fontawesome/brands/github
+
+repo_url: https://github.com/chuccp/win-sshpass
+repo_name: chuccp/win-sshpass
+edit_uri: edit/main/docs-site/docs-en/
 
 plugins:
-  - search
+  - search:
+      separator: '[\s\-,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])'
+  - tags:
+      tags_file: tags.md
 
 markdown_extensions:
-  - pymdownx.highlight:
-      anchor_linenums: true
-  - pymdownx.inlinehilite
-  - pymdownx.snippets
-  - pymdownx.superfences
-  - pymdownx.tabbed:
-      alternate_style: true
+  - abbr
   - admonition
-  - pymdownx.details
   - attr_list
+  - def_list
+  - footnotes
   - md_in_html
+  - tables
   - toc:
       permalink: true
-
-nav:
-  - Home: index.md
-  - Getting Started:
-      - Installation: getting-started/installation.md
-      - Quick Start: getting-started/quick-start.md
-  - Guide:
-      - SSH Connection: guide/ssh.md
-      - File Transfer: guide/file-transfer.md
-      - Interactive Shell: guide/shell.md
-      - SCP & Rsync: guide/scp-rsync.md
-      - Configuration File: guide/config-file.md
-  - Advanced:
-      - Go SDK: advanced/sdk.md
-      - Best Practices: advanced/best-practices.md
-  - Changelog: changelog.md
+      toc_depth: 3
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
 
 extra:
+  generator: false
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/chuccp/win-sshpass
+      name: GitHub
   alternate:
     - name: English
       link: /win-sshpass/en/
@@ -79,3 +114,23 @@ extra:
     - name: 日本語
       link: /win-sshpass/ja/
       lang: ja
+  status:
+    new: New
+    deprecated: Deprecated
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Installation: getting-started/installation.md
+      - Quick Start: getting-started/quick-start.md
+  - Guides:
+      - SSH Connection: guide/ssh.md
+      - File Transfer: guide/file-transfer.md
+      - Interactive Shell: guide/shell.md
+      - SCP & Rsync: guide/scp-rsync.md
+      - Configuration File: guide/config-file.md
+  - Advanced:
+      - Go SDK: advanced/sdk.md
+      - Best Practices: advanced/best-practices.md
+  - Changelog: changelog.md
+  - Tags: tags.md

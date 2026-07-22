@@ -75,18 +75,17 @@ win-sshpass keygen -comment "my-laptop"
 
 生成後、公開鍵をサーバーにデプロイすればパスワードレスログインが可能になります（下記参照）。
 
-### 公開鍵の手動デプロイ
+### 公開鍵のデプロイ
 
-セキュリティ上の理由から、win-sshpass はサーバーへの公開鍵の自動デプロイを行いません。手動でデプロイしてください：
+生成後、公開鍵をサーバーにデプロイしてパスワードレスログインを有効にします：
 
 ```bash
-# 方法 1: win-sshpass を使って公開鍵を authorized_keys に追記
-win-sshpass -p 'mypassword' ssh user@host 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo "$(cat)" >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys' < ~/.ssh/id_ed25519.pub
-
-# 方法 2: 公開鍵の内容をコピーし、サーバーにログインして追記
-cat ~/.ssh/id_ed25519.pub
-# その後サーバーにログインし、公開鍵を ~/.ssh/authorized_keys に追記
+# 公開鍵の内容を変数に読み込み、SSH経由でデプロイ
+PUBKEY=$(cat ~/.ssh/id_ed25519.pub)
+win-sshpass -p 'mypassword' ssh user@host "mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo '$PUBKEY' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
 ```
+
+シェルが `$PUBKEY` をローカルで展開してから win-sshpass にコマンドを渡すため、実際の公開鍵文字列がリモートコマンドに埋め込まれます。この方法により、引用符や標準入力転送の問題を回避できます。
 
 デプロイ完了後、秘密鍵でパスワードなしログインが可能になります：
 

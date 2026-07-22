@@ -89,6 +89,19 @@ win-sshpass -p 'pass' -t 30 ssh user@server 'long-running-command'
 
 # Upload multiple files
 win-sshpass -h server -p 'pass' -local "a.txt,b.txt,c.txt" -remote /tmp/
+
+# Generate SSH key pair
+win-sshpass keygen
+
+# Generate RSA key with custom output path
+win-sshpass keygen -algo rsa -out ~/.ssh/mykey -comment "my-servers"
+
+# Login with generated key
+win-sshpass -i ~/.ssh/id_ed25519 ssh user@server
+
+# Hash and verify local files
+win-sshpass hash sha256 ./download.iso
+win-sshpass verify sha256 d1dc38f6dfb... ./download.iso
 ```
 
 ## Next Steps

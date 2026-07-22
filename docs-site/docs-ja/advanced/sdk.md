@@ -150,6 +150,33 @@ if cfg != nil {
 }
 ```
 
+## 鍵生成
+
+プログラムで SSH 鍵ペアを生成：
+
+```go
+// Ed25519 鍵ペアを生成（推奨）
+pair, err := sshpass.GenerateKeyPair(sshpass.KeyEd25519, "user@host")
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("秘密鍵:\n%s\n", pair.PrivateKey)
+fmt.Printf("公開鍵:\n%s\n", pair.PublicKey)
+
+// RSA 鍵ペアを生成（最小 2048 ビット）
+pair, err = sshpass.GenerateRSAKeyPair(4096, "user@host")
+
+// 鍵ペアをファイルに保存
+err = sshpass.SaveKeyPair(pair, "~/.ssh/mykey")
+// 作成されるファイル: ~/.ssh/mykey (秘密鍵, 0600) と ~/.ssh/mykey.pub (公開鍵)
+
+// デフォルトの鍵パスを取得
+path := sshpass.DefaultKeyPath(sshpass.KeyEd25519) // ~/.ssh/id_ed25519
+
+// 公開鍵をリモートサーバーに展開（既存のクライアント接続が必要）
+err = sshpass.DeployPublicKey(client, pair.PublicKey)
+```
+
 ## 関数オプション
 
 関数オプションで Client の動作を設定：
@@ -211,6 +238,28 @@ client, err := sshpass.NewClient(cfg,
 ```
 
 接続を閉じる Ctrl+C ハンドラーを登録します。デフォルトではオフで、ホストのシグナル処理を妨げません。
+
+### ブレークポイントレジューム
+
+```go
+client, err := sshpass.NewClient(cfg,
+    sshpass.WithResume(),
+)
+```
+
+SFTP 転送のブレークポイントレジュームを有効にします。中断されたアップロード/ダウンロードは中断した箇所から再開します。
+
+### プロキシ設定
+
+```go
+cfg := sshpass.NewConfig()
+cfg.Host = "example.com"
+cfg.User = "root"
+cfg.Password = "secret"
+cfg.ProxyURL = "socks5://user:pass@127.0.0.1:1080" // または http://, https://, socks4://
+```
+
+`ProxyURL` を設定すると、SSH 接続は指定されたプロキシを経由してトンネリングされます。対応プロトコル: SOCKS5 (認証オプション付き)、SOCKS4、SOCKS4A、HTTP CONNECT、HTTPS CONNECT。
 
 ## 低レベル API
 

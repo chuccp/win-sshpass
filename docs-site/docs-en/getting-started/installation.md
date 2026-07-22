@@ -63,6 +63,29 @@ win-sshpass -v
 # Output: win-sshpass version v0.3.2 (windows/amd64)
 ```
 
+## Docker Testing Environment
+
+For development and testing, a Docker-based test environment is provided:
+
+```bash
+# Clone and start test containers
+git clone https://github.com/chuccp/win-sshpass.git
+cd win-sshpass/docker-test
+docker compose up -d ssh-server
+
+# Build the binary
+cd ..
+go build -o win-sshpass.exe ./cmd/sshpass
+
+# Run the comprehensive test suite (71 tests)
+./docker-test/test_all.sh
+
+# Cleanup
+cd docker-test && docker compose down
+```
+
+The Docker image includes OpenSSH, lrzsz (rz/sz), and rsync for full feature testing.
+
 ## Dependencies
 
 win-sshpass is a standalone executable with no external runtime dependencies. Go dependencies used during build:

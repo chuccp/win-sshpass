@@ -1,0 +1,27 @@
+services:
+  # SSH server - primary test target
+  ssh-server:
+    build: .
+    container_name: sshpass-test-ssh
+    hostname: testhost
+    ports:
+      - "2222:22"
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "22"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+      start_period: 2s
+
+  # Optional: SOCKS5 proxy for proxy tunneling tests.
+  # If you have a local proxy (e.g., Clash at 127.0.0.1:10809), set
+  # SOCKS5_PROXY env var instead and skip this container.
+  # socks5-proxy:
+  #   image: vimagick/dante:latest
+  #   container_name: sshpass-test-socks5
+  #   ports:
+  #     - "1080:1080"
+  #   volumes:
+  #     - ./dante.conf:/etc/dante/sockd.conf:ro
+  #   depends_on:
+  #     - ssh-server

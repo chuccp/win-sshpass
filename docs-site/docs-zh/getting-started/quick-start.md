@@ -89,6 +89,19 @@ win-sshpass -p 'pass' -t 30 ssh user@server 'long-running-command'
 
 # 上传多个文件
 win-sshpass -h server -p 'pass' -local "a.txt,b.txt,c.txt" -remote /tmp/
+
+# 生成 SSH 密钥对
+win-sshpass keygen
+
+# 生成 RSA 密钥，指定输出路径
+win-sshpass keygen -algo rsa -out ~/.ssh/mykey -comment "my-servers"
+
+# 使用生成的密钥登录
+win-sshpass -i ~/.ssh/id_ed25519 ssh user@server
+
+# 本地文件哈希与校验
+win-sshpass hash sha256 ./download.iso
+win-sshpass verify sha256 d1dc38f6dfb... ./download.iso
 ```
 
 ## 下一步

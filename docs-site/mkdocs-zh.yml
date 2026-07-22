@@ -1,6 +1,6 @@
 site_name: win-sshpass 使用手册
 site_url: https://chuccp.github.io/win-sshpass/zh/
-site_description: win-sshpass 官方文档（中文）
+site_description: 'win-sshpass — 跨平台 sshpass 实现：密码/密钥 SSH 登录、交互式 Shell、SFTP/SCP/Rsync 文件传输、SOCKS5/SOCKS4/HTTP 代理隧道、断点续传、文件哈希校验、密钥生成、Docker 测试套件，以及可复用的 Go SDK。'
 site_author: win-sshpass Team
 
 docs_dir: docs-zh
@@ -9,42 +9,114 @@ site_dir: site-zh
 theme:
   name: material
   language: zh
+  font:
+    text: Noto Sans
+    code: JetBrains Mono
   palette:
     - scheme: default
+      primary: indigo
+      accent: teal
       toggle:
         icon: material/brightness-7
         name: 切换到深色模式
     - scheme: slate
+      primary: indigo
+      accent: teal
       toggle:
         icon: material/brightness-4
         name: 切换到浅色模式
   features:
     - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.sections
-    - navigation.expand
+    - navigation.indexes
+    - navigation.top
+    - navigation.tracking
+    - navigation.path
+    - navigation.prune
+    - toc.follow
     - search.suggest
     - search.highlight
+    - search.share
     - content.code.copy
     - content.code.annotate
+    - content.code.select
     - content.tabs.link
+    - content.tooltips
+    - header.autohide
+  icon:
+    repo: fontawesome/brands/github
+
+repo_url: https://github.com/chuccp/win-sshpass
+repo_name: chuccp/win-sshpass
+edit_uri: edit/main/docs-site/docs-zh/
 
 plugins:
-  - search
+  - search:
+      separator: '[\s\-,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])'
+  - tags:
+      tags_file: tags.md
 
 markdown_extensions:
-  - pymdownx.highlight:
-      anchor_linenums: true
-  - pymdownx.inlinehilite
-  - pymdownx.snippets
-  - pymdownx.superfences
-  - pymdownx.tabbed:
-      alternate_style: true
+  - abbr
   - admonition
-  - pymdownx.details
   - attr_list
+  - def_list
+  - footnotes
   - md_in_html
+  - tables
   - toc:
       permalink: true
+      toc_depth: 3
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+extra:
+  generator: false
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/chuccp/win-sshpass
+      name: GitHub
+  alternate:
+    - name: English
+      link: /win-sshpass/en/
+      lang: en
+    - name: 简体中文
+      link: /win-sshpass/zh/
+      lang: zh
+    - name: 繁體中文
+      link: /win-sshpass/tw/
+      lang: zh-TW
+    - name: 日本語
+      link: /win-sshpass/ja/
+      lang: ja
+  status:
+    new: 新增
+    deprecated: 已弃用
 
 nav:
   - 首页: index.md
@@ -61,21 +133,4 @@ nav:
       - Go SDK: advanced/sdk.md
       - 最佳实践: advanced/best-practices.md
   - 更新日志: changelog.md
-
-extra:
-  social:
-    - icon: fontawesome/brands/github
-      link: https://github.com/chuccp/win-sshpass
-  alternate:
-    - name: English
-      link: /win-sshpass/en/
-      lang: en
-    - name: 简体中文
-      link: /win-sshpass/zh/
-      lang: zh
-    - name: 繁體中文
-      link: /win-sshpass/tw/
-      lang: zh-TW
-    - name: 日本語
-      link: /win-sshpass/ja/
-      lang: ja
+  - 标签: tags.md

@@ -27,22 +27,45 @@ The project is a reusable Go SDK (`package sshpass`) plus a CLI entry point.
 - `cmd/sshpass/ui_darwin.go` - rz/sz file dialog via zenity/osascript (macOS, Finder native).
 - `cmd/sshpass/ui_other.go` - rz/sz no-op file selector, falls back to stdin prompt (Linux).
 - `client.go` - `Client` object: `NewClient`, `Exec`, `Shell`, `SFTP`, `Close`, `TimedOut`.
-- `options.go` - Functional options (`WithStdin`, `WithStdout`, `WithStderr`, `WithProgress`, `WithFileSelector`, `WithSignalHandler`) and the `ProgressFunc`/`FileSelector` abstractions. The SDK ships **no UI implementations**; CLI-side adapters (progressbar, zenity) live in `cmd/sshpass/ui*.go`.
+- `options.go` - Functional options (`WithStdin`, `WithStdout`, `WithStderr`, `WithProgress`, `WithFileSelector`, `WithSignalHandler`, `WithResume`) and the `ProgressFunc`/`FileSelector` abstractions. The SDK ships **no UI implementations**; CLI-side adapters (progressbar, zenity) live in `cmd/sshpass/ui*.go`.
 - `config.go` - `Config` struct, `NewConfig`, `LoadConfig`, `LoadConfigOrPasswordFile`, merge/validate/normalize methods.
 - `ssh.go` - `Dial` (exported, alias `SSHClient`), retry/timeout/known_hosts, `runShell`/`executeCommand` (use injected I/O).
 - `ssh_resize_unix.go` - terminal resize via SIGWINCH (Linux/macOS).
 - `ssh_resize_windows.go` - terminal resize via polling (Windows).
-- `sftp.go` - `SFTPClient` with `Upload`/`Download`, timeout-aware readers/writers, progress reporting.
+- `sftp.go` - `SFTPClient` with `Upload`/`Download`, timeout-aware readers/writers, progress reporting, breakpoint resume.
 - `scp.go` - `RunSCP`/`RunRsync` over a `*Client`.
 - `args.go` - `ParseSSHArgs`/`ParseSCPArgs`/`ParseRsyncArgs`/`DetectCommandType`.
 - `shell_transfer.go` - rz/sz monitor using `FileSelector` and injected I/O.
 - `util.go` - path helpers, `ParseUserHostPath`, `CleanRemotePath` (returns error), `SplitPaths`, `ExitCodeFromError`, `setupOperationTimeout`.
 - `proxy.go` - `proxyDial`: SOCKS5 (via golang.org/x/net/proxy), SOCKS4/SOCKS4A (inline), and HTTP/HTTPS CONNECT proxy tunneling. Used by `dialAndHandshake` when `Config.ProxyURL` is set.
+- `hash.go` - `HashFile`/`VerifyFile`: local file hash computation and verification (MD5, SHA-1, SHA-256, SHA-512).
+- `keygen.go` - `GenerateKeyPair`, `GenerateRSAKeyPair`, `SaveKeyPair`, `DeployPublicKey`, `DefaultKeyPath`: SSH key pair generation (Ed25519, RSA).
 - `version.go` - exported `Version`.
 
 The library avoids process-level side effects: no `os.Exit`, no global signal
 registration (unless `WithSignalHandler` is used), and all I/O streams are
 injectable via options.
+
+## Docker Testing
+
+A local Docker-based integration test suite is in `docker-test/`:
+
+```bash
+# Start the SSH test server
+cd docker-test
+docker compose up -d ssh-server
+
+# Build & run all integration tests (71 tests covering all features)
+cd ..
+go build -o win-sshpass.exe ./cmd/sshpass
+./docker-test/test_all.sh
+```
+
+The Docker image pre-deploys a test Ed25519 key pair (`docker-test/test_key` /
+`docker-test/test_key.pub`) into `testuser` and `root` authorized_keys.
+
+The test script uses `127.0.0.1:10809` as the SOCKS5 proxy endpoint
+(configurable via `SOCKS5_PROXY` env var).
 
 ## Platform Support
 

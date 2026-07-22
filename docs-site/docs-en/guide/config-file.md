@@ -26,6 +26,7 @@ port: 22
 | `connect_timeout` | TCP connection timeout in seconds | 10 |
 | `retry` / `retries` | Connection retry count | 3 |
 | `strict_host_key` | Enable strict host key verification | false |
+| `proxy` / `proxy_url` | Proxy URL for SSH tunnel | - |
 
 ### Example
 
@@ -39,6 +40,7 @@ port: 22
 # connect_timeout: 10     # TCP connection timeout (seconds)
 # retry: 3                # Connection retry count
 # strict_host_key: false  # Enable strict host key verification
+# proxy: socks5://127.0.0.1:1080  # Proxy URL (socks5/socks4/http/https)
 ```
 
 ## Using Config Files

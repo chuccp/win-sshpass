@@ -26,6 +26,8 @@
 - **代理支持** — 通过 SOCKS5/SOCKS4/HTTP/HTTPS 代理隧道连接 SSH
 - **断点续传** — 中断的 SFTP 文件传输可从断点处恢复
 - **文件哈希与校验** — 计算和校验本地文件哈希（MD5、SHA-1、SHA-256、SHA-512）
+- **密钥生成** — SSH 密钥对生成（Ed25519/RSA）
+- **Docker 测试** — 全面的集成测试套件
 
 ## 下载
 
@@ -210,6 +212,9 @@ win-sshpass -p <密码> rsync -avz user@host:<远程路径> <本地路径>
 | `-retry` | 总连接尝试次数（默认：3） | `-retry 5` |
 | `-resume` | 从断点恢复中断的文件传输 | `-resume` |
 | `-proxy` | 代理 URL（socks5/socks4/http/https） | `-proxy socks5://127.0.0.1:1080` |
+| `-algo` | 密钥算法（ed25519/rsa），默认 ed25519 | `-algo rsa` |
+| `-out` | 密钥输出路径前缀，默认 id_ed25519 | `-out ~/.ssh/mykey` |
+| `-comment` | 密钥注释 | `-comment "my-laptop"` |
 | `-v` | 显示版本 | `-v` |
 | `-help` | 显示帮助信息 | `-help` |
 
@@ -228,6 +233,57 @@ win-sshpass verify sha256 d1dc38f6df... ./file.iso
 ```
 
 支持的算法：`md5`、`sha1`、`sha256`、`sha512`。
+
+## 密钥生成
+
+无需 SSH 连接，即可生成 SSH 密钥对：
+
+```bash
+win-sshpass keygen                  # 生成 Ed25519 密钥（默认）
+win-sshpass keygen -algo rsa        # 生成 RSA 密钥
+win-sshpass keygen -out ~/.ssh/mykey   # 指定输出路径
+win-sshpass keygen -comment "my-laptop" # 添加注释
+```
+
+支持的算法：`ed25519`、`rsa`。
+
+生成的文件：
+- `<名称>` — 私钥
+- `<名称>.pub` — 公钥
+
+默认输出：`id_ed25519` 和 `id_ed25519.pub`（或 `id_rsa` 和 `id_rsa.pub`）。
+
+**部署公钥以实现无密码登录：**
+
+```bash
+# 将公钥内容读入变量，再通过 SSH 部署
+PUBKEY=$(cat ~/.ssh/id_ed25519.pub)
+win-sshpass -p 'password' ssh user@host "mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo '$PUBKEY' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+
+# 然后使用私钥登录
+win-sshpass -i ~/.ssh/id_ed25519 ssh user@host
+```
+
+## Docker 测试
+
+项目包含完整的 Docker 集成测试套件，覆盖所有核心功能：
+
+```bash
+# 启动测试容器
+cd docker-test
+docker compose up -d
+
+# 运行全部测试
+./test_all.sh
+
+# 保持测试过程中产生的临时文件
+./test_all.sh --keep-files
+
+# 停止并清理容器
+docker compose down
+```
+
+测试覆盖：SSH 命令执行、sshpass 风格参数解析、密码认证（明文/环境变量/配置文件）、SFTP 上传下载（文本/二进制/大文件）、SCP 传输、Rsync 传输、SOCKS5 代理、超时与重试、密钥认证、密钥生成、文件哈希校验、错误处理。
 
 ## 配置文件格式
 
@@ -285,6 +341,15 @@ win-sshpass hash sha256 ./download.iso
 
 # 11. 校验文件完整性
 win-sshpass verify sha256 d1dc38f6dfb1e4c8... ./download.iso
+
+# 12. 生成 Ed25519 密钥对
+win-sshpass keygen -out ~/.ssh/my_key -comment "my-work-laptop"
+
+# 13. 生成 RSA 密钥对
+win-sshpass keygen -algo rsa -out ~/.ssh/my_rsa_key
+
+# 14. 使用 Docker 运行完整集成测试
+cd docker-test && docker compose up -d && ./test_all.sh
 ```
 
 ## 代理支持

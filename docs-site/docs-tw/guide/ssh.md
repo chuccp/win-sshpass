@@ -75,18 +75,17 @@ win-sshpass keygen -comment "my-laptop"
 
 生成後，將公鑰部署到服務端即可實現無密碼登入（見下文）。
 
-### 手動部署公鑰實現無密碼登入
+### 部署公鑰實現無密碼登入
 
-出於安全考量，win-sshpass **不會自動連接伺服器部署公鑰**。請手動將公鑰部署到服務端：
+產生金鑰後，將公鑰部署到伺服器即可實現無密碼登入：
 
 ```bash
-# 方法一：用 win-sshpass 手動追加公鑰到 authorized_keys
-win-sshpass -p 'mypassword' ssh user@host 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo "$(cat)" >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys' < ~/.ssh/id_ed25519.pub
-
-# 方法二：手動複製公鑰內容，登入伺服器後追加
-cat ~/.ssh/id_ed25519.pub
-# 然後登入伺服器，將公鑰追加到 ~/.ssh/authorized_keys
+# 將公鑰內容讀入變數，再透過 SSH 部署
+PUBKEY=$(cat ~/.ssh/id_ed25519.pub)
+win-sshpass -p 'mypassword' ssh user@host "mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo '$PUBKEY' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
 ```
+
+Shell 在本機展開 `$PUBKEY` 後再將命令傳給 win-sshpass，因此實際的公鑰字串被嵌入到遠端命令中，避免了引號轉義和標準輸入轉送的問題。
 
 部署完成後，即可使用私鑰進行無密碼登入：
 

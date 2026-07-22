@@ -150,6 +150,33 @@ if cfg != nil {
 }
 ```
 
+## 金鑰產生
+
+以程式化方式產生 SSH 金鑰對：
+
+```go
+// 產生 Ed25519 金鑰對（推薦）
+pair, err := sshpass.GenerateKeyPair(sshpass.KeyEd25519, "user@host")
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("私鑰：\n%s\n", pair.PrivateKey)
+fmt.Printf("公鑰：\n%s\n", pair.PublicKey)
+
+// 產生 RSA 金鑰對（至少 2048 位元）
+pair, err = sshpass.GenerateRSAKeyPair(4096, "user@host")
+
+// 將金鑰對儲存到檔案
+err = sshpass.SaveKeyPair(pair, "~/.ssh/mykey")
+// 建立：~/.ssh/mykey（私鑰，0600）和 ~/.ssh/mykey.pub（公鑰）
+
+// 取得預設金鑰路徑
+path := sshpass.DefaultKeyPath(sshpass.KeyEd25519) // ~/.ssh/id_ed25519
+
+// 將公鑰部署到遠端伺服器（需要已有的用戶端連線）
+err = sshpass.DeployPublicKey(client, pair.PublicKey)
+```
+
 ## 函式選項
 
 透過函式選項設定 User 的行為：
@@ -211,6 +238,28 @@ client, err := sshpass.NewClient(cfg,
 ```
 
 註冊 Ctrl+C 處理器，按下時關閉連線。預設不註冊，以免干擾宿主程序的訊號處理。
+
+### 斷點續傳
+
+```go
+client, err := sshpass.NewClient(cfg,
+    sshpass.WithResume(),
+)
+```
+
+啟用 SFTP 傳輸的斷點續傳功能 —— 中斷的上傳/下載將從斷點處繼續。
+
+### 代理配置
+
+```go
+cfg := sshpass.NewConfig()
+cfg.Host = "example.com"
+cfg.User = "root"
+cfg.Password = "secret"
+cfg.ProxyURL = "socks5://user:pass@127.0.0.1:1080" // 或 http://、https://、socks4://
+```
+
+設定 `ProxyURL` 後，SSH 連線將透過指定的代理伺服器進行通道傳輸。支援的協定：SOCKS5（可選認證）、SOCKS4、SOCKS4A、HTTP CONNECT、HTTPS CONNECT。
 
 ## 底層 API
 

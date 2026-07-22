@@ -31,6 +31,8 @@ A cross-platform implementation of sshpass (Windows & Linux), providing similar 
 - **Proxy support** — tunnel SSH connections through SOCKS5/SOCKS4/HTTP/HTTPS proxies
 - **Breakpoint resume** — resume interrupted SFTP file transfers from where they left off
 - **File hash & verify** — compute and verify local file hashes (MD5, SHA-1, SHA-256, SHA-512)
+- **Key generation** — built-in SSH key pair generation (Ed25519 and RSA)
+- **Docker testing** — comprehensive integration test suite with local Docker containers
 
 ## Download
 
@@ -218,6 +220,14 @@ win-sshpass -p <password> rsync -avz user@host:<remote_path> <local_path>
 | `-v` | Show version | `-v` |
 | `-help` | Show help message | `-help` |
 
+### Keygen flags
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `-algo` | Key algorithm (`ed25519` or `rsa`) | `ed25519` |
+| `-comment` | Comment for generated public key | `user@host` |
+| `-out` | Output path for private key | `~/.ssh/id_ed25519` or `~/.ssh/id_rsa` |
+
 ## Hash & Verify
 
 Compute and verify local file hashes without needing an SSH connection:
@@ -233,6 +243,72 @@ win-sshpass verify sha256 d1dc38f6df... ./file.iso
 ```
 
 Supported algorithms: `md5`, `sha1`, `sha256`, `sha512`.
+
+## Key Generation
+
+Generate SSH key pairs locally without needing ssh-keygen:
+
+```bash
+# Generate Ed25519 key (recommended — faster and more secure)
+win-sshpass keygen
+
+# Generate RSA 4096-bit key
+win-sshpass keygen -algo rsa
+
+# Specify output path
+win-sshpass keygen -out ~/.ssh/mykey
+
+# Add a comment
+win-sshpass keygen -comment "my-laptop"
+
+# Show generated key info
+# Private key: ~/.ssh/id_ed25519 (or specified -out path)
+# Public key:  ~/.ssh/id_ed25519.pub
+```
+
+Keys are saved to `~/.ssh/id_ed25519` (Ed25519) or `~/.ssh/id_rsa` (RSA) by default. The public key file is automatically given a `.pub` suffix.
+
+**Deploy the public key to enable password-less login:**
+
+```bash
+# Read the public key content into a variable, then deploy via SSH
+PUBKEY=$(cat ~/.ssh/id_ed25519.pub)
+win-sshpass -p 'password' ssh user@host "mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo '$PUBKEY' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+
+# Then log in with the private key
+win-sshpass -i ~/.ssh/id_ed25519 ssh user@host
+```
+
+## Docker Testing
+
+A local integration test suite runs against Docker containers, covering all features:
+
+```bash
+# 1. Start the SSH test container
+cd docker-test
+docker compose up -d ssh-server
+
+# 2. Build the binary
+cd ..
+go build -o win-sshpass.exe ./cmd/sshpass
+
+# 3. Run all tests (71 tests: SSH, SFTP, SCP, Rsync, SOCKS5 proxy, key auth, keygen, hash/verify, timeout, error handling, etc.)
+./docker-test/test_all.sh
+
+# 4. Use custom SOCKS5 proxy (default: socks5://127.0.0.1:10809)
+SOCKS5_PROXY="socks5://127.0.0.1:1080" ./docker-test/test_all.sh
+
+# 5. Cleanup
+cd docker-test && docker compose down
+```
+
+The Docker image includes:
+- OpenSSH server with password and key authentication
+- lrzsz (rz/sz) for shell file transfer testing
+- rsync for rsync-style transfer testing
+- Pre-deployed test Ed25519 key pair (private: `docker-test/test_key`)
+- Test users: `testuser`/`testpass` and `root`/`rootpass`
+- Test data files in `/tmp/testdata/`
 
 ## Configuration File Format
 
@@ -290,6 +366,15 @@ win-sshpass hash sha256 ./download.iso
 
 # 11. Verify file integrity
 win-sshpass verify sha256 d1dc38f6dfb1e4c8... ./download.iso
+
+# 12. Generate SSH key pair
+win-sshpass keygen
+
+# 13. Generate RSA key with custom path and comment
+win-sshpass keygen -algo rsa -out ~/.ssh/mykey -comment "my-server"
+
+# 14. Login with generated private key (after deploying public key to server)
+win-sshpass -i ~/.ssh/id_ed25519 ssh user@host
 ```
 
 ## Proxy Support
@@ -390,6 +475,7 @@ Behavior is configured through functional options passed to `NewClient`:
 | `WithStdin(r)` / `WithStdout(w)` / `WithStderr(w)` | Redirect I/O streams (default `os.Stdin`/`os.Stdout`/`os.Stderr`). |
 | `WithProgress(fn)` | Set a `ProgressFunc` callback that receives `(description string, sent, total int64)` during SFTP transfers. The SDK performs no rendering — callers display progress however they like. Defaults to none (headless-friendly). |
 | `WithFileSelector(s)` | Set the `FileSelector` used by the rz/sz shell-transfer fallback. The SDK ships no default implementation; without one, rz/sz prompts for a path on stdin. |
+| `WithResume()` | Enable breakpoint-resume for SFTP transfers — interrupted uploads/downloads continue from where they left off. |
 | `WithSignalHandler()` | Register a Ctrl+C handler that closes the connection. Off by default so the library never interferes with host signal handling. |
 
 The SDK intentionally bundles **no UI code** (no progress bar, no file dialog).

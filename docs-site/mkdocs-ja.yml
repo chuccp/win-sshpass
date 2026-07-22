@@ -1,6 +1,6 @@
-site_name: win-sshpass ユーザーガイド
+site_name: win-sshpass
 site_url: https://chuccp.github.io/win-sshpass/ja/
-site_description: win-sshpass 公式ドキュメント（日本語）
+site_description: 'win-sshpass — クロスプラットフォームの sshpass 実装：SSH パスワード/キーログイン、インタラクティブシェル、SFTP/SCP/Rsync 転送、SOCKS5/SOCKS4/HTTP プロキシトンネル、ブレークポイントレジューム、ファイルハッシュ検証、鍵生成、Docker テストスイート、再利用可能な Go SDK。'
 site_author: win-sshpass Team
 
 docs_dir: docs-ja
@@ -9,63 +9,98 @@ site_dir: site-ja
 theme:
   name: material
   language: ja
+  font:
+    text: Noto Sans
+    code: JetBrains Mono
   palette:
     - scheme: default
+      primary: indigo
+      accent: teal
       toggle:
         icon: material/brightness-7
         name: ダークモードに切り替え
     - scheme: slate
+      primary: indigo
+      accent: teal
       toggle:
         icon: material/brightness-4
         name: ライトモードに切り替え
   features:
     - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.sections
-    - navigation.expand
+    - navigation.indexes
+    - navigation.top
+    - navigation.tracking
+    - navigation.path
+    - navigation.prune
+    - toc.follow
     - search.suggest
     - search.highlight
+    - search.share
     - content.code.copy
     - content.code.annotate
+    - content.code.select
     - content.tabs.link
+    - content.tooltips
+    - header.autohide
+  icon:
+    repo: fontawesome/brands/github
+
+repo_url: https://github.com/chuccp/win-sshpass
+repo_name: chuccp/win-sshpass
+edit_uri: edit/main/docs-site/docs-ja/
 
 plugins:
-  - search
+  - search:
+      separator: '[\s\-,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])'
+  - tags:
+      tags_file: tags.md
 
 markdown_extensions:
-  - pymdownx.highlight:
-      anchor_linenums: true
-  - pymdownx.inlinehilite
-  - pymdownx.snippets
-  - pymdownx.superfences
-  - pymdownx.tabbed:
-      alternate_style: true
+  - abbr
   - admonition
-  - pymdownx.details
   - attr_list
+  - def_list
+  - footnotes
   - md_in_html
+  - tables
   - toc:
       permalink: true
-
-nav:
-  - ホーム: index.md
-  - はじめに:
-      - インストール: getting-started/installation.md
-      - クイックスタート: getting-started/quick-start.md
-  - ガイド:
-      - SSH 接続: guide/ssh.md
-      - ファイル転送: guide/file-transfer.md
-      - インタラクティブシェル: guide/shell.md
-      - SCP と Rsync: guide/scp-rsync.md
-      - 設定ファイル: guide/config-file.md
-  - 上級編:
-      - Go SDK: advanced/sdk.md
-      - ベストプラクティス: advanced/best-practices.md
-  - 変更履歴: changelog.md
+      toc_depth: 3
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
 
 extra:
+  generator: false
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/chuccp/win-sshpass
+      name: GitHub
   alternate:
     - name: English
       link: /win-sshpass/en/
@@ -79,3 +114,23 @@ extra:
     - name: 日本語
       link: /win-sshpass/ja/
       lang: ja
+  status:
+    new: 新規
+    deprecated: 非推奨
+
+nav:
+  - ホーム: index.md
+  - はじめに:
+      - インストール: getting-started/installation.md
+      - クイックスタート: getting-started/quick-start.md
+  - ガイド:
+      - SSH 接続: guide/ssh.md
+      - ファイル転送: guide/file-transfer.md
+      - インタラクティブシェル: guide/shell.md
+      - SCP と Rsync: guide/scp-rsync.md
+      - 設定ファイル: guide/config-file.md
+  - 高度な使い方:
+      - Go SDK: advanced/sdk.md
+      - ベストプラクティス: advanced/best-practices.md
+  - 変更履歴: changelog.md
+  - タグ: tags.md
