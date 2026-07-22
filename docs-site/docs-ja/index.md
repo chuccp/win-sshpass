@@ -6,7 +6,7 @@ hide:
 
 # win-sshpass
 
-> クロスプラットフォームの sshpass 実装（Windows および Linux）：パスワード/キー SSH ログイン、インタラクティブシェル、SFTP/SCP/Rsync ファイル転送、SOCKS5/SOCKS4/HTTP プロキシトンネル、ブレークポイントレジューム、ファイルハッシュ検証、鍵生成、再利用可能な Go SDK。
+> クロスプラットフォームの sshpass 実装（Windows、Linux、macOS）：パスワード/キー SSH ログイン、インタラクティブシェル、SFTP/SCP/Rsync ファイル転送、SOCKS5/SOCKS4/HTTP プロキシトンネル、ブレークポイントレジューム、ファイルハッシュ検証、鍵生成、再利用可能な Go SDK。
 
 [クイックスタート](getting-started/quick-start.md){ .md-button .md-button--primary }
 [インストール](getting-started/installation.md){ .md-button }

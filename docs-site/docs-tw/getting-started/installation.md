@@ -2,7 +2,7 @@
 
 ## 系統需求
 
-- **作業系統**：Windows 10/11（x64、ARM64）或 Linux（amd64、arm64）
+- **作業系統**：Windows 10/11（x64、ARM64）、Linux（amd64、arm64）或 macOS（amd64、arm64）
 - **零依賴**：無需安裝 OpenSSH 或其他軟體
 
 ## 安裝方式
@@ -38,10 +38,19 @@ scoop install win-sshpass
 | **amd64** | `win-sshpass-*-linux-amd64.tar.gz` |
 | **arm64** | `win-sshpass-*-linux-arm64.tar.gz` |
 
+**macOS**
+
+| 架構 | PKG 安裝包 | Tarball |
+|------|-----------|---------|
+| **amd64 (Intel)** | `win-sshpass-*-darwin-amd64.pkg` | `win-sshpass-*-darwin-amd64.tar.gz` |
+| **arm64 (Apple Silicon)** | `win-sshpass-*-darwin-arm64.pkg` | `win-sshpass-*-darwin-arm64.tar.gz` |
+
+> `.pkg` 安裝包會自動將二進位檔案安裝到 `/usr/local/bin/win-sshpass`。
+
 1. 前往 [Releases](https://github.com/chuccp/win-sshpass/releases) 頁面
 2. 下載對應平台和架構的安裝包
-3. **Windows MSI**：執行安裝程式，會自動新增到系統 PATH
-4. **Windows Zip / Linux tar.gz**：解壓後將二進位檔案放入 PATH 目錄
+3. **Windows MSI / macOS PKG**：執行安裝程式，二進位檔案會自動新增到系統 PATH
+4. **Windows Zip / Linux tar.gz / macOS tar.gz**：解壓後將二進位檔案放入 PATH 目錄
 
 ### 方式四：從原始碼建構
 

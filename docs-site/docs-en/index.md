@@ -6,7 +6,7 @@ hide:
 
 # win-sshpass
 
-> A cross-platform implementation of sshpass (Windows & Linux): password/key SSH login, interactive shell, SFTP/SCP/Rsync file transfer, SOCKS5/SOCKS4/HTTP proxy tunneling, breakpoint resume, file hash/verify, key generation, and a reusable Go SDK.
+> A cross-platform implementation of sshpass (Windows, Linux & macOS): password/key SSH login, interactive shell, SFTP/SCP/Rsync file transfer, SOCKS5/SOCKS4/HTTP proxy tunneling, breakpoint resume, file hash/verify, key generation, and a reusable Go SDK.
 
 [Quick Start](getting-started/quick-start.md){ .md-button .md-button--primary }
 [Installation](getting-started/installation.md){ .md-button }

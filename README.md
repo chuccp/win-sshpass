@@ -26,7 +26,7 @@ A cross-platform implementation of sshpass (Windows & Linux), providing similar 
 - Dynamic terminal resizing in interactive shell mode
 - Git Bash path conversion detection and auto-fix
 - IPv6 address support
-- Support for Windows (x64, ARM64) and Linux (amd64, arm64)
+- Support for Windows (x64, ARM64), Linux (amd64, arm64), and macOS (amd64, arm64)
 - **Reusable Go SDK** — import as a library (`package sshpass`) to embed SSH/SFTP/shell in your own app, with injectable I/O streams and progress callbacks
 - **Proxy support** — tunnel SSH connections through SOCKS5/SOCKS4/HTTP/HTTPS proxies
 - **Breakpoint resume** — resume interrupted SFTP file transfers from where they left off
@@ -51,10 +51,19 @@ Download the latest release from [GitHub Releases](https://github.com/chuccp/win
 | **amd64** | `win-sshpass-*-linux-amd64.tar.gz` |
 | **arm64** | `win-sshpass-*-linux-arm64.tar.gz` |
 
+### macOS
+
+| Architecture | PKG Installer | Tarball |
+|--------------|---------------|---------|
+| **amd64 (Intel)** | `win-sshpass-*-darwin-amd64.pkg` | `win-sshpass-*-darwin-amd64.tar.gz` |
+| **arm64 (Apple Silicon)** | `win-sshpass-*-darwin-arm64.pkg` | `win-sshpass-*-darwin-arm64.tar.gz` |
+
+> The `.pkg` installer places the binary at `/usr/local/bin/win-sshpass` automatically.
+
 1. Go to [Releases](https://github.com/chuccp/win-sshpass/releases) page
 2. Download the package for your platform and architecture
-3. **Windows MSI**: run the installer — it will add the install directory to your system PATH automatically
-4. **Windows Zip / Linux tar.gz**: extract and place the binary in your PATH
+3. **Windows MSI / macOS PKG**: run the installer — it will add the binary to your system PATH automatically
+4. **Windows Zip / Linux tar.gz / macOS tar.gz**: extract and place the binary in your PATH
 
 > **Zero dependencies**: `win-sshpass.exe` is a standalone binary. No need to install OpenSSH or any other software. Download it, put it in your PATH, and you're ready to go.
 

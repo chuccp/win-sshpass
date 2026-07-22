@@ -2,7 +2,7 @@
 
 ## システム要件
 
-- **OS**: Windows 10/11（x64、ARM64）または Linux（amd64、arm64）
+- **OS**: Windows 10/11（x64、ARM64）、Linux（amd64、arm64）、または macOS（amd64、arm64）
 - **依存関係なし**: OpenSSH や他のソフトウェアをインストールする必要はありません
 
 ## インストール方法
@@ -38,10 +38,19 @@ scoop install win-sshpass
 | **amd64** | `win-sshpass-*-linux-amd64.tar.gz` |
 | **arm64** | `win-sshpass-*-linux-arm64.tar.gz` |
 
+**macOS**
+
+| アーキテクチャ | PKG インストーラー | Tarball |
+|---------------|-------------------|---------|
+| **amd64 (Intel)** | `win-sshpass-*-darwin-amd64.pkg` | `win-sshpass-*-darwin-amd64.tar.gz` |
+| **arm64 (Apple Silicon)** | `win-sshpass-*-darwin-arm64.pkg` | `win-sshpass-*-darwin-arm64.tar.gz` |
+
+> `.pkg` インストーラーはバイナリを `/usr/local/bin/win-sshpass` に自動的に配置します。
+
 1. [Releases](https://github.com/chuccp/win-sshpass/releases) ページに移動
 2. プラットフォームとアーキテクチャに合ったパッケージをダウンロード
-3. **Windows MSI**：インストーラーを実行すると、システム PATH に自動追加
-4. **Windows Zip / Linux tar.gz**：展開してバイナリを PATH に配置
+3. **Windows MSI / macOS PKG**：インストーラーを実行すると、バイナリがシステム PATH に自動追加
+4. **Windows Zip / Linux tar.gz / macOS tar.gz**：展開してバイナリを PATH に配置
 
 ### 方法 4: ソースからビルド
 

@@ -21,7 +21,7 @@
 - 互動式 Shell 模式下動態調整終端大小
 - Git Bash 路徑轉換偵測與自動修復
 - 支援 IPv6 位址
-- 支援 Windows（x64、ARM64）和 Linux（amd64、arm64）
+- 支援 Windows（x64、ARM64）、Linux（amd64、arm64）和 macOS（amd64、arm64）
 - **可複用 Go SDK** — 作為函式庫引入（`package sshpass`），在自有應用中嵌入 SSH/SFTP/Shell 能力，支援注入 I/O 串流與進度回呼
 - **代理支援** — 透過 SOCKS5/SOCKS4/HTTP/HTTPS 代理通道連線 SSH
 - **斷點續傳** — 中斷的 SFTP 檔案傳輸可從斷點處恢復
@@ -46,10 +46,19 @@
 | **amd64** | `win-sshpass-*-linux-amd64.tar.gz` |
 | **arm64** | `win-sshpass-*-linux-arm64.tar.gz` |
 
+### macOS
+
+| 架構 | PKG 安裝包 | Tarball |
+|------|-----------|---------|
+| **amd64 (Intel)** | `win-sshpass-*-darwin-amd64.pkg` | `win-sshpass-*-darwin-amd64.tar.gz` |
+| **arm64 (Apple Silicon)** | `win-sshpass-*-darwin-arm64.pkg` | `win-sshpass-*-darwin-arm64.tar.gz` |
+
+> `.pkg` 安裝包會自動將二進位檔案安裝到 `/usr/local/bin/win-sshpass`。
+
 1. 開啟 [Releases](https://github.com/chuccp/win-sshpass/releases) 頁面
 2. 下載對應平台和架構的安裝包
-3. **Windows MSI**：執行安裝程式即可，安裝目錄會自動加入系統 PATH
-4. **Windows Zip / Linux tar.gz**：解壓後將二進位檔案放入 PATH 目錄
+3. **Windows MSI / macOS PKG**：執行安裝程式即可，二進位檔案會自動加入系統 PATH
+4. **Windows Zip / Linux tar.gz / macOS tar.gz**：解壓後將二進位檔案放入 PATH 目錄
 
 > **零依賴**：`win-sshpass.exe` 是一個獨立的可執行檔案，無需安裝 OpenSSH 或任何其他軟體。下載後放入 PATH 目錄即可直接使用。
 
