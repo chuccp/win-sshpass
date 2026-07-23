@@ -87,6 +87,14 @@ func WithSignalHandler() Option {
 	return func(c *Client) { c.signal = true }
 }
 
+// WithAgentForward enables ssh-agent forwarding. When set, the local
+// ssh-agent is forwarded to the remote server, allowing it to use the
+// local agent for further SSH connections (e.g. git over SSH on the
+// remote host). This requires that ssh-agent is running locally.
+func WithAgentForward() Option {
+	return func(c *Client) { c.config.AgentForward = true }
+}
+
 // WithResume enables breakpoint-resume for file transfers. When set, Upload
 // and Download check whether the destination file already exists and is
 // partially transferred; if so, the transfer resumes from the last byte

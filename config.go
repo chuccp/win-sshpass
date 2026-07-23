@@ -20,6 +20,8 @@ type Config struct {
 	ConnectTimeout int    // TCP connection timeout in seconds
 	Retries        int    // total connection attempts (default 1 = single attempt, no retry)
 	ProxyURL       string // optional proxy URL (socks5://, socks5h://, socks4://, http://, https://)
+	UseAgent       bool   // use ssh-agent for authentication
+	AgentForward   bool   // enable ssh-agent forwarding to remote server
 }
 
 // NewConfig creates a Config with default values.
@@ -63,8 +65,8 @@ func (c *Config) Validate() error {
 	if !isValidPort(c.Port) {
 		return fmt.Errorf("invalid port number: %s (must be 1-65535)", c.Port)
 	}
-	if c.Password == "" && c.KeyPath == "" {
-		return fmt.Errorf("no authentication method provided (password or key required)")
+	if c.Password == "" && c.KeyPath == "" && !c.UseAgent {
+		return fmt.Errorf("no authentication method provided (password, key, or ssh-agent required)")
 	}
 	return nil
 }
@@ -103,6 +105,12 @@ func (dst *Config) MergeFrom(src *Config) {
 	}
 	if src.ProxyURL != "" {
 		dst.ProxyURL = src.ProxyURL
+	}
+	if src.UseAgent {
+		dst.UseAgent = true
+	}
+	if src.AgentForward {
+		dst.AgentForward = true
 	}
 }
 

@@ -37,6 +37,9 @@ type Client struct {
 	// interrupt-handler cleanup (nil unless WithSignalHandler is used)
 	stopSignal func()
 
+	// agent-forwarding connection (nil unless AgentForward is enabled)
+	agentConn io.Closer
+
 	closeOnce sync.Once
 	closeErr  error
 }
@@ -78,6 +81,15 @@ func NewClient(config *Config, opts ...Option) (*Client, error) {
 		return nil, err
 	}
 	c.sshClient = sshClient
+
+	// set up ssh-agent forwarding if requested
+	if config.AgentForward {
+		if conn, err := setupAgentForwarding(sshClient, c.logger); err == nil {
+			c.agentConn = conn
+		} else {
+			c.logger.Info("ssh-agent forwarding unavailable", "err", err)
+		}
+	}
 
 	// set up operation timeout (timer resets on each data transfer; closes the
 	// connection when it fires).
@@ -189,6 +201,9 @@ func (c *Client) Close() error {
 		}
 		if c.sshClient != nil {
 			c.closeErr = c.sshClient.Close()
+		}
+		if c.agentConn != nil {
+			c.agentConn.Close()
 		}
 	})
 	return c.closeErr

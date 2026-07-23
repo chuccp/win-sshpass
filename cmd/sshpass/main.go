@@ -66,6 +66,7 @@ func main() {
 	var localForwards, remoteForwards repeatableFlag
 	flag.Var(&localForwards, "L", "local port forward [bind:]port:host:hostport (e.g. -L 8080:db:3306)")
 	flag.Var(&remoteForwards, "R", "remote port forward [bind:]port:host:hostport (e.g. -R 9090:localhost:8080)")
+	agentForward := flag.Bool("A", false, "enable ssh-agent forwarding (allows remote server to use local agent)")
 	flag.Parse()
 
 	// initialize JSON state
@@ -82,6 +83,9 @@ func main() {
 	}
 	if !*jsonFlag {
 		cliOpts = append(cliOpts, sshpass.WithProgress(newCLIProgress(os.Stderr).progress))
+	}
+	if *agentForward {
+		cliOpts = append(cliOpts, sshpass.WithAgentForward())
 	}
 	if *resume {
 		cliOpts = append(cliOpts, sshpass.WithResume())
@@ -220,6 +224,9 @@ func main() {
 		cfgConfig.MergeConfig(nil, cliOverride)  // CLI as final override
 		cfgConfig.ApplyUserDefault()
 		cfgConfig.Normalize()
+		if cfgConfig.Password == "" && cfgConfig.KeyPath == "" {
+			cfgConfig.UseAgent = true
+		}
 		jsonSetHost(fmt.Sprintf("%s@%s", cfgConfig.User, cfgConfig.Host))
 		client, err := sshpass.NewClient(cfgConfig, cliOpts...)
 		if err != nil {
@@ -244,6 +251,9 @@ func main() {
 		cfgConfig.MergeConfig(nil, cliOverride)    // CLI as final override
 		cfgConfig.ApplyUserDefault()
 		cfgConfig.Normalize()
+		if cfgConfig.Password == "" && cfgConfig.KeyPath == "" {
+			cfgConfig.UseAgent = true
+		}
 		jsonSetHost(fmt.Sprintf("%s@%s", cfgConfig.User, cfgConfig.Host))
 		client, err := sshpass.NewClient(cfgConfig, cliOpts...)
 		if err != nil {
@@ -261,8 +271,10 @@ func main() {
 
 	// SSH command handling
 	if config == nil {
-		if len(remainingArgs) > 0 && (pass != "" || *keyPath != "") {
-			// sshpass style: -p password or -i keyfile ssh user@host [command]
+		if len(remainingArgs) > 0 {
+			// sshpass style: ssh user@host [command]
+			// Password/key are optional — ssh-agent auto-detection handles auth
+			// when neither is provided.
 			config, cmdToRun = sshpass.ParseSSHArgs(remainingArgs)
 			// if -h flag was used and no user@host found in args, use remaining args as command
 			if config.Host == "" && *host != "" {
@@ -270,8 +282,10 @@ func main() {
 				cmdToRun = sshpass.JoinArgs(remainingArgs)
 			}
 			config.MergeConfig(nil, cliOverride)
-		} else if *host != "" && (pass != "" || *keyPath != "") {
-			// read from command line arguments (including file transfer mode)
+		} else if *host != "" {
+			// read from command line arguments (including file transfer mode).
+			// Password/key are optional — ssh-agent auto-detection handles auth
+			// when neither is provided.
 			config = sshpass.NewConfig()
 			config.MergeConfig(nil, cliOverride)
 		} else {
@@ -311,6 +325,11 @@ func main() {
 	config.Normalize()
 	if config.Port == "" {
 		config.Port = "22"
+	}
+
+	// Auto-detect ssh-agent when no password or key is provided.
+	if config.Password == "" && config.KeyPath == "" {
+		config.UseAgent = true
 	}
 	jsonSetHost(fmt.Sprintf("%s@%s", config.User, config.Host))
 
@@ -549,6 +568,7 @@ func printUsage() {
 	fmt.Println("  -out <path>        output path for generated private key (keygen; default: ~/.ssh/id_ed25519)")
 	fmt.Println("  -L [bind:]port:host:hostport  local port forward (e.g. -L 8080:db:3306)")
 	fmt.Println("  -R [bind:]port:host:hostport  remote port forward (e.g. -R 9090:localhost:8080)")
+	fmt.Println("  -A                 enable ssh-agent forwarding (remote server can use local agent)")
 	fmt.Println("  -json              output results as JSON (for AI agents and automation)")
 	fmt.Println("  -v                 show version")
 	fmt.Println("  -help              show this help message")
@@ -569,6 +589,8 @@ func printUsage() {
 	fmt.Println("  win-sshpass keygen                                  # generate ed25519 key to ~/.ssh/id_ed25519")
 	fmt.Println("  win-sshpass keygen -algo rsa -out ~/.ssh/mykey      # generate RSA key to custom path")
 	fmt.Println("  win-sshpass -json -p 'pass' ssh user@example.com 'whoami'  # JSON output for automation")
+	fmt.Println("  win-sshpass ssh user@example.com                          # auto-detect ssh-agent (no -p/-i)")
+	fmt.Println("  win-sshpass -A -i ~/.ssh/id_ed25519 ssh user@example.com  # enable agent forwarding")
 	fmt.Println("\nSDK usage (as a Go library):")
 	fmt.Println("  import \"github.com/chuccp/win-sshpass\"  // package sshpass")
 	fmt.Println("  client, err := sshpass.NewClient(cfg)")

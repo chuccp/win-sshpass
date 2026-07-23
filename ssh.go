@@ -49,6 +49,16 @@ func dial(config *Config, logger *slog.Logger) (*ssh.Client, error) {
 		authMethods = append(authMethods, ssh.PublicKeys(signer))
 	}
 
+	// use ssh-agent if requested (auto-detected when no key or password is provided)
+	if config.UseAgent {
+		if method, closer, err := agentAuthMethod(); err == nil {
+			authMethods = append(authMethods, method)
+			defer closer.Close() // agent connection only needed during handshake
+		} else {
+			logger.Info("ssh-agent unavailable", "err", err)
+		}
+	}
+
 	// add password authentication if available (as fallback or primary)
 	if config.Password != "" {
 		authMethods = append(authMethods, ssh.Password(config.Password))
@@ -68,7 +78,7 @@ func dial(config *Config, logger *slog.Logger) (*ssh.Client, error) {
 	}
 
 	if len(authMethods) == 0 {
-		return nil, fmt.Errorf("no authentication method provided (password or key required)")
+		return nil, fmt.Errorf("no authentication method available (password, key, or ssh-agent required)")
 	}
 
 	// set host key verification callback
@@ -287,6 +297,9 @@ func runShell(c *Client) error {
 	}
 
 	// start remote shell
+	if c.agentConn != nil {
+		requestAgentForwarding(session)
+	}
 	if err := session.Shell(); err != nil {
 		return fmt.Errorf("failed to start shell: %w", err)
 	}
@@ -305,6 +318,10 @@ func executeCommand(c *Client, command string) error {
 	session.Stdin = c.stdin
 	session.Stdout = c.stdout
 	session.Stderr = c.stderr
+
+	if c.agentConn != nil {
+		requestAgentForwarding(session)
+	}
 
 	return session.Run(command)
 }
