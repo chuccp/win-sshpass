@@ -50,7 +50,7 @@ func runKeygen(args []string, gf keygenGlobalFlags) {
 
 	algoVal, err := sshpass.ParseKeyAlgorithm(*algo)
 	if err != nil {
-		fatalError("Error: %v", err)
+		fatalError("%v", err)
 	}
 
 	// resolve comment: explicit > user@hostname
@@ -62,7 +62,7 @@ func runKeygen(args []string, gf keygenGlobalFlags) {
 	// generate the key pair
 	pair, err := sshpass.GenerateKeyPair(algoVal, cmt)
 	if err != nil {
-		fatalError("Error: %v", err)
+		fatalError("%v", err)
 	}
 
 	// determine output path
@@ -73,7 +73,7 @@ func runKeygen(args []string, gf keygenGlobalFlags) {
 
 	// save to disk
 	if err := sshpass.SaveKeyPair(pair, actualPath); err != nil {
-		fatalError("Error: %v", err)
+		fatalError("%v", err)
 	}
 
 	// build summary text

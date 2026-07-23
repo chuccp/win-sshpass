@@ -75,7 +75,7 @@ func main() {
 	if *configFile != "" {
 		config, pass, err = sshpass.LoadConfigOrPasswordFile(*configFile, pass, *strictHostKey)
 		if err != nil {
-			fatalError("Error: %v", err)
+			fatalError("%v", err)
 		}
 	}
 	if pass == "" && *useEnv {
@@ -123,7 +123,7 @@ func main() {
 			jsonSetCommand(fmt.Sprintf("hash %s %s", remainingArgs[1], remainingArgs[2]))
 			result, err := sshpass.HashFile(remainingArgs[2], remainingArgs[1])
 			if err != nil {
-				fatalError("Error: %v", err)
+				fatalError("%v", err)
 			}
 			if jsonEnabled() {
 				jsonSuccess(result)
@@ -138,7 +138,7 @@ func main() {
 			jsonSetCommand(fmt.Sprintf("verify %s %s %s", remainingArgs[1], remainingArgs[2], remainingArgs[3]))
 			ok, err := sshpass.VerifyFile(remainingArgs[3], remainingArgs[1], remainingArgs[2])
 			if err != nil {
-				fatalError("Error: %v", err)
+				fatalError("%v", err)
 			}
 			if jsonEnabled() {
 				if ok {
@@ -274,7 +274,7 @@ func main() {
 
 	// validate config
 	if err := config.Validate(); err != nil {
-		fatalError("Error: %v", err)
+		fatalError("%v", err)
 	}
 
 	// file transfer path — uses client.SFTP which shares the Client's SSH
@@ -282,16 +282,16 @@ func main() {
 	if *localPath != "" && *remotePath != "" {
 		localPaths, err := sshpass.SplitPaths(*localPath, "local")
 		if err != nil {
-			fatalError("Error: %v", err)
+			fatalError("%v", err)
 		}
 		remotePaths, err := sshpass.SplitPaths(*remotePath, "remote")
 		if err != nil {
-			fatalError("Error: %v", err)
+			fatalError("%v", err)
 		}
 		for i := range remotePaths {
 			remotePaths[i], err = sshpass.CleanRemotePath(remotePaths[i])
 			if err != nil {
-				fatalError("Error: %v", err)
+				fatalError("%v", err)
 			}
 		}
 
@@ -344,7 +344,7 @@ func main() {
 		}
 		return
 	} else if *localPath != "" || *remotePath != "" {
-		fatalError("Error: file transfer requires both -local and -remote arguments")
+		fatalError("file transfer requires both -local and -remote arguments")
 	}
 
 	// command/shell path

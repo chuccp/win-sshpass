@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"os"
 	"time"
-
-	sshpass "github.com/chuccp/win-sshpass"
 )
 
 // jsonResult is the structured output emitted when the -json flag is used.
@@ -88,20 +86,4 @@ func jsonFail(errMsg string, exitCode int) {
 		Error:    errMsg,
 	})
 	os.Exit(1)
-}
-
-// jsonFailFromError is a convenience wrapper that extracts the exit code from
-// err (if possible) and emits a JSON failure result.
-func jsonFailFromError(err error, fallbackExitCode int) {
-	msg := err.Error()
-	code := fallbackExitCode
-	if c, ok := exitCodeFromErr(err); ok {
-		code = c
-	}
-	jsonFail(msg, code)
-}
-
-// exitCodeFromErr delegates to the SDK's ExitCodeFromError.
-func exitCodeFromErr(err error) (int, bool) {
-	return sshpass.ExitCodeFromError(err)
 }

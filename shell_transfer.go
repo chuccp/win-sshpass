@@ -208,50 +208,6 @@ func extractCommandFromNotFound(buf []byte) (string, []string) {
 	return cmd, nil
 }
 
-// parseEchoedCommand searches the output buffer for an echoed rz/sz command
-// and extracts the command name and arguments. The echoed line looks like:
-//
-//	[root@host ~]# sz CLAUDE.md
-//	[root@host ~]# rz
-func parseEchoedCommand(buf []byte, pendingCmd string) (string, []string) {
-	cmdWord := strings.Fields(pendingCmd)[0] // "rz" or "sz"
-	s := string(buf)
-
-	for i := 0; i <= len(s)-len(cmdWord); i++ {
-		if !strings.HasPrefix(s[i:], cmdWord) {
-			continue
-		}
-		// Check word boundary before
-		if i > 0 {
-			prev := s[i-1]
-			if prev != ' ' && prev != '\r' && prev != '\n' && prev != '#' {
-				continue
-			}
-		}
-		// Check word boundary after
-		afterIdx := i + len(cmdWord)
-		if afterIdx < len(s) {
-			after := s[afterIdx]
-			if after != ' ' && after != '\r' && after != '\n' {
-				continue
-			}
-		}
-		// Found the command word — extract the rest of the line
-		rest := s[i:]
-		lineEnd := strings.IndexAny(rest, "\r\n")
-		if lineEnd >= 0 {
-			rest = rest[:lineEnd]
-		}
-		fields := strings.Fields(rest)
-		if len(fields) == 0 || fields[0] != cmdWord {
-			continue
-		}
-		return fields[0], fields[1:]
-	}
-
-	return "", nil
-}
-
 // --- Handlers ---
 
 func (m *rzszMonitor) handleRZ(localPath string) {

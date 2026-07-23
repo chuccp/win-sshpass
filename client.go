@@ -131,7 +131,10 @@ func (c *Client) ExecCapture(cmd string) (stdout, stderr string, exitCode int, e
 	defer session.Close()
 
 	var outBuf, errBuf bytes.Buffer
-	session.Stdin = c.stdin
+	// Deliberately do NOT set session.Stdin — ExecCapture is a capture-mode
+	// method. If the remote command reads stdin, it gets EOF immediately
+	// instead of consuming the client's stdin stream (which may be a pipe
+	// or terminal in automation/JSON mode).
 	session.Stdout = &outBuf
 	session.Stderr = &errBuf
 
