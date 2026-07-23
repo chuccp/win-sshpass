@@ -52,6 +52,19 @@ func dial(config *Config, logger *slog.Logger) (*ssh.Client, error) {
 	// add password authentication if available (as fallback or primary)
 	if config.Password != "" {
 		authMethods = append(authMethods, ssh.Password(config.Password))
+		// keyboard-interactive fallback: some servers (PAM-based, Cisco, etc.)
+		// reject the "password" method and only accept "keyboard-interactive".
+		// Since the user already provided a password, we answer the challenge
+		// with the same value — no extra interaction needed.
+		authMethods = append(authMethods, ssh.KeyboardInteractive(
+			func(name, instruction string, questions []string, echos []bool) ([]string, error) {
+				answers := make([]string, len(questions))
+				for i := range questions {
+					answers[i] = config.Password
+				}
+				return answers, nil
+			},
+		))
 	}
 
 	if len(authMethods) == 0 {
