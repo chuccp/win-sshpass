@@ -74,10 +74,14 @@ func main() {
 
 	// CLI-side UI adapters: progress bar (stderr) and zenity file dialogs.
 	// The SDK itself ships no UI; these are injected through options.
+	// In JSON mode the progress bar is suppressed so stderr stays clean for
+	// AI agents and automation scripts that capture both streams.
 	cliOpts := []sshpass.Option{
-		sshpass.WithProgress(newCLIProgress(os.Stderr).progress),
 		sshpass.WithFileSelector(cliFileSelector{}),
 		sshpass.WithSignalHandler(),
+	}
+	if !*jsonFlag {
+		cliOpts = append(cliOpts, sshpass.WithProgress(newCLIProgress(os.Stderr).progress))
 	}
 	if *resume {
 		cliOpts = append(cliOpts, sshpass.WithResume())
