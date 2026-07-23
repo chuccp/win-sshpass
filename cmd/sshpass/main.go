@@ -4,10 +4,39 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"runtime"
+	"strings"
 
 	sshpass "github.com/chuccp/win-sshpass"
 )
+
+// repeatableFlag is a flag.Value that collects multiple occurrences of the
+// same flag (e.g. -L a -L b → ["a", "b"]).
+type repeatableFlag []string
+
+func (f *repeatableFlag) String() string     { return strings.Join(*f, ",") }
+func (f *repeatableFlag) Set(v string) error { *f = append(*f, v); return nil }
+
+// parseForwardSpec parses an SSH forward spec into a listen address and a
+// target address. Supported formats (matching OpenSSH):
+//
+//	port:host:hostport            → 127.0.0.1:port, host:hostport
+//	bind:port:host:hostport       → bind:port, host:hostport
+func parseForwardSpec(spec string) (listen, target string, err error) {
+	parts := strings.Split(spec, ":")
+	switch len(parts) {
+	case 3: // port:host:hostport
+		listen = "127.0.0.1:" + parts[0]
+		target = parts[1] + ":" + parts[2]
+	case 4: // bind:port:host:hostport
+		listen = parts[0] + ":" + parts[1]
+		target = parts[2] + ":" + parts[3]
+	default:
+		return "", "", fmt.Errorf("invalid forward spec %q (expected [bind:]port:host:hostport)", spec)
+	}
+	return listen, target, nil
+}
 
 func main() {
 	// command line arguments
@@ -34,6 +63,9 @@ func main() {
 	showVersion := flag.Bool("v", false, "show version")
 	showHelp := flag.Bool("help", false, "show help")
 	jsonFlag := flag.Bool("json", false, "output results as JSON (for AI agents and automation)")
+	var localForwards, remoteForwards repeatableFlag
+	flag.Var(&localForwards, "L", "local port forward [bind:]port:host:hostport (e.g. -L 8080:db:3306)")
+	flag.Var(&remoteForwards, "R", "remote port forward [bind:]port:host:hostport (e.g. -R 9090:localhost:8080)")
 	flag.Parse()
 
 	// initialize JSON state
@@ -175,6 +207,9 @@ func main() {
 	// handle based on command type
 	switch cmdType {
 	case sshpass.CommandSCP:
+		if len(localForwards) > 0 || len(remoteForwards) > 0 {
+			fatalError("port forwarding (-L/-R) is not supported with scp")
+		}
 		scpParsed, scpArgs := sshpass.ParseSCPArgs(remainingArgs)
 		cfgConfig := sshpass.NewConfig()
 		cfgConfig.MergeConfig(config, scpParsed) // config file as src, scp-parsed as override
@@ -196,6 +231,9 @@ func main() {
 		return
 
 	case sshpass.CommandRsync:
+		if len(localForwards) > 0 || len(remoteForwards) > 0 {
+			fatalError("port forwarding (-L/-R) is not supported with rsync")
+		}
 		rsyncParsed, rsyncArgs := sshpass.ParseRsyncArgs(remainingArgs)
 		cfgConfig := sshpass.NewConfig()
 		cfgConfig.MergeConfig(config, rsyncParsed) // config file as src, rsync-parsed as override
@@ -280,6 +318,9 @@ func main() {
 	// file transfer path — uses client.SFTP which shares the Client's SSH
 	// connection, timeout, and interrupt handling.
 	if *localPath != "" && *remotePath != "" {
+		if len(localForwards) > 0 || len(remoteForwards) > 0 {
+			fatalError("port forwarding (-L/-R) is not supported with file transfer mode")
+		}
 		localPaths, err := sshpass.SplitPaths(*localPath, "local")
 		if err != nil {
 			fatalError("%v", err)
@@ -354,12 +395,59 @@ func main() {
 	}
 	defer client.Close()
 
+	// Set up port forwarding if requested.
+	var forwarders []*sshpass.Forwarder
+	for _, spec := range localForwards {
+		listen, target, err := parseForwardSpec(spec)
+		if err != nil {
+			fatalError("%v", err)
+		}
+		f, err := client.LocalForward(listen, target)
+		if err != nil {
+			fatalError("local forward %s failed: %v", spec, err)
+		}
+		forwarders = append(forwarders, f)
+		if !jsonEnabled() {
+			fmt.Fprintf(os.Stderr, "local forward: %s -> %s\n", listen, target)
+		}
+	}
+	for _, spec := range remoteForwards {
+		listen, target, err := parseForwardSpec(spec)
+		if err != nil {
+			fatalError("%v", err)
+		}
+		f, err := client.RemoteForward(listen, target)
+		if err != nil {
+			fatalError("remote forward %s failed: %v", spec, err)
+		}
+		forwarders = append(forwarders, f)
+		if !jsonEnabled() {
+			fmt.Fprintf(os.Stderr, "remote forward: %s -> %s\n", listen, target)
+		}
+	}
+	defer func() {
+		for _, f := range forwarders {
+			f.Close()
+		}
+	}()
+
 	// execute command
 	cmd := *command
 	if cmd == "" {
 		cmd = cmdToRun
 	}
 	jsonSetCommand(cmd)
+
+	// If forwarding is active without a command, block until interrupted.
+	if len(forwarders) > 0 && cmd == "" {
+		if jsonEnabled() {
+			jsonSuccess("Port forwarding established")
+		}
+		sigCh := make(chan os.Signal, 1)
+		signal.Notify(sigCh, os.Interrupt)
+		<-sigCh
+		return
+	}
 
 	// JSON mode: capture output and emit structured result
 	if jsonEnabled() {
@@ -455,6 +543,8 @@ func printUsage() {
 	fmt.Println("  -algo <type>       key algorithm for keygen (ed25519 or rsa, default: ed25519)")
 	fmt.Println("  -comment <string>  comment for generated key (default: user@host)")
 	fmt.Println("  -out <path>        output path for generated private key (keygen; default: ~/.ssh/id_ed25519)")
+	fmt.Println("  -L [bind:]port:host:hostport  local port forward (e.g. -L 8080:db:3306)")
+	fmt.Println("  -R [bind:]port:host:hostport  remote port forward (e.g. -R 9090:localhost:8080)")
 	fmt.Println("  -json              output results as JSON (for AI agents and automation)")
 	fmt.Println("  -v                 show version")
 	fmt.Println("  -help              show this help message")
@@ -468,6 +558,8 @@ func printUsage() {
 	fmt.Println("  win-sshpass -p 'pass' -h example.com -local file1.txt,file2.txt -remote /tmp/")
 	fmt.Println("  win-sshpass -p 'pass' -h example.com -local ./backup -remote /data/file.tar.gz -d")
 	fmt.Println("  win-sshpass -p 'pass' -h example.com -local ./bigfile.iso -remote /data/bigfile.iso -resume")
+	fmt.Println("  win-sshpass -p 'pass' -L 8080:db.internal:3306 ssh user@jumphost   # access db.internal:3306 via jumphost at localhost:8080")
+	fmt.Println("  win-sshpass -p 'pass' -R 9090:localhost:8080 ssh user@server        # expose local :8080 at server:9090")
 	fmt.Println("  win-sshpass -p 'pass' -proxy socks5://127.0.0.1:1080 ssh user@example.com")
 	fmt.Println("  win-sshpass -p 'pass' -proxy http://user:pass@proxy.local:8080 ssh user@example.com")
 	fmt.Println("  win-sshpass keygen                                  # generate ed25519 key to ~/.ssh/id_ed25519")
