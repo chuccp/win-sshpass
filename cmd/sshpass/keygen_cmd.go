@@ -46,6 +46,8 @@ func runKeygen(args []string, gf keygenGlobalFlags) {
 		os.Exit(2)
 	}
 
+	jsonSetCommand(fmt.Sprintf("keygen -algo %s -out %s", *algo, *outPath))
+
 	algoVal, err := sshpass.ParseKeyAlgorithm(*algo)
 	if err != nil {
 		fatalError("Error: %v", err)
@@ -74,17 +76,29 @@ func runKeygen(args []string, gf keygenGlobalFlags) {
 		fatalError("Error: %v", err)
 	}
 
-	// print summary
+	// build summary text
+	pubKeyLine := ""
+	if pair != nil {
+		pubKeyLine = string(pair.PublicKey)
+	}
+
+	// JSON mode: output structured result
+	if jsonEnabled() {
+		summary := fmt.Sprintf("Generated %s key pair:\n  Private key: %s\n  Public key:  %s.pub\n  Public key line: %s",
+			algoVal, actualPath, actualPath, pubKeyLine)
+		jsonSuccess(summary)
+		return
+	}
+
+	// Normal mode: print summary to stderr
 	fmt.Fprintf(os.Stderr, "Generated %s key pair:\n", algoVal)
 	fmt.Fprintf(os.Stderr, "  Private key: %s\n", actualPath)
 	fmt.Fprintf(os.Stderr, "  Public key:  %s.pub\n", actualPath)
-	if pair != nil {
-		pubLine := string(pair.PublicKey)
-		if len(pubLine) > 80 {
-			pubLine = pubLine[:80] + "..."
-		}
-		fmt.Fprintf(os.Stderr, "  Public key line: %s", pubLine)
+	displayPub := pubKeyLine
+	if len(displayPub) > 80 {
+		displayPub = displayPub[:80] + "..."
 	}
+	fmt.Fprintf(os.Stderr, "  Public key line: %s", displayPub)
 	fmt.Fprintf(os.Stderr, "\nTo enable password-less login, deploy the public key to the server:\n")
 	fmt.Fprintf(os.Stderr, `  cat %s.pub | ssh user@host "cat >> ~/.ssh/authorized_keys"`+"\n", actualPath)
 }

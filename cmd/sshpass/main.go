@@ -33,7 +33,12 @@ func main() {
 	keyOutPath := flag.String("out", "", "output path for the generated private key (keygen subcommand; default: ~/.ssh/id_ed25519 or ~/.ssh/id_rsa)")
 	showVersion := flag.Bool("v", false, "show version")
 	showHelp := flag.Bool("help", false, "show help")
+	jsonFlag := flag.Bool("json", false, "output results as JSON (for AI agents and automation)")
 	flag.Parse()
+
+	// initialize JSON state
+	jsonState.enabled = *jsonFlag
+	jsonInit()
 
 	// CLI-side UI adapters: progress bar (stderr) and zenity file dialogs.
 	// The SDK itself ships no UI; these are injected through options.
@@ -115,9 +120,14 @@ func main() {
 			if len(remainingArgs) != 3 {
 				fatalError("Usage: sshpass hash <algorithm> <file>\nAlgorithms: md5, sha1, sha256, sha512")
 			}
+			jsonSetCommand(fmt.Sprintf("hash %s %s", remainingArgs[1], remainingArgs[2]))
 			result, err := sshpass.HashFile(remainingArgs[2], remainingArgs[1])
 			if err != nil {
 				fatalError("Error: %v", err)
+			}
+			if jsonEnabled() {
+				jsonSuccess(result)
+				return
 			}
 			fmt.Println(result)
 			return
@@ -125,9 +135,18 @@ func main() {
 			if len(remainingArgs) != 4 {
 				fatalError("Usage: sshpass verify <algorithm> <hash> <file>\nAlgorithms: md5, sha1, sha256, sha512")
 			}
+			jsonSetCommand(fmt.Sprintf("verify %s %s %s", remainingArgs[1], remainingArgs[2], remainingArgs[3]))
 			ok, err := sshpass.VerifyFile(remainingArgs[3], remainingArgs[1], remainingArgs[2])
 			if err != nil {
 				fatalError("Error: %v", err)
+			}
+			if jsonEnabled() {
+				if ok {
+					jsonSuccess("OK")
+				} else {
+					jsonFail("verification FAILED", 1)
+				}
+				return
 			}
 			if ok {
 				fmt.Println("OK")
@@ -162,6 +181,7 @@ func main() {
 		cfgConfig.MergeConfig(nil, cliOverride)  // CLI as final override
 		cfgConfig.ApplyUserDefault()
 		cfgConfig.Normalize()
+		jsonSetHost(fmt.Sprintf("%s@%s", cfgConfig.User, cfgConfig.Host))
 		client, err := sshpass.NewClient(cfgConfig, cliOpts...)
 		if err != nil {
 			fatalError("SCP connection failed: %v", err)
@@ -169,6 +189,9 @@ func main() {
 		defer client.Close()
 		if err := sshpass.RunSCP(client, scpArgs); err != nil {
 			fatalError("SCP failed: %v", err)
+		}
+		if jsonEnabled() {
+			jsonSuccess("SCP transfer completed")
 		}
 		return
 
@@ -179,6 +202,7 @@ func main() {
 		cfgConfig.MergeConfig(nil, cliOverride)    // CLI as final override
 		cfgConfig.ApplyUserDefault()
 		cfgConfig.Normalize()
+		jsonSetHost(fmt.Sprintf("%s@%s", cfgConfig.User, cfgConfig.Host))
 		client, err := sshpass.NewClient(cfgConfig, cliOpts...)
 		if err != nil {
 			fatalError("Rsync connection failed: %v", err)
@@ -186,6 +210,9 @@ func main() {
 		defer client.Close()
 		if err := sshpass.RunRsync(client, rsyncArgs); err != nil {
 			fatalError("Rsync failed: %v", err)
+		}
+		if jsonEnabled() {
+			jsonSuccess("Rsync transfer completed")
 		}
 		return
 	}
@@ -243,6 +270,7 @@ func main() {
 	if config.Port == "" {
 		config.Port = "22"
 	}
+	jsonSetHost(fmt.Sprintf("%s@%s", config.User, config.Host))
 
 	// validate config
 	if err := config.Validate(); err != nil {
@@ -279,26 +307,40 @@ func main() {
 		}
 		defer conn.Close()
 
+		var transferDesc string
 		if *download {
+			transferDesc = "download"
 			for _, rPath := range remotePaths {
 				for _, lp := range localPaths {
-					fmt.Printf("Downloading %s -> %s...\n", rPath, lp)
+					if !jsonEnabled() {
+						fmt.Printf("Downloading %s -> %s...\n", rPath, lp)
+					}
 					if err := conn.Download(rPath, lp); err != nil {
 						fatalError("Download failed: %v", err)
 					}
 				}
 			}
-			fmt.Println("Download successful!")
 		} else {
+			transferDesc = "upload"
 			for _, lp := range localPaths {
 				for _, rPath := range remotePaths {
-					fmt.Printf("Uploading %s -> %s...\n", lp, rPath)
+					if !jsonEnabled() {
+						fmt.Printf("Uploading %s -> %s...\n", lp, rPath)
+					}
 					if err := conn.Upload(lp, rPath); err != nil {
 						fatalError("Upload failed: %v", err)
 					}
 				}
 			}
-			fmt.Println("Upload successful!")
+		}
+		if jsonEnabled() {
+			jsonSuccess(fmt.Sprintf("%s completed successfully", transferDesc))
+		} else {
+			if *download {
+				fmt.Println("Download successful!")
+			} else {
+				fmt.Println("Upload successful!")
+			}
 		}
 		return
 	} else if *localPath != "" || *remotePath != "" {
@@ -317,7 +359,42 @@ func main() {
 	if cmd == "" {
 		cmd = cmdToRun
 	}
+	jsonSetCommand(cmd)
 
+	// JSON mode: capture output and emit structured result
+	if jsonEnabled() {
+		if cmd == "" {
+			jsonFail("JSON mode is not supported for interactive shell sessions", -1)
+		}
+		stdout, stderr, exitCode, execErr := client.ExecCapture(cmd)
+		r := jsonResult{
+			Host:     jsonState.host,
+			Command:  cmd,
+			ExitCode: exitCode,
+			Stdout:   stdout,
+			Stderr:   stderr,
+		}
+		if exitCode == 0 && execErr == nil {
+			r.Success = true
+		} else {
+			r.Success = false
+			if execErr != nil {
+				// session/connection-level error
+				r.Error = execErr.Error()
+			} else {
+				// command exited with non-zero code; stderr is already
+				// in r.Stderr — provide a brief summary in error
+				r.Error = fmt.Sprintf("command exited with code %d", exitCode)
+			}
+		}
+		printJSON(r)
+		if exitCode != 0 {
+			os.Exit(exitCode)
+		}
+		return
+	}
+
+	// Normal mode: stream output directly
 	var runErr error
 	if cmd != "" {
 		runErr = client.Exec(cmd)
@@ -338,8 +415,13 @@ func main() {
 }
 
 // fatalError prints an error message to stderr and exits with code 1.
+// In JSON mode, it outputs a JSON error result to stdout instead.
 func fatalError(format string, args ...any) {
-	fmt.Fprintf(os.Stderr, format+"\n", args...)
+	msg := fmt.Sprintf(format, args...)
+	if jsonEnabled() {
+		jsonFail(msg, -1)
+	}
+	fmt.Fprintln(os.Stderr, msg)
 	os.Exit(1)
 }
 
@@ -373,6 +455,7 @@ func printUsage() {
 	fmt.Println("  -algo <type>       key algorithm for keygen (ed25519 or rsa, default: ed25519)")
 	fmt.Println("  -comment <string>  comment for generated key (default: user@host)")
 	fmt.Println("  -out <path>        output path for generated private key (keygen; default: ~/.ssh/id_ed25519)")
+	fmt.Println("  -json              output results as JSON (for AI agents and automation)")
 	fmt.Println("  -v                 show version")
 	fmt.Println("  -help              show this help message")
 	fmt.Println("\nExamples:")
@@ -389,6 +472,7 @@ func printUsage() {
 	fmt.Println("  win-sshpass -p 'pass' -proxy http://user:pass@proxy.local:8080 ssh user@example.com")
 	fmt.Println("  win-sshpass keygen                                  # generate ed25519 key to ~/.ssh/id_ed25519")
 	fmt.Println("  win-sshpass keygen -algo rsa -out ~/.ssh/mykey      # generate RSA key to custom path")
+	fmt.Println("  win-sshpass -json -p 'pass' ssh user@example.com 'whoami'  # JSON output for automation")
 	fmt.Println("\nSDK usage (as a Go library):")
 	fmt.Println("  import \"github.com/chuccp/win-sshpass\"  // package sshpass")
 	fmt.Println("  client, err := sshpass.NewClient(cfg)")

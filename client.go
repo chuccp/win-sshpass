@@ -1,6 +1,7 @@
 package sshpass
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"log/slog"
@@ -108,6 +109,45 @@ func (c *Client) SSHClient() *ssh.Client { return c.sshClient }
 // any.
 func (c *Client) Exec(cmd string) error {
 	return executeCommand(c, cmd)
+}
+
+// ExecCapture runs a command on the remote host and captures stdout and stderr
+// into strings instead of streaming them. It is designed for programmatic
+// consumption (e.g. JSON output mode) where the caller needs the full output
+// before deciding how to present it.
+//
+// Return values:
+//   - stdout: the captured standard output of the command.
+//   - stderr: the captured standard error of the command.
+//   - exitCode: 0 on success, the remote exit status on non-zero exit, or -1
+//     if the session could not be created or the command failed to start.
+//   - err: nil for normal exits (including non-zero exit codes); non-nil only
+//     for session-creation or connection-level failures.
+func (c *Client) ExecCapture(cmd string) (stdout, stderr string, exitCode int, err error) {
+	session, err := c.sshClient.NewSession()
+	if err != nil {
+		return "", "", -1, fmt.Errorf("failed to create session: %w", err)
+	}
+	defer session.Close()
+
+	var outBuf, errBuf bytes.Buffer
+	session.Stdin = c.stdin
+	session.Stdout = &outBuf
+	session.Stderr = &errBuf
+
+	runErr := session.Run(cmd)
+	stdout = outBuf.String()
+	stderr = errBuf.String()
+
+	if runErr != nil {
+		if code, ok := ExitCodeFromError(runErr); ok {
+			exitCode = code
+		} else {
+			exitCode = -1
+			err = runErr
+		}
+	}
+	return stdout, stderr, exitCode, err
 }
 
 // Shell starts an interactive remote shell with PTY and terminal-resize
