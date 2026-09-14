@@ -37,6 +37,17 @@ win-sshpass -e ssh user@host
 !!! tip "安全性建議"
     使用環境變數或設定檔比在命令列中直接傳遞密碼更安全，因為命令歷史中不會記錄密碼。
 
+### 空密碼
+
+當伺服器帳號沒有設定密碼時，明確傳入空密碼。省略 `-p` 意義不同——那會回退到 ssh-agent：
+
+```bash
+win-sshpass -p '' ssh root@192.168.1.100 'hostname'
+```
+
+!!! note "引號寫法"
+    PowerShell 與 Git Bash 用 `''`；Windows CMD 用 `""`。
+
 ## 私鑰認證
 
 ```bash
@@ -150,6 +161,9 @@ win-sshpass -p 'pass' ssh -p 2222 user@host
 
 # 使用 -u 和 -P 參數
 win-sshpass -p 'pass' -h host -u ubuntu -P 2222
+
+# 主機名稱可不帶 user@（使用者名稱預設 root，主機名稱交由系統解析）
+win-sshpass -p 'pass' ssh example.com 'uptime'
 ```
 
 ## 執行遠端命令

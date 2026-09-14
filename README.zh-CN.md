@@ -146,6 +146,12 @@ win-sshpass -p <密码> ssh [user@host] [命令]
 win-sshpass -p <密码> ssh -p <端口> user@host '命令'
 win-sshpass -p <密码> ssh -o StrictHostKeyChecking=no user@host
 
+# 主机名不带 user@（用户名默认 root，主机名交给系统解析）
+win-sshpass -p <密码> ssh example.com 'uptime'
+
+# 空密码（服务端没有设置密码时使用；要显式写 -p ''，不能省略）
+win-sshpass -p '' ssh root@192.168.1.100 'hostname'
+
 # 交互式 Shell（raw 终端模式：正确的回显、Ctrl+C、vim/top 支持）
 win-sshpass -p <密码> ssh user@host
 
@@ -218,7 +224,7 @@ win-sshpass -p <密码> rsync -avz user@host:<远程路径> <本地路径>
 
 | 参数 | 说明 | 示例 |
 |------|------|------|
-| `-p` | 密码 | `-p 'secret123'` |
+| `-p` | 密码。显式传空值 `-p ''` 表示服务端没有设置密码 | `-p 'secret123'` |
 | `-i` | 私钥路径 | `-i ~/.ssh/id_ed25519` |
 | `-f` | 密码文件/配置文件 | `-f pass.txt` |
 | `-e` | 从环境变量 SSHPASS 读密码 | `SSHPASS='pass' win-sshpass -e ssh ...` |

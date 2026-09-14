@@ -37,6 +37,18 @@ win-sshpass -e ssh user@host
 !!! tip "Security Tip"
     Using environment variables or config files is more secure than passing passwords on the command line, as the password won't appear in command history.
 
+### Empty Password
+
+For servers whose account has no password set, pass an explicitly empty password.
+Omitting `-p` is not the same thing — that falls back to ssh-agent instead:
+
+```bash
+win-sshpass -p '' ssh root@192.168.1.100 'hostname'
+```
+
+!!! note "Quoting"
+    Use `''` in PowerShell and Git Bash; in Windows CMD use `""`.
+
 ## Private Key Authentication
 
 ```bash
@@ -150,6 +162,9 @@ win-sshpass -p 'pass' ssh -p 2222 user@host
 
 # Using -u and -P flags
 win-sshpass -p 'pass' -h host -u ubuntu -P 2222
+
+# Host without user@ — username defaults to root, the name is resolved by the OS
+win-sshpass -p 'pass' ssh example.com 'uptime'
 ```
 
 ## Executing Remote Commands

@@ -146,6 +146,12 @@ win-sshpass -p <パスワード> ssh [user@host] [コマンド]
 win-sshpass -p <パスワード> ssh -p <ポート> user@host 'コマンド'
 win-sshpass -p <パスワード> ssh -o StrictHostKeyChecking=no user@host
 
+# ホスト名のみ（user@ は省略可。ユーザーは root、名前は OS が解決）
+win-sshpass -p <パスワード> ssh example.com 'uptime'
+
+# 空パスワード（サーバーにパスワードが設定されていない場合。-p '' を明示すること）
+win-sshpass -p '' ssh root@192.168.1.100 'hostname'
+
 # インタラクティブシェル（raw ターミナルモード：正しいエコー、Ctrl+C、vim/top 対応）
 win-sshpass -p <パスワード> ssh user@host
 
@@ -218,7 +224,7 @@ win-sshpass -p <パスワード> rsync -avz user@host:<リモートパス> <ロ�
 
 | パラメータ | 説明 | 例 |
 |-----------|------|-----|
-| `-p` | パスワード | `-p 'secret123'` |
+| `-p` | パスワード。明示的な空値 `-p ''` は「サーバーにパスワードなし」を意味する | `-p 'secret123'` |
 | `-i` | 秘密鍵パス | `-i ~/.ssh/id_ed25519` |
 | `-f` | パスワードファイル/設定ファイル | `-f pass.txt` |
 | `-e` | 環境変数 SSHPASS からパスワード読み込み | `SSHPASS='pass' win-sshpass -e ssh ...` |

@@ -146,6 +146,12 @@ win-sshpass -p <密碼> ssh [user@host] [命令]
 win-sshpass -p <密碼> ssh -p <端口> user@host '命令'
 win-sshpass -p <密碼> ssh -o StrictHostKeyChecking=no user@host
 
+# 主機名稱可不帶 user@（使用者名稱預設 root，主機名稱交由系統解析）
+win-sshpass -p <密碼> ssh example.com 'uptime'
+
+# 空密碼（伺服器未設定密碼時使用；必須明確寫 -p ''，不能省略）
+win-sshpass -p '' ssh root@192.168.1.100 'hostname'
+
 # 互動式 Shell（raw 終端模式：正確的回顯、Ctrl+C、vim/top 支援）
 win-sshpass -p <密碼> ssh user@host
 
@@ -218,7 +224,7 @@ win-sshpass -p <密碼> rsync -avz user@host:<遠端路徑> <本地路徑>
 
 | 參數 | 說明 | 範例 |
 |------|------|------|
-| `-p` | 密碼 | `-p 'secret123'` |
+| `-p` | 密碼。明確傳入空值 `-p ''` 表示伺服器沒有設定密碼 | `-p 'secret123'` |
 | `-i` | 私鑰路徑 | `-i ~/.ssh/id_ed25519` |
 | `-f` | 密碼檔案/設定檔 | `-f pass.txt` |
 | `-e` | 從環境變數 SSHPASS 讀密碼 | `SSHPASS='pass' win-sshpass -e ssh ...` |

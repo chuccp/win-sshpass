@@ -151,6 +151,12 @@ win-sshpass -p <password> ssh [user@host] [command]
 win-sshpass -p <password> ssh -p <port> user@host 'command'
 win-sshpass -p <password> ssh -o StrictHostKeyChecking=no user@host
 
+# Host without user@ — user defaults to root, the name is resolved by the OS
+win-sshpass -p <password> ssh example.com 'uptime'
+
+# Empty password — for servers that have no password set (use -p '', don't omit it)
+win-sshpass -p '' ssh root@192.168.1.100 'hostname'
+
 # Interactive shell (raw terminal mode: proper echo, Ctrl+C, vim/top support)
 win-sshpass -p <password> ssh user@host
 
@@ -223,7 +229,7 @@ win-sshpass -p <password> rsync -avz user@host:<remote_path> <local_path>
 
 | Parameter | Description | Example |
 |-----------|-------------|---------|
-| `-p` | Password | `-p 'secret123'` |
+| `-p` | Password. An explicitly empty value (`-p ''`) is a valid password, for servers with no password set | `-p 'secret123'` |
 | `-i` | Private key path | `-i ~/.ssh/id_ed25519` |
 | `-f` | Password file / config file | `-f pass.txt` |
 | `-e` | Read password from SSHPASS env var | `SSHPASS='pass' win-sshpass -e ssh ...` |

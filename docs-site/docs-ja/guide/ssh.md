@@ -37,6 +37,17 @@ win-sshpass -e ssh user@host
 !!! tip "セキュリティのヒント"
     環境変数や設定ファイルを使用する方が、コマンドラインで直接パスワードを渡すよりも安全です。コマンド履歴にパスワードが残りません。
 
+### 空パスワード
+
+サーバー側のアカウントにパスワードが設定されていない場合は、空のパスワードを明示的に渡します。`-p` を省略した場合とは意味が異なります（省略時は ssh-agent にフォールバックします）：
+
+```bash
+win-sshpass -p '' ssh root@192.168.1.100 'hostname'
+```
+
+!!! note "クォート"
+    PowerShell と Git Bash では `''`、Windows CMD では `""` を使用します。
+
 ## 秘密鍵認証
 
 ```bash
@@ -150,6 +161,9 @@ win-sshpass -p 'pass' ssh -p 2222 user@host
 
 # -u と -P フラグを使用
 win-sshpass -p 'pass' -h host -u ubuntu -P 2222
+
+# ホスト名のみ（user@ は省略可。ユーザーは root、名前は OS が解決）
+win-sshpass -p 'pass' ssh example.com 'uptime'
 ```
 
 ## リモートコマンドの実行
