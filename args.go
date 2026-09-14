@@ -57,6 +57,15 @@ func ParseSSHArgs(args []string) (*Config, string) {
 			i++
 			continue
 		}
+		// Bare host name, e.g. "ssh esxi": the first token before any user@host
+		// is taken as the host and resolved by the OS. Tokens containing
+		// whitespace are left alone — they are far more likely to be a command
+		// than a host name.
+		if config.Host == "" && !strings.HasPrefix(arg, "-") && !strings.ContainsAny(arg, " \t") {
+			config.Host = arg
+			i++
+			continue
+		}
 		// remaining args as command
 		if config.Host != "" {
 			command = JoinArgs(args[i:])

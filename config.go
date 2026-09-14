@@ -13,6 +13,7 @@ type Config struct {
 	Host           string
 	User           string
 	Password       string
+	PasswordSet    bool // password was explicitly provided; an empty Password is then a valid credential
 	Port           string
 	KeyPath        string // private key file path
 	StrictHostKey  bool   // whether to verify host key
@@ -41,6 +42,13 @@ func (c *Config) ApplyUserDefault() {
 	}
 }
 
+// HasPassword reports whether password authentication should be attempted.
+// A non-empty Password always counts; an empty one only counts when PasswordSet
+// marks it as explicitly provided (servers can legitimately have no password).
+func (c *Config) HasPassword() bool {
+	return c.Password != "" || c.PasswordSet
+}
+
 // Normalize ensures config values are consistent.
 func (c *Config) Normalize() {
 	if c.Timeout > 0 && c.ConnectTimeout >= c.Timeout {
@@ -65,7 +73,7 @@ func (c *Config) Validate() error {
 	if !isValidPort(c.Port) {
 		return fmt.Errorf("invalid port number: %s (must be 1-65535)", c.Port)
 	}
-	if c.Password == "" && c.KeyPath == "" && !c.UseAgent {
+	if !c.HasPassword() && c.KeyPath == "" && !c.UseAgent {
 		return fmt.Errorf("no authentication method provided (password, key, or ssh-agent required)")
 	}
 	return nil
@@ -76,8 +84,11 @@ func (dst *Config) MergeFrom(src *Config) {
 	if src == nil {
 		return
 	}
-	if src.Password != "" {
+	// PasswordSet lets an explicit empty password override a non-empty one
+	// (e.g. "-p ''" beating the password from a config file).
+	if src.Password != "" || src.PasswordSet {
 		dst.Password = src.Password
+		dst.PasswordSet = true
 	}
 	if src.KeyPath != "" {
 		dst.KeyPath = src.KeyPath

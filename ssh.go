@@ -59,8 +59,10 @@ func dial(config *Config, logger *slog.Logger) (*ssh.Client, error) {
 		}
 	}
 
-	// add password authentication if available (as fallback or primary)
-	if config.Password != "" {
+	// add password authentication if available (as fallback or primary).
+	// HasPassword also covers an explicitly empty password (-p ''), which is
+	// the correct credential for servers that have no password set.
+	if config.HasPassword() {
 		authMethods = append(authMethods, ssh.Password(config.Password))
 		// keyboard-interactive fallback: some servers (PAM-based, Cisco, etc.)
 		// reject the "password" method and only accept "keyboard-interactive".

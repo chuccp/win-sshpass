@@ -246,3 +246,45 @@ func TestParseSSHArgsCommandOnly(t *testing.T) {
 		t.Errorf("cmd = %q, want %q", cmd, "ls -la /tmp")
 	}
 }
+
+func TestParseSSHArgsBareHost(t *testing.T) {
+	t.Run("bare host name", func(t *testing.T) {
+		cfg, cmd := ParseSSHArgs([]string{"ssh", "esxi"})
+		if cfg.Host != "esxi" {
+			t.Errorf("Host = %q, want esxi", cfg.Host)
+		}
+		if cfg.User != "root" {
+			t.Errorf("User = %q, want root (default)", cfg.User)
+		}
+		if cmd != "" {
+			t.Errorf("cmd = %q, want empty", cmd)
+		}
+	})
+	t.Run("bare host name with command", func(t *testing.T) {
+		cfg, cmd := ParseSSHArgs([]string{"ssh", "esxi", "uname", "-a"})
+		if cfg.Host != "esxi" {
+			t.Errorf("Host = %q, want esxi", cfg.Host)
+		}
+		if cmd != "uname -a" {
+			t.Errorf("cmd = %q, want %q", cmd, "uname -a")
+		}
+	})
+	t.Run("user@host wins over bare token order", func(t *testing.T) {
+		cfg, _ := ParseSSHArgs([]string{"ssh", "root@192.168.249.249", "ls"})
+		if cfg.Host != "192.168.249.249" || cfg.User != "root" {
+			t.Errorf("User=%q Host=%q, want root/192.168.249.249", cfg.User, cfg.Host)
+		}
+	})
+	t.Run("token with whitespace is not a host", func(t *testing.T) {
+		cfg, _ := ParseSSHArgs([]string{"ssh", "uname -a"})
+		if cfg.Host != "" {
+			t.Errorf("Host = %q, want empty (command, not a host)", cfg.Host)
+		}
+	})
+	t.Run("flag-like token is not a host", func(t *testing.T) {
+		cfg, _ := ParseSSHArgs([]string{"ssh", "-unknown"})
+		if cfg.Host != "" {
+			t.Errorf("Host = %q, want empty (flag, not a host)", cfg.Host)
+		}
+	})
+}

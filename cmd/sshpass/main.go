@@ -43,7 +43,7 @@ func main() {
 	configFile := flag.String("f", "", "password file or config file path")
 	host := flag.String("h", "", "host address")
 	user := flag.String("u", "", "username (default: root)")
-	password := flag.String("p", "", "password")
+	password := flag.String("p", "", "password (an empty value is allowed)")
 	port := flag.String("P", "22", "port")
 	keyPath := flag.String("i", "", "private key file path")
 	command := flag.String("c", "", "command to execute")
@@ -112,17 +112,30 @@ func main() {
 
 	// get password: priority -p > config file > password file > -e > SSHPASS
 	pass := *password
+	// Distinguish "-p ''" (an explicit empty password, valid for servers with no
+	// password) from "no -p at all". flag.Visit only reports flags the user
+	// actually passed, the same trick used below for -P/-t/-ct/-retry/-k.
+	passwordProvided := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == "p" {
+			passwordProvided = true
+		}
+	})
 	if *configFile != "" {
 		config, pass, err = sshpass.LoadConfigOrPasswordFile(*configFile, pass, *strictHostKey)
 		if err != nil {
 			fatalError("%v", err)
 		}
 	}
-	if pass == "" && *useEnv {
+	if passwordProvided {
+		pass = *password // explicit -p outranks the config/password file
+	}
+	if pass == "" && *useEnv && !passwordProvided {
 		pass = sshpass.GetEnvPassword()
 	}
 	cliOverride := &sshpass.Config{
 		Password:       pass,
+		PasswordSet:    passwordProvided,
 		KeyPath:        *keyPath,
 		Host:           *host,
 		User:           *user,
@@ -224,7 +237,7 @@ func main() {
 		cfgConfig.MergeConfig(nil, cliOverride)  // CLI as final override
 		cfgConfig.ApplyUserDefault()
 		cfgConfig.Normalize()
-		if cfgConfig.Password == "" && cfgConfig.KeyPath == "" {
+		if !cfgConfig.HasPassword() && cfgConfig.KeyPath == "" {
 			cfgConfig.UseAgent = true
 		}
 		jsonSetHost(fmt.Sprintf("%s@%s", cfgConfig.User, cfgConfig.Host))
@@ -251,7 +264,7 @@ func main() {
 		cfgConfig.MergeConfig(nil, cliOverride)    // CLI as final override
 		cfgConfig.ApplyUserDefault()
 		cfgConfig.Normalize()
-		if cfgConfig.Password == "" && cfgConfig.KeyPath == "" {
+		if !cfgConfig.HasPassword() && cfgConfig.KeyPath == "" {
 			cfgConfig.UseAgent = true
 		}
 		jsonSetHost(fmt.Sprintf("%s@%s", cfgConfig.User, cfgConfig.Host))
@@ -327,8 +340,10 @@ func main() {
 		config.Port = "22"
 	}
 
-	// Auto-detect ssh-agent when no password or key is provided.
-	if config.Password == "" && config.KeyPath == "" {
+	// Auto-detect ssh-agent when neither a password nor a key is provided.
+	// An explicitly empty password (-p '') counts as provided: the user asked
+	// for password authentication, not for an agent fallback.
+	if !config.HasPassword() && config.KeyPath == "" {
 		config.UseAgent = true
 	}
 	jsonSetHost(fmt.Sprintf("%s@%s", config.User, config.Host))
@@ -549,7 +564,7 @@ func printUsage() {
 	fmt.Println("  win-sshpass -h <host> -p <password> -local <path> -remote <file> -d (download)")
 	fmt.Println("  win-sshpass keygen [-algo <ed25519|rsa>] [-out <keypath>]  (generate key pair locally)")
 	fmt.Println("\nOptions:")
-	fmt.Println("  -p <password>      specify password directly")
+	fmt.Println("  -p <password>      specify password directly (empty value is allowed)")
 	fmt.Println("  -f <file>          read password from file (single line) or config file")
 	fmt.Println("  -c <command>       command to execute on the remote host")
 	fmt.Println("  -i <key>           use private key authentication")

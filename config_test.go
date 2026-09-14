@@ -483,3 +483,69 @@ func TestNewConfigDefaults(t *testing.T) {
 		t.Errorf("default Retries = %d, want 3", cfg.Retries)
 	}
 }
+
+func TestHasPassword(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  Config
+		want bool
+	}{
+		{"no password at all", Config{}, false},
+		{"non-empty password", Config{Password: "secret"}, true},
+		{"explicitly empty password", Config{PasswordSet: true}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.cfg.HasPassword(); got != tt.want {
+				t.Errorf("HasPassword() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestValidateWithExplicitEmptyPassword(t *testing.T) {
+	// "-p ''" is a valid credential for a server with no password: the user is
+	// not falling back to ssh-agent, so validation must not demand another method.
+	t.Run("empty password explicitly provided", func(t *testing.T) {
+		cfg := &Config{Host: "host", Port: "22", PasswordSet: true}
+		if err := cfg.Validate(); err != nil {
+			t.Fatalf("Validate with explicit empty password should not error: %v", err)
+		}
+	})
+	t.Run("empty password without PasswordSet still rejected", func(t *testing.T) {
+		cfg := &Config{Host: "host", Port: "22"}
+		if err := cfg.Validate(); err == nil {
+			t.Fatal("expected error when no password was provided")
+		}
+	})
+}
+
+func TestMergeConfigEmptyPasswordOverride(t *testing.T) {
+	t.Run("explicit empty password overrides config file password", func(t *testing.T) {
+		dst := NewConfig()
+		src := &Config{Host: "h", Password: "from-file"}
+		override := &Config{PasswordSet: true} // -p ''
+		dst.MergeConfig(src, override)
+		if dst.Password != "" {
+			t.Errorf("Password = %q, want empty", dst.Password)
+		}
+		if !dst.HasPassword() {
+			t.Error("HasPassword() = false, want true (password was provided, just empty)")
+		}
+	})
+	t.Run("unset password leaves config file password intact", func(t *testing.T) {
+		dst := NewConfig()
+		src := &Config{Host: "h", Password: "from-file"}
+		dst.MergeConfig(src, &Config{})
+		if dst.Password != "from-file" {
+			t.Errorf("Password = %q, want from-file", dst.Password)
+		}
+	})
+	t.Run("non-empty password marks PasswordSet", func(t *testing.T) {
+		dst := NewConfig()
+		dst.MergeFrom(&Config{Password: "secret"})
+		if !dst.PasswordSet {
+			t.Error("PasswordSet = false, want true after merging a non-empty password")
+		}
+	})
+}
