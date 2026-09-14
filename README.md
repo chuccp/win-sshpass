@@ -35,6 +35,7 @@ A cross-platform implementation of sshpass (Windows, Linux & macOS), providing s
 - **Breakpoint resume** — resume interrupted SFTP file transfers from where they left off
 - **File hash & verify** — compute and verify local file hashes (MD5, SHA-1, SHA-256, SHA-512)
 - **Key generation** — built-in SSH key pair generation (Ed25519 and RSA)
+- **Detached commands** (`--bg`) — start a service over SSH and return immediately, without the session hanging on it
 
 ## Download
 
@@ -180,6 +181,38 @@ win-sshpass -f pass.txt ssh user@host
 win-sshpass -f server.config
 ```
 
+### Detached Commands (`--bg`)
+
+Start a long-running process (a service, a daemon) and return immediately
+instead of waiting for it to exit.
+
+```bash
+# Start a service after deploying a new binary
+win-sshpass -p 'pass' ssh --bg root@host 'cd /app && ./myapp > /tmp/myapp.log 2>&1'
+
+# Replace the binary and start it in the same command
+win-sshpass -p 'pass' ssh --bg root@host 'cd /app && cp /tmp/myapp-new ./myapp && chmod +x ./myapp && ./myapp > /tmp/myapp.log 2>&1'
+
+# Restart a service, then verify it in a separate connection
+win-sshpass -p 'pass' ssh --bg root@host 'pkill -x myapp; sleep 1; cd /app && ./myapp > /tmp/myapp.log 2>&1'
+win-sshpass -p 'pass' ssh root@host 'ps -ef | grep [m]yapp; curl -s localhost:8080/api/status/ping'
+```
+
+Why it is needed: `ssh host 'nohup ./myapp &'` **hangs**. The background
+process inherits the session's stdout/stderr, so the SSH channel never reaches
+EOF and the client keeps waiting until the service exits (or `-t` fires).
+`--bg` starts the command through `setsid` (falling back to `nohup` on systems
+without it) with all three streams redirected, so the channel closes as soon as
+the shell returns while the service keeps running.
+
+Notes:
+
+- Redirect the command's output **inside** the command (`> /tmp/xxx.log 2>&1`);
+  `--bg` discards anything left on the streams.
+- The exit code only reports that the command was launched, not that the service
+  came up — verify with a second connection as shown above.
+- Can also be set per host in a [config file](#configuration-file-format) with `background: true`.
+
 ### File Transfer
 
 > **Git Bash users**: Use `//` prefix for remote paths, e.g. `-remote //tmp/file.txt`. See [Git Bash Notes](#git-bash-notes) below.
@@ -249,6 +282,7 @@ win-sshpass -p <password> rsync -avz user@host:<remote_path> <local_path>
 | `-L` | Local port forward (repeatable) | `-L 8080:db.internal:3306` |
 | `-R` | Remote port forward (repeatable) | `-R 9090:localhost:8080` |
 | `-A` | Enable ssh-agent forwarding | `-A` |
+| `--bg` | Start the command detached from the session and return immediately (for services, e.g. after deploying a binary). Redirect the command's output inside the command itself | `--bg './server > /tmp/server.log 2>&1'` |
 | `-json` | Output results as JSON (for AI/automation) | `-json` |
 | `-v` | Show version | `-v` |
 | `-help` | Show help message | `-help` |

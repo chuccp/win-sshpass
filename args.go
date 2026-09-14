@@ -47,6 +47,12 @@ func ParseSSHArgs(args []string) (*Config, string) {
 			i++
 			continue
 		}
+		if arg == "--bg" || arg == "-bg" {
+			// run the command detached from the session (see BackgroundCommand)
+			config.Background = true
+			i++
+			continue
+		}
 		if strings.Contains(arg, "@") {
 			// user@host format (supports IPv6)
 			parts := strings.SplitN(arg, "@", 2)

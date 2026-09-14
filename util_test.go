@@ -200,6 +200,60 @@ func TestJoinArgs(t *testing.T) {
 	}
 }
 
+func TestShellQuote(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"plain", "ls -la /tmp", "'ls -la /tmp'"},
+		{"empty", "", "''"},
+		{"embedded single quote", "echo 'hi'", `'echo '\''hi'\'''`},
+		{"double quotes untouched", `echo "a b"`, `'echo "a b"'`},
+		{"newlines preserved", "echo a\necho b", "'echo a\necho b'"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ShellQuote(tt.in); got != tt.want {
+				t.Errorf("ShellQuote(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBackgroundCommand(t *testing.T) {
+	const cmd = "cd /app && ./server > /tmp/server.log 2>&1"
+	got := BackgroundCommand(cmd)
+
+	// The original command must be passed through shell-quoted, once per branch.
+	quoted := ShellQuote(cmd)
+	if n := strings.Count(got, quoted); n != 2 {
+		t.Errorf("command should appear quoted in both branches, got %d occurrences:\n%s", n, got)
+	}
+	// setsid branch first, nohup fallback (for systems without setsid, e.g. macOS).
+	if !strings.Contains(got, "if command -v setsid >/dev/null 2>&1; then setsid sh -c ") {
+		t.Errorf("missing setsid branch:\n%s", got)
+	}
+	if !strings.Contains(got, "else nohup sh -c ") {
+		t.Errorf("missing nohup fallback:\n%s", got)
+	}
+	if !strings.HasSuffix(got, "& fi") {
+		t.Errorf("wrapped command should end with a background job inside the if, got:\n%s", got)
+	}
+	// Every stream redirected, so the SSH channel can reach EOF and the client
+	// returns instead of waiting for the service to exit.
+	if n := strings.Count(got, "</dev/null >/dev/null 2>&1 &"); n != 2 {
+		t.Errorf("both branches must redirect stdin/stdout/stderr, got %d:\n%s", n, got)
+	}
+}
+
+func TestBackgroundCommandEscapesQuotes(t *testing.T) {
+	got := BackgroundCommand("echo 'hi' > /tmp/out")
+	if !strings.Contains(got, `'echo '\''hi'\'' > /tmp/out'`) {
+		t.Errorf("embedded single quote not escaped:\n%s", got)
+	}
+}
+
 func TestSetupOperationTimeoutFires(t *testing.T) {
 	var triggered atomic.Bool
 	closeFn := func() { triggered.Store(true) }

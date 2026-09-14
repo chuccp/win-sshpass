@@ -30,6 +30,7 @@ Windows、Linux、macOS 対応の sshpass ツール。Linux の sshpass と同�
 - **ブレークポイントレジューム** — 中断された SFTP ファイル転送を途中から再開
 - **ファイルハッシュと検証** — ローカルファイルのハッシュ計算と検証（MD5、SHA-1、SHA-256、SHA-512）
 - **鍵生成** — 内蔵SSH鍵ペア生成（Ed25519 と RSA）
+- **バックグラウンド実行**（`--bg`）— SSH 経由でサービスを起動して即座に戻る。セッションがサービスに引きずられません
 
 ## ダウンロード
 
@@ -175,6 +176,30 @@ win-sshpass -f pass.txt ssh user@host
 win-sshpass -f server.config
 ```
 
+### バックグラウンド実行（`--bg`）
+
+常駐プロセス（サービス、デーモン）を起動して即座に戻ります。終了を待ちません。
+
+```bash
+# 新しいバイナリを配置した後にサービスを起動
+win-sshpass -p 'pass' ssh --bg root@host 'cd /app && ./myapp > /tmp/myapp.log 2>&1'
+
+# 同じコマンド内でバイナリを差し替えて起動
+win-sshpass -p 'pass' ssh --bg root@host 'cd /app && cp /tmp/myapp-new ./myapp && chmod +x ./myapp && ./myapp > /tmp/myapp.log 2>&1'
+
+# サービスを再起動し、別の接続で確認
+win-sshpass -p 'pass' ssh --bg root@host 'pkill -x myapp; sleep 1; cd /app && ./myapp > /tmp/myapp.log 2>&1'
+win-sshpass -p 'pass' ssh root@host 'ps -ef | grep [m]yapp; curl -s localhost:8080/api/status/ping'
+```
+
+なぜ必要か：`ssh host 'nohup ./myapp &'` は**ハングします**。バックグラウンドプロセスがセッションの stdout/stderr を継承するため SSH チャネルが EOF に達せず、サービスが終了するまで（または `-t` が発火するまで）クライアントは待ち続けます。`--bg` はコマンドを `setsid`（無い環境では `nohup`）で起動し、3 つの標準ストリームをすべてリダイレクトするため、シェルが戻ると同時にチャネルが閉じ、サービスは動き続けます。
+
+注意：
+
+- 出力は**コマンドの内部で**リダイレクトしてください（`> /tmp/xxx.log 2>&1`）。それ以外は `--bg` が破棄します
+- 終了コードは「起動できた」ことだけを示します。サービスが立ち上がったかは上記のように別の接続で確認してください
+- [設定ファイル](#設定ファイル形式)でホストごとに `background: true` を指定することもできます
+
 ### ファイル転送
 
 > **Git Bash ユーザー**: リモートパスには `//` プレフィックスを使用してください（例: `-remote //tmp/file.txt）。詳細は下記の [Git Bash の注意事項](#git-bash-の注意事項) を参照してください。
@@ -244,6 +269,7 @@ win-sshpass -p <パスワード> rsync -avz user@host:<リモートパス> <ロ�
 | `-L` | ローカルポート転送（繰り返し可能） | `-L 8080:db.internal:3306` |
 | `-R` | リモートポート転送（繰り返し可能） | `-R 9090:localhost:8080` |
 | `-A` | ssh-agent 転送を有効化 | `-A` |
+| `--bg` | コマンドをセッションから切り離して起動し、即座に戻る（サービスの起動用。バイナリ配置後など）。出力はコマンド内でリダイレクトしてください | `--bg './server > /tmp/server.log 2>&1'` |
 | `-json` | JSON 形式で出力（AI/自動化向け） | `-json` |
 | `-v` | バージョン表示 | `-v` |
 | `-help` | ヘルプメッセージを表示 | `-help` |

@@ -288,3 +288,53 @@ func TestParseSSHArgsBareHost(t *testing.T) {
 		}
 	})
 }
+
+func TestParseSSHArgsBackground(t *testing.T) {
+	tests := []struct {
+		name           string
+		args           []string
+		wantBackground bool
+		wantCmd        string
+	}{
+		{
+			name:    "flag absent",
+			args:    []string{"ssh", "root@1.2.3.4", "./server"},
+			wantCmd: "./server",
+		},
+		{
+			name:           "--bg before host",
+			args:           []string{"ssh", "--bg", "root@1.2.3.4", "./server"},
+			wantBackground: true, wantCmd: "./server",
+		},
+		{
+			name:           "-bg shorthand after host",
+			args:           []string{"ssh", "root@1.2.3.4", "-bg", "./server"},
+			wantBackground: true, wantCmd: "./server",
+		},
+		{
+			name:           "--bg with -o and -p options",
+			args:           []string{"ssh", "-o", "StrictHostKeyChecking=no", "-p", "2222", "--bg", "root@1.2.3.4", "cd /app && ./svc > /tmp/svc.log 2>&1"},
+			wantBackground: true, wantCmd: "cd /app && ./svc > /tmp/svc.log 2>&1",
+		},
+		{
+			name:    "flag-like text inside the command is untouched",
+			args:    []string{"ssh", "root@1.2.3.4", "echo --bg"},
+			wantCmd: "echo --bg",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg, cmd := ParseSSHArgs(tt.args)
+			if cfg.Background != tt.wantBackground {
+				t.Errorf("Background = %v, want %v", cfg.Background, tt.wantBackground)
+			}
+			if cmd != tt.wantCmd {
+				t.Errorf("command = %q, want %q", cmd, tt.wantCmd)
+			}
+			if cfg.Host != "1.2.3.4" {
+				t.Errorf("Host = %q, want 1.2.3.4", cfg.Host)
+			}
+		})
+	}
+}

@@ -30,6 +30,7 @@
 - **断点续传** — 中断的 SFTP 文件传输可从断点处恢复
 - **文件哈希与校验** — 计算和校验本地文件哈希（MD5、SHA-1、SHA-256、SHA-512）
 - **密钥生成** — SSH 密钥对生成（Ed25519/RSA）
+- **后台运行命令**（`--bg`）— 通过 SSH 启动服务后立即返回，会话不会挂在服务上
 
 ## 下载
 
@@ -175,6 +176,30 @@ win-sshpass -f pass.txt ssh user@host
 win-sshpass -f server.config
 ```
 
+### 后台运行命令（`--bg`）
+
+启动常驻进程（服务、守护进程）后立即返回，不等待它退出。
+
+```bash
+# 部署完新二进制后启动服务
+win-sshpass -p 'pass' ssh --bg root@host 'cd /app && ./myapp > /tmp/myapp.log 2>&1'
+
+# 同一条命令里替换二进制并启动
+win-sshpass -p 'pass' ssh --bg root@host 'cd /app && cp /tmp/myapp-new ./myapp && chmod +x ./myapp && ./myapp > /tmp/myapp.log 2>&1'
+
+# 重启服务，再用另一条连接验证
+win-sshpass -p 'pass' ssh --bg root@host 'pkill -x myapp; sleep 1; cd /app && ./myapp > /tmp/myapp.log 2>&1'
+win-sshpass -p 'pass' ssh root@host 'ps -ef | grep [m]yapp; curl -s localhost:8080/api/status/ping'
+```
+
+为什么需要它：`ssh host 'nohup ./myapp &'` 这种写法**会挂住** —— 后台进程继承了会话的 stdout/stderr，SSH 通道就一直不 EOF，客户端会一直等到服务退出（或 `-t` 超时）。`--bg` 会把命令通过 `setsid` 启动（没有 setsid 的系统自动退化为 `nohup`），并把三个标准流全部重定向，于是 shell 一返回通道就关闭，而服务继续运行。
+
+注意：
+
+- 输出**必须写在命令内部**重定向（`> /tmp/xxx.log 2>&1`），否则会被 `--bg` 丢弃
+- 退出码只代表命令已启动，不代表服务起来了 —— 像上面那样用另一条连接验证
+- 也可以在[配置文件](#配置文件格式)里按主机设置 `background: true`
+
 ### 文件传输
 
 > **Git Bash 用户**：远程路径需使用 `//` 前缀，例如 `-remote //tmp/file.txt`。详见下方 [Git Bash 注意事项](#git-bash-注意事项)。
@@ -244,6 +269,7 @@ win-sshpass -p <密码> rsync -avz user@host:<远程路径> <本地路径>
 | `-L` | 本地端口转发（可重复使用） | `-L 8080:db.internal:3306` |
 | `-R` | 远程端口转发（可重复使用） | `-R 9090:localhost:8080` |
 | `-A` | 启用 ssh-agent 转发 | `-A` |
+| `--bg` | 让命令脱离会话在后台启动并立即返回（用于启动服务，如部署完二进制后）。输出需在命令内部重定向 | `--bg './server > /tmp/server.log 2>&1'` |
 | `-json` | JSON 格式输出（适用于 AI/自动化） | `-json` |
 | `-algo` | 密钥算法（ed25519/rsa），默认 ed25519 | `-algo rsa` |
 | `-out` | 密钥输出路径前缀，默认 id_ed25519 | `-out ~/.ssh/mykey` |

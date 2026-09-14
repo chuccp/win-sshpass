@@ -36,7 +36,7 @@ The project is a reusable Go SDK (`package sshpass`) plus a CLI entry point.
 - `scp.go` - `RunSCP`/`RunRsync` over a `*Client`.
 - `args.go` - `ParseSSHArgs`/`ParseSCPArgs`/`ParseRsyncArgs`/`DetectCommandType`.
 - `shell_transfer.go` - rz/sz monitor using `FileSelector` and injected I/O.
-- `util.go` - path helpers, `ParseUserHostPath`, `CleanRemotePath` (returns error), `SplitPaths`, `ExitCodeFromError`, `setupOperationTimeout`.
+- `util.go` - path helpers, `ParseUserHostPath`, `CleanRemotePath` (returns error), `SplitPaths`, `ExitCodeFromError`, `setupOperationTimeout`, `ShellQuote`, `BackgroundCommand` (wraps a command for the `--bg` flag so it is started detached).
 - `proxy.go` - `proxyDial`: SOCKS5 (via golang.org/x/net/proxy), SOCKS4/SOCKS4A (inline), and HTTP/HTTPS CONNECT proxy tunneling. Used by `dialAndHandshake` when `Config.ProxyURL` is set.
 - `hash.go` - `HashFile`/`VerifyFile`: local file hash computation and verification (MD5, SHA-1, SHA-256, SHA-512).
 - `keygen.go` - `GenerateKeyPair`, `GenerateRSAKeyPair`, `SaveKeyPair`, `DeployPublicKey`, `DefaultKeyPath`: SSH key pair generation (Ed25519, RSA).
@@ -45,6 +45,17 @@ The project is a reusable Go SDK (`package sshpass`) plus a CLI entry point.
 The library avoids process-level side effects: no `os.Exit`, no global signal
 registration (unless `WithSignalHandler` is used), and all I/O streams are
 injectable via options.
+
+### Detached commands (`--bg`)
+
+`ssh host 'nohup ./server &'` hangs the client: the background process inherits
+the session's stdout/stderr, so the SSH channel never reaches EOF and the
+command appears to wait for the service to exit. `Client.Exec`/`ExecCapture`
+therefore rewrite the command through `BackgroundCommand` when
+`Config.Background` is set (`--bg`, or `background: true` in a config file),
+which starts it via `setsid` (falling back to `nohup`) with all streams
+redirected. Such commands must redirect their own output, e.g.
+`--bg './server > /tmp/server.log 2>&1'`.
 
 ## Platform Support
 

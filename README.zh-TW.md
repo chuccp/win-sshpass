@@ -30,6 +30,7 @@
 - **斷點續傳** — 中斷的 SFTP 檔案傳輸可從斷點處恢復
 - **檔案雜湊與校驗** — 計算和校驗本地檔案雜湊（MD5、SHA-1、SHA-256、SHA-512）
 - **金鑰產生** — SSH 金鑰對產生（Ed25519/RSA）
+- **背景執行指令**（`--bg`）— 透過 SSH 啟動服務後立即返回，工作階段不會卡在服務上
 
 ## 下載
 
@@ -175,6 +176,30 @@ win-sshpass -f pass.txt ssh user@host
 win-sshpass -f server.config
 ```
 
+### 背景執行指令（`--bg`）
+
+啟動常駐程式（服務、守護程式）後立即返回，不等待它結束。
+
+```bash
+# 部署完新二進位檔後啟動服務
+win-sshpass -p 'pass' ssh --bg root@host 'cd /app && ./myapp > /tmp/myapp.log 2>&1'
+
+# 同一條指令裡替換二進位檔並啟動
+win-sshpass -p 'pass' ssh --bg root@host 'cd /app && cp /tmp/myapp-new ./myapp && chmod +x ./myapp && ./myapp > /tmp/myapp.log 2>&1'
+
+# 重啟服務，再用另一條連線驗證
+win-sshpass -p 'pass' ssh --bg root@host 'pkill -x myapp; sleep 1; cd /app && ./myapp > /tmp/myapp.log 2>&1'
+win-sshpass -p 'pass' ssh root@host 'ps -ef | grep [m]yapp; curl -s localhost:8080/api/status/ping'
+```
+
+為什麼需要它：`ssh host 'nohup ./myapp &'` 這種寫法**會卡住** —— 背景程式繼承了工作階段的 stdout/stderr，SSH 通道就一直不 EOF，客戶端會一直等到服務結束（或 `-t` 逾時）。`--bg` 會把指令透過 `setsid` 啟動（沒有 setsid 的系統自動退化為 `nohup`），並將三個標準流全部重新導向，因此 shell 一返回通道就關閉，而服務繼續執行。
+
+注意：
+
+- 輸出**必須寫在指令內部**重新導向（`> /tmp/xxx.log 2>&1`），否則會被 `--bg` 丟棄
+- 結束碼只代表指令已啟動，不代表服務起來了 —— 請像上面那樣用另一條連線驗證
+- 也可以在[設定檔](#設定檔格式)裡按主機設定 `background: true`
+
 ### 檔案傳輸
 
 > **Git Bash 使用者**：遠端路徑需使用 `//` 前綴，例如 `-remote //tmp/file.txt`。詳見下方 [Git Bash 注意事項](#git-bash-注意事項)。
@@ -244,6 +269,7 @@ win-sshpass -p <密碼> rsync -avz user@host:<遠端路徑> <本地路徑>
 | `-L` | 本機連接埠轉送（可重複使用） | `-L 8080:db.internal:3306` |
 | `-R` | 遠端連接埠轉送（可重複使用） | `-R 9090:localhost:8080` |
 | `-A` | 啟用 ssh-agent 轉送 | `-A` |
+| `--bg` | 讓指令脫離工作階段在背景啟動並立即返回（用於啟動服務，如部署完二進位檔後）。輸出需在指令內重新導向 | `--bg './server > /tmp/server.log 2>&1'` |
 | `-json` | JSON 格式輸出（適用於 AI/自動化） | `-json` |
 | `-algo` | 金鑰演算法（ed25519/rsa），預設 ed25519 | `-algo rsa` |
 | `-out` | 金鑰輸出路徑前綴，預設 id_ed25519 | `-out ~/.ssh/mykey` |

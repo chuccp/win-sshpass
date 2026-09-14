@@ -23,6 +23,7 @@ type Config struct {
 	ProxyURL       string // optional proxy URL (socks5://, socks5h://, socks4://, http://, https://)
 	UseAgent       bool   // use ssh-agent for authentication
 	AgentForward   bool   // enable ssh-agent forwarding to remote server
+	Background     bool   // run the command detached from the session (--bg)
 }
 
 // NewConfig creates a Config with default values.
@@ -122,6 +123,9 @@ func (dst *Config) MergeFrom(src *Config) {
 	}
 	if src.AgentForward {
 		dst.AgentForward = true
+	}
+	if src.Background {
+		dst.Background = true
 	}
 }
 
@@ -237,6 +241,9 @@ func LoadConfig(filename string) (*Config, error) {
 			hasKeys = true
 		case "proxy", "proxy_url":
 			config.ProxyURL = value
+			hasKeys = true
+		case "background", "bg":
+			config.Background = parseBoolValue(value)
 			hasKeys = true
 		}
 	}

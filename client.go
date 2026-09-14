@@ -119,7 +119,14 @@ func (c *Client) SSHClient() *ssh.Client { return c.sshClient }
 // Exec runs a single command on the remote host, streaming I/O through the
 // client's configured stdin/stdout/stderr. It returns the command's error, if
 // any.
+//
+// When Config.Background is set (--bg) the command is started detached from the
+// session and Exec returns as soon as the remote shell has launched it; such a
+// command must redirect its own output to a log if it needs one.
 func (c *Client) Exec(cmd string) error {
+	if c.config.Background {
+		cmd = BackgroundCommand(cmd)
+	}
 	return executeCommand(c, cmd)
 }
 
@@ -136,6 +143,9 @@ func (c *Client) Exec(cmd string) error {
 //   - err: nil for normal exits (including non-zero exit codes); non-nil only
 //     for session-creation or connection-level failures.
 func (c *Client) ExecCapture(cmd string) (stdout, stderr string, exitCode int, err error) {
+	if c.config.Background {
+		cmd = BackgroundCommand(cmd)
+	}
 	session, err := c.sshClient.NewSession()
 	if err != nil {
 		return "", "", -1, fmt.Errorf("failed to create session: %w", err)

@@ -39,6 +39,32 @@ func JoinArgs(args []string) string {
 	return strings.Join(args, " ")
 }
 
+// ShellQuote wraps s in single quotes for POSIX shells and escapes any embedded
+// single quote, so the result is always a single word.
+func ShellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
+}
+
+// BackgroundCommand rewrites command so the remote shell starts it detached and
+// returns immediately (used by the --bg flag).
+//
+// Without this, `ssh host 'nohup ./server &'` makes the client wait: the
+// background process inherits the session's stdout/stderr, the SSH channel never
+// reaches EOF, and the command appears to hang until the process exits (or the
+// -t timeout fires). The wrapper redirects all three standard streams, ignores
+// SIGHUP and detaches from the session, so the channel closes as soon as the
+// shell returns while the service keeps running.
+//
+// Output is discarded by the wrapper, so a command that needs a log must
+// redirect inside itself, e.g. `./server > /tmp/server.log 2>&1`.
+// setsid is used when available; nohup covers systems without it (macOS).
+func BackgroundCommand(command string) string {
+	quoted := ShellQuote(command)
+	return "if command -v setsid >/dev/null 2>&1; then " +
+		"setsid sh -c " + quoted + " </dev/null >/dev/null 2>&1 & " +
+		"else nohup sh -c " + quoted + " </dev/null >/dev/null 2>&1 & fi"
+}
+
 // SplitPaths splits a path string by comma or space separator.
 // Returns error if complex paths (containing '/' or '\') are space-separated.
 // name identifies which parameter for error messages (e.g., "local" or "remote").
