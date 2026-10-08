@@ -35,6 +35,7 @@ A cross-platform implementation of sshpass (Windows, Linux & macOS), providing s
 - **Breakpoint resume** — resume interrupted SFTP file transfers from where they left off
 - **File hash & verify** — compute and verify local file hashes (MD5, SHA-1, SHA-256, SHA-512)
 - **Key generation** — built-in SSH key pair generation (Ed25519 and RSA)
+- **Self-update** (`update`) — check GitHub Releases and replace the binary with the newest release in place
 - **Detached commands** (`--bg`) — start a service over SSH and return immediately, without the session hanging on it
 
 ## Download
@@ -345,6 +346,47 @@ win-sshpass -p 'password' ssh user@host "mkdir -p ~/.ssh && chmod 700 ~/.ssh && 
 # Then log in with the private key
 win-sshpass -i ~/.ssh/id_ed25519 ssh user@host
 ```
+
+## Update
+
+Update to the latest release directly from GitHub — no need to re-download the archive by hand:
+
+```bash
+# Update to the latest release
+win-sshpass update
+
+# Only check whether a newer release exists
+win-sshpass update -check
+
+# Reinstall the current version, or move to a specific release tag
+win-sshpass update -force
+win-sshpass update -version v1.0.0
+```
+
+It first asks GitHub which release is current and compares that with the version you are running — one request, no download. Only when the release is newer does it fetch the archive for your OS and architecture and replace the running binary in place:
+
+```
+$ win-sshpass update
+Updating win-sshpass v0.9.1 (windows/amd64)...
+downloading win-sshpass-v0.9.4-amd64.zip (3.4 MiB)
+Downloading win-sshpass-v0.9.4-amd64.zip 100% |████████████████| (3.6/3.6 MB, 1.2 MB/s)
+Updated win-sshpass v0.9.1 -> v0.9.4 (C:\Tools\win-sshpass.exe)
+```
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `-check` | Only report whether a newer release exists | — |
+| `-force` | Reinstall even when the current version is already the latest | — |
+| `-version <tag>` | Install a specific release tag (implies `-force`) | latest release |
+| `-target <path>` | Binary to replace | the running executable |
+
+Notes:
+
+- On Windows the previous binary is kept as `win-sshpass.exe.old` (a running `.exe` cannot be deleted) and removed by the next update. On Linux and macOS the swap is an atomic rename.
+- The install directory must be writable. If win-sshpass came from **scoop**, **winget**, or the **MSI/PKG** installer, update through that package manager instead — it tracks the files it owns.
+- The downloaded binary is verified to be a real executable before it replaces anything, so a failed or intercepted download cannot leave you without a working `win-sshpass`.
+- The version check uses github.com's `/releases/latest` redirect instead of the REST API, so it needs no token and no API quota (the API allows 60 unauthenticated requests per hour) and keeps working where `api.github.com` is blocked. The API is only a fallback.
+- Behind a proxy, `update` honours the `HTTPS_PROXY` / `HTTP_PROXY` environment variables.
 
 ## Configuration File Format
 

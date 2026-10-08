@@ -323,6 +323,47 @@ win-sshpass -p 'password' ssh user@host "mkdir -p ~/.ssh && chmod 700 ~/.ssh && 
 win-sshpass -i ~/.ssh/id_ed25519 ssh user@host
 ```
 
+## 自动更新
+
+直接从 GitHub 更新到最新版本，无需手动下载压缩包：
+
+```bash
+# 更新到最新版本
+win-sshpass update
+
+# 仅检查是否有新版本
+win-sshpass update -check
+
+# 重新安装当前版本，或切换到指定版本
+win-sshpass update -force
+win-sshpass update -version v1.0.0
+```
+
+该命令先向 GitHub 查询当前最新版本号，与正在运行的版本比较——只需一次请求，不会下载任何文件。只有当版本确实更新时，才会下载匹配当前系统和架构的安装包，并就地替换正在运行的可执行文件：
+
+```
+$ win-sshpass update
+Updating win-sshpass v0.9.1 (windows/amd64)...
+downloading win-sshpass-v0.9.4-amd64.zip (3.4 MiB)
+Downloading win-sshpass-v0.9.4-amd64.zip 100% |████████████████| (3.6/3.6 MB, 1.2 MB/s)
+Updated win-sshpass v0.9.1 -> v0.9.4 (C:\Tools\win-sshpass.exe)
+```
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `-check` | 仅检查是否有新版本，不下载 | — |
+| `-force` | 即使已是最新版本也重新安装 | — |
+| `-version <tag>` | 安装指定的 release 版本（隐含 `-force`） | 最新版本 |
+| `-target <path>` | 要替换的可执行文件路径 | 当前运行的程序 |
+
+注意事项：
+
+- Windows 上旧版本会保留为 `win-sshpass.exe.old`（正在运行的 `.exe` 无法删除），下次更新时自动清理。Linux 和 macOS 上是原子重命名替换。
+- 安装目录必须可写。如果 win-sshpass 是通过 **scoop**、**winget** 或 **MSI/PKG** 安装的，请改用对应的包管理器更新，以免文件归属混乱。
+- 替换之前会校验下载内容确实是可执行文件，因此下载失败或被拦截不会导致不可用的 `win-sshpass`。
+- 版本检查走的是 github.com 的 `/releases/latest` 跳转，而不是 REST API，因此无需 token、不受 API 每小时 60 次的匿名限额影响，在 `api.github.com` 被墙的网络下同样可用（API 仅作为兜底）。
+- 使用代理时，`update` 会读取 `HTTPS_PROXY` / `HTTP_PROXY` 环境变量。
+
 ## 配置文件格式
 
 ```yaml

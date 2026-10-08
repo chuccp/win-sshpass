@@ -222,6 +222,12 @@ func main() {
 		return
 	}
 
+	// --- update subcommand (self-update from GitHub releases, local only) ---
+	if len(remainingArgs) > 0 && remainingArgs[0] == "update" {
+		runUpdate(remainingArgs[1:])
+		return
+	}
+
 	// detect command type
 	cmdType := sshpass.DetectCommandType(remainingArgs)
 
@@ -563,6 +569,7 @@ func printUsage() {
 	fmt.Println("  win-sshpass -h <host> -p <password> -local <file> -remote <path>  (upload)")
 	fmt.Println("  win-sshpass -h <host> -p <password> -local <path> -remote <file> -d (download)")
 	fmt.Println("  win-sshpass keygen [-algo <ed25519|rsa>] [-out <keypath>]  (generate key pair locally)")
+	fmt.Println("  win-sshpass update [-check] [-force]  (install the latest release from GitHub)")
 	fmt.Println("\nOptions:")
 	fmt.Println("  -p <password>      specify password directly (empty value is allowed)")
 	fmt.Println("  -f <file>          read password from file (single line) or config file")
@@ -605,6 +612,8 @@ func printUsage() {
 	fmt.Println("  win-sshpass -p 'pass' -proxy http://user:pass@proxy.local:8080 ssh user@example.com")
 	fmt.Println("  win-sshpass keygen                                  # generate ed25519 key to ~/.ssh/id_ed25519")
 	fmt.Println("  win-sshpass keygen -algo rsa -out ~/.ssh/mykey      # generate RSA key to custom path")
+	fmt.Println("  win-sshpass update                                  # update to the latest release")
+	fmt.Println("  win-sshpass update -check                           # only check whether a newer release exists")
 	fmt.Println("  win-sshpass -json -p 'pass' ssh user@example.com 'whoami'  # JSON output for automation")
 	fmt.Println("  win-sshpass ssh user@example.com                          # auto-detect ssh-agent (no -p/-i)")
 	fmt.Println("  win-sshpass -A -i ~/.ssh/id_ed25519 ssh user@example.com  # enable agent forwarding")

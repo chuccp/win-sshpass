@@ -30,6 +30,7 @@ Windows、Linux、macOS 対応の sshpass ツール。Linux の sshpass と同�
 - **ブレークポイントレジューム** — 中断された SFTP ファイル転送を途中から再開
 - **ファイルハッシュと検証** — ローカルファイルのハッシュ計算と検証（MD5、SHA-1、SHA-256、SHA-512）
 - **鍵生成** — 内蔵SSH鍵ペア生成（Ed25519 と RSA）
+- **セルフアップデート**（`update`）— GitHub Releases を確認し、実行中のバイナリを最新版に置き換え
 - **バックグラウンド実行**（`--bg`）— SSH 経由でサービスを起動して即座に戻る。セッションがサービスに引きずられません
 
 ## ダウンロード
@@ -328,6 +329,47 @@ win-sshpass -p 'password' ssh user@host "mkdir -p ~/.ssh && chmod 700 ~/.ssh && 
 # その後、秘密鍵でログイン
 win-sshpass -i ~/.ssh/id_ed25519 ssh user@host
 ```
+
+## アップデート
+
+アーカイブを手動でダウンロードし直すことなく、GitHub から最新リリースに更新できます：
+
+```bash
+# 最新リリースに更新
+win-sshpass update
+
+# 新しいリリースがあるか確認するだけ
+win-sshpass update -check
+
+# 現在のバージョンを再インストール、または特定のタグに切り替え
+win-sshpass update -force
+win-sshpass update -version v1.0.0
+```
+
+まず GitHub に現在の最新リリースを問い合わせ、実行中のバージョンと比較します——リクエスト1回だけで、ダウンロードは発生しません。実際に新しい場合にのみ、お使いの OS とアーキテクチャに合うアーカイブを取得し、実行中のバイナリをその場で置き換えます：
+
+```
+$ win-sshpass update
+Updating win-sshpass v0.9.1 (windows/amd64)...
+downloading win-sshpass-v0.9.4-amd64.zip (3.4 MiB)
+Downloading win-sshpass-v0.9.4-amd64.zip 100% |████████████████| (3.6/3.6 MB, 1.2 MB/s)
+Updated win-sshpass v0.9.1 -> v0.9.4 (C:\Tools\win-sshpass.exe)
+```
+
+| パラメータ | 説明 | デフォルト |
+|-----------|------|-----------|
+| `-check` | 新しいリリースがあるか確認するだけ（ダウンロードしない） | — |
+| `-force` | 最新版であっても再インストールする | — |
+| `-version <tag>` | 指定したリリースタグをインストール（`-force` を含む） | 最新リリース |
+| `-target <path>` | 置き換えるバイナリのパス | 実行中のバイナリ |
+
+注意点：
+
+- Windows では旧バイナリは `win-sshpass.exe.old` として残り（実行中の `.exe` は削除できないため）、次回のアップデートで削除されます。Linux と macOS ではアトミックなリネームで置き換えます。
+- インストール先ディレクトリに書き込み権限が必要です。**scoop**、**winget**、**MSI/PKG** インストーラーで導入した場合は、ファイル管理が重複するため、それぞれのパッケージマネージャーで更新してください。
+- 置き換える前に、ダウンロードしたファイルが実際に実行ファイルであることを検証します。そのため、ダウンロードの失敗や傍受によって `win-sshpass` が使えなくなることはありません。
+- バージョン確認は REST API ではなく github.com の `/releases/latest` リダイレクトを使うため、トークン不要・API の匿名レート制限（1時間60回）の影響を受けず、`api.github.com` がブロックされたネットワークでも動作します（API はフォールバックのみ）。
+- プロキシ環境では、`update` は `HTTPS_PROXY` / `HTTP_PROXY` 環境変数を参照します。
 
 ## 設定ファイル形式
 

@@ -22,6 +22,8 @@ GOOS=darwin  GOARCH=arm64               go build -o win-sshpass ./cmd/sshpass
 The project is a reusable Go SDK (`package sshpass`) plus a CLI entry point.
 
 - `cmd/sshpass/main.go` - CLI entry point: flag parsing, config merging, command dispatch.
+- `cmd/sshpass/keygen_cmd.go`, `cmd/sshpass/update_cmd.go` - local subcommands (`keygen`, `update`); unlike ssh/scp/rsync they never open a connection.
+- `cmd/sshpass/json_output.go` - `-json` result plumbing (`jsonSuccess`/`jsonFail`/`jsonSetHost`).
 - `cmd/sshpass/ui.go` - CLI progress bar adapter (shared, all platforms).
 - `cmd/sshpass/ui_windows.go` - rz/sz file dialog via zenity (Windows).
 - `cmd/sshpass/ui_darwin.go` - rz/sz file dialog via zenity/osascript (macOS, Finder native).
@@ -40,6 +42,8 @@ The project is a reusable Go SDK (`package sshpass`) plus a CLI entry point.
 - `proxy.go` - `proxyDial`: SOCKS5 (via golang.org/x/net/proxy), SOCKS4/SOCKS4A (inline), and HTTP/HTTPS CONNECT proxy tunneling. Used by `dialAndHandshake` when `Config.ProxyURL` is set.
 - `hash.go` - `HashFile`/`VerifyFile`: local file hash computation and verification (MD5, SHA-1, SHA-256, SHA-512).
 - `keygen.go` - `GenerateKeyPair`, `GenerateRSAKeyPair`, `SaveKeyPair`, `DeployPublicKey`, `DefaultKeyPath`: SSH key pair generation (Ed25519, RSA).
+- `update.go` - `SelfUpdate` plus its building blocks: `CompareVersions`, release lookup via the GitHub API, `SelectReleaseAsset`, `DownloadFile`, `ExtractBinary`.
+- `update_replace_unix.go` / `update_replace_windows.go` - in-place replacement of the running executable (platform-specific, see below).
 - `version.go` - exported `Version`.
 
 The library avoids process-level side effects: no `os.Exit`, no global signal
@@ -56,6 +60,60 @@ therefore rewrite the command through `BackgroundCommand` when
 which starts it via `setsid` (falling back to `nohup`) with all streams
 redirected. Such commands must redirect their own output, e.g.
 `--bg './server > /tmp/server.log 2>&1'`.
+
+### Self-update (`update`)
+
+`win-sshpass update` resolves the newest release, compares it with the running
+`Version` and only downloads when the release is newer (or `-force` /
+`-version` says so). Flags are subcommand-local (`update -check`), not global.
+
+Release lookup has two routes (`resolveRelease`):
+
+1. **github.com** (preferred, `releaseFromWeb`): one HEAD to
+   `github.com/<repo>/releases/latest` answers 302 with the tag in `Location`;
+   the asset URL is then derived from the tag, since the workflow names every
+   archive `win-sshpass-<tag>[-<goos>]-<arch>.<ext>`. No token, no API quota,
+   and it works where `api.github.com` is blocked.
+
+   The download always uses the tag-pinned
+   `/releases/download/<tag>/<asset>`, never `/releases/latest/download/<asset>`:
+   the latter resolves to whatever is newest when the transfer starts, so a
+   release published between the version check and the download would serve a
+   build other than the one that was compared (or 404, since the older asset is
+   not attached to the new release). The fake release server in
+   `update_test.go` deliberately does not route `/releases/latest/download/`,
+   so a regression there fails the tests.
+2. **api.github.com** (fallback): authoritative asset list, so a release that
+   is missing a build for this platform is reported precisely.
+
+Asset names come from the release workflow (`win-sshpass-<tag>-<arch>.zip` on
+Windows, `win-sshpass-<tag>-<goos>-<arch>.tar.gz` elsewhere) and are matched by
+suffix in `SelectReleaseAsset`. The `.msi`/`.pkg` installers are never selected:
+they are applied by the OS package manager, not by swapping a file. Keep these
+names in sync with `.github/workflows/release.yml` when it changes — route 1
+depends on them.
+
+Two platform details shape `SelfUpdate`:
+
+- The swap is a *rename*, which cannot cross filesystems, so the downloaded
+  binary is staged inside the target's directory. Staging happens before the
+  download so an unwritable install directory fails fast instead of after a
+  multi-megabyte transfer.
+- Windows cannot overwrite a running `.exe` but can rename it: the old binary is
+  parked as `<target>.old` and deleted at the start of the next update. On Unix
+  the rename is atomic and the running process keeps the old inode.
+
+A release download has *no* total deadline: GitHub throttles these transfers
+hard in some regions (measured here at 6–11 KB/s, i.e. ~9 minutes for the
+3.4 MiB amd64 archive), and a wall-clock cap fails downloads that are
+progressing fine. It is bounded by `downloadStallTimeout` (2 minutes of
+silence) instead, backed by the transport's dial and response-header timeouts.
+
+The download is checked (size + executable magic) before it replaces anything,
+so a failed or intercepted download cannot leave the user without a working
+binary. A binary installed by scoop/winget/MSI is *not* meant to self-update;
+`privilegedInstallHint` adds a pointer to the package manager when the install
+directory looks privileged.
 
 ## Platform Support
 

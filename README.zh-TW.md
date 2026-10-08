@@ -30,6 +30,7 @@
 - **斷點續傳** — 中斷的 SFTP 檔案傳輸可從斷點處恢復
 - **檔案雜湊與校驗** — 計算和校驗本地檔案雜湊（MD5、SHA-1、SHA-256、SHA-512）
 - **金鑰產生** — SSH 金鑰對產生（Ed25519/RSA）
+- **自動更新**（`update`）— 檢查 GitHub Releases 並就地替換為最新版本的執行檔
 - **背景執行指令**（`--bg`）— 透過 SSH 啟動服務後立即返回，工作階段不會卡在服務上
 
 ## 下載
@@ -322,6 +323,47 @@ win-sshpass -p 'password' ssh user@host "mkdir -p ~/.ssh && chmod 700 ~/.ssh && 
 # 然後使用私鑰登入
 win-sshpass -i ~/.ssh/id_ed25519 ssh user@host
 ```
+
+## 自動更新
+
+直接從 GitHub 更新到最新版本，無需手動下載壓縮檔：
+
+```bash
+# 更新到最新版本
+win-sshpass update
+
+# 僅檢查是否有新版本
+win-sshpass update -check
+
+# 重新安裝目前版本，或切換到指定版本
+win-sshpass update -force
+win-sshpass update -version v1.0.0
+```
+
+此命令會先向 GitHub 查詢目前的最新版本號，與正在執行的版本比較——只需一次請求，不會下載任何檔案。只有版本確實較新時，才會下載符合目前系統與架構的安裝包，並就地替換正在執行的執行檔：
+
+```
+$ win-sshpass update
+Updating win-sshpass v0.9.1 (windows/amd64)...
+downloading win-sshpass-v0.9.4-amd64.zip (3.4 MiB)
+Downloading win-sshpass-v0.9.4-amd64.zip 100% |████████████████| (3.6/3.6 MB, 1.2 MB/s)
+Updated win-sshpass v0.9.1 -> v0.9.4 (C:\Tools\win-sshpass.exe)
+```
+
+| 參數 | 說明 | 預設值 |
+|------|------|--------|
+| `-check` | 僅檢查是否有新版本，不下載 | — |
+| `-force` | 即使已是最新版本也重新安裝 | — |
+| `-version <tag>` | 安裝指定的 release 版本（隱含 `-force`） | 最新版本 |
+| `-target <path>` | 要替換的執行檔路徑 | 目前執行的程式 |
+
+注意事項：
+
+- Windows 上舊版本會保留為 `win-sshpass.exe.old`（執行中的 `.exe` 無法刪除），下次更新時自動清理。Linux 與 macOS 則是原子重命名替換。
+- 安裝目錄必須可寫入。如果 win-sshpass 是透過 **scoop**、**winget** 或 **MSI/PKG** 安裝的，請改用對應的套件管理器更新，以免檔案歸屬混亂。
+- 替換之前會校驗下載內容確實是執行檔，因此下載失敗或被攔截不會導致無法使用的 `win-sshpass`。
+- 版本檢查走的是 github.com 的 `/releases/latest` 重導向，而非 REST API，因此無需 token、不受 API 每小時 60 次的匿名限制影響，在 `api.github.com` 被封鎖的網路下同樣可用（API 僅作為後備）。
+- 使用代理時，`update` 會讀取 `HTTPS_PROXY` / `HTTP_PROXY` 環境變數。
 
 ## 設定檔格式
 

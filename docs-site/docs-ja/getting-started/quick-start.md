@@ -102,6 +102,10 @@ win-sshpass -i ~/.ssh/id_ed25519 ssh user@server
 # ローカルファイルのハッシュ計算と検証
 win-sshpass hash sha256 ./download.iso
 win-sshpass verify sha256 d1dc38f6dfb... ./download.iso
+
+# 最新リリースに更新
+win-sshpass update
+win-sshpass update -check
 ```
 
 ## 次のステップ

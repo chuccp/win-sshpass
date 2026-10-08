@@ -102,6 +102,10 @@ win-sshpass -i ~/.ssh/id_ed25519 ssh user@server
 # Hash and verify local files
 win-sshpass hash sha256 ./download.iso
 win-sshpass verify sha256 d1dc38f6dfb... ./download.iso
+
+# Update to the latest release
+win-sshpass update
+win-sshpass update -check
 ```
 
 ## Next Steps

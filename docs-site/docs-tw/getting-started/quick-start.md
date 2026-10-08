@@ -102,6 +102,10 @@ win-sshpass -i ~/.ssh/id_ed25519 ssh user@server
 # 本地檔案雜湊與校驗
 win-sshpass hash sha256 ./download.iso
 win-sshpass verify sha256 d1dc38f6dfb... ./download.iso
+
+# 更新到最新版本
+win-sshpass update
+win-sshpass update -check
 ```
 
 ## 下一步
