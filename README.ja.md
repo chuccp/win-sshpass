@@ -54,8 +54,8 @@ win-sshpass -h example.com -p 'password' -d -remote /tmp/app.log -local ./app.lo
 win-sshpass -web -h 127.0.0.1 -u root -P 22 -p 'password'
 ```
 
-接続オプション付きで起動した場合、<http://127.0.0.1:6326> を開くと自動接続して
-ワークスペースを直接表示します。
+コマンドには `-h` または `-f` で SSH ホストを指定する必要があります。
+<http://127.0.0.1:6326> を開くと自動接続してワークスペースを直接表示します。
 
 ## Web SSH ワークスペース
 
@@ -65,16 +65,17 @@ win-sshpass -web -h 127.0.0.1 -u root -P 22 -p 'password'
 - テーマ：既定はシステム設定。ライト/ダークも選択可能。
 - アップロード進捗：ファイル名、順序、バー、全体パーセント。
 
-接続オプションを省略した場合はブラウザーの接続フォームを使用します：
+`win-sshpass -web` だけではエラー終了します。コマンドでホスト、必要に応じて
+ユーザーと認証情報を指定するか、設定ファイルを使用してください：
 
 ```bash
-win-sshpass -web
+win-sshpass -f server.config -web
 ```
 
 待受アドレスの変更：
 
 ```bash
-win-sshpass -web -web-addr 127.0.0.1:6326
+win-sshpass -web -h example.com -u root -p 'password' -web-addr 127.0.0.1:6326
 ```
 
 既定ではループバックのみをリッスンします。

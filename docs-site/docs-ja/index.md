@@ -56,7 +56,7 @@ win-sshpass -p 'password' ssh user@host
 win-sshpass keygen
 
 # Web SSH ワークスペースを開く
-win-sshpass -web
+win-sshpass -web -h example.com -u root -p 'password'
 ```
 
 ---

@@ -559,13 +559,13 @@ func TestPrepareWebConfig(t *testing.T) {
 		}
 	})
 
-	t.Run("missing host leaves interactive form", func(t *testing.T) {
+	t.Run("missing host is rejected", func(t *testing.T) {
 		config, err := prepareWebConfig(nil, &sshpass.Config{Password: "secret", PasswordSet: true}, false)
-		if err != nil {
-			t.Fatal(err)
+		if err == nil || !strings.Contains(err.Error(), "SSH host is required") {
+			t.Fatalf("error = %v, want required host error", err)
 		}
 		if config != nil {
-			t.Errorf("config = %+v, want nil", config)
+			t.Errorf("config = %+v, want nil on validation failure", config)
 		}
 	})
 

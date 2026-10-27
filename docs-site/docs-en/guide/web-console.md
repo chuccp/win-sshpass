@@ -1,8 +1,8 @@
 # Web Console & MCP
 
-`win-sshpass -web` starts a local SSH workspace in the browser. It supports
-direct connection from command-line settings, an in-browser connection form,
-SFTP file management, a real terminal, and MCP tool access.
+`win-sshpass -web` starts a local SSH workspace in the browser. A host supplied
+with `-h` or `-f` is required. The workspace includes SFTP file management, a
+real terminal, and MCP tool access.
 
 ## Start
 
@@ -15,20 +15,21 @@ win-sshpass -web -h 127.0.0.1 -u root -P 22 -p 'password'
 Open <http://127.0.0.1:6326>. The page connects automatically and opens the
 workspace.
 
-Start without a host to show the connection form:
+Running bare `win-sshpass -web` is rejected. Use a config file when connecting
+with saved settings:
 
 ```bash
-win-sshpass -web
+win-sshpass -f server.config -web
 ```
 
 Change the listener deliberately:
 
 ```bash
-win-sshpass -web -web-addr 127.0.0.1:6326
+win-sshpass -web -h example.com -u root -p 'password' -web-addr 127.0.0.1:6326
 ```
 
 The default listener is loopback-only. Binding to another interface exposes
-the connection page to that network.
+the Web workspace to that network.
 
 ## Workspace
 

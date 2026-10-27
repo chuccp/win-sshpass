@@ -54,7 +54,8 @@ win-sshpass -h example.com -p '密碼' -d -remote /tmp/app.log -local ./app.log
 win-sshpass -web -h 127.0.0.1 -u root -P 22 -p '密碼'
 ```
 
-啟動命令包含連線參數時，開啟 <http://127.0.0.1:6326> 會自動連線並直接進入工作區。
+命令必須透過 `-h` 或 `-f` 提供 SSH 伺服器位址。開啟
+<http://127.0.0.1:6326> 會自動連線並直接進入工作區。
 
 ## Web SSH 工作區
 
@@ -64,16 +65,17 @@ win-sshpass -web -h 127.0.0.1 -u root -P 22 -p '密碼'
 - 主題：預設跟隨系統，可切換淺色/深色。
 - 上傳進度：檔名、序號、進度條與總體百分比。
 
-未指定連線參數時，可使用瀏覽器連線表單：
+直接執行 `win-sshpass -web` 會報錯結束。必須在命令中提供伺服器位址，並視需要
+提供使用者與驗證參數，也可以使用設定檔：
 
 ```bash
-win-sshpass -web
+win-sshpass -f server.config -web
 ```
 
 變更監聽位址：
 
 ```bash
-win-sshpass -web -web-addr 127.0.0.1:6326
+win-sshpass -web -h example.com -u root -p '密碼' -web-addr 127.0.0.1:6326
 ```
 
 預設僅監聽回環位址。

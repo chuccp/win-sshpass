@@ -56,7 +56,7 @@ win-sshpass -p 'password' ssh user@host
 win-sshpass keygen
 
 # Open the Web SSH workspace
-win-sshpass -web
+win-sshpass -web -h example.com -u root -p 'password'
 ```
 
 ---

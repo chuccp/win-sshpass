@@ -1,7 +1,7 @@
 # Web コンソールと MCP
 
 `win-sshpass -web` はブラウザー内にローカル SSH ワークスペースを起動します。
-コマンドライン設定からの自動接続、接続フォーム、SFTP 管理、実ターミナル、
+`-h` または `-f` で SSH ホストを指定する必要があります。SFTP 管理、実ターミナル、
 MCP ツールを提供します。
 
 ## 起動
@@ -14,20 +14,20 @@ win-sshpass -web -h 127.0.0.1 -u root -P 22 -p 'password'
 
 <http://127.0.0.1:6326> を開くと自動接続してワークスペースを表示します。
 
-ブラウザーで接続情報を入力する場合：
+`win-sshpass -web` だけではエラー終了します。設定ファイルを使用する場合：
 
 ```bash
-win-sshpass -web
+win-sshpass -f server.config -web
 ```
 
 待受アドレスの変更：
 
 ```bash
-win-sshpass -web -web-addr 127.0.0.1:6326
+win-sshpass -web -h example.com -u root -p 'password' -web-addr 127.0.0.1:6326
 ```
 
 既定ではループバックのみです。別インターフェースにバインドすると、その
-ネットワークへ接続画面を公開します。
+ネットワークへ Web ワークスペースを公開します。
 
 ## ワークスペース
 

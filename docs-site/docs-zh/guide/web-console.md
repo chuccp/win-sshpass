@@ -1,7 +1,7 @@
 # Web 控制台与 MCP
 
-`win-sshpass -web` 会在浏览器中启动本地 SSH 工作区，支持命令行参数自动
-连接、浏览器连接表单、SFTP 文件管理、真实终端和 MCP 工具。
+`win-sshpass -web` 会在浏览器中启动本地 SSH 工作区，必须通过 `-h` 或 `-f`
+提供 SSH 服务器地址。工作区包含 SFTP 文件管理、真实终端和 MCP 工具。
 
 ## 启动
 
@@ -13,19 +13,19 @@ win-sshpass -web -h 127.0.0.1 -u root -P 22 -p '密码'
 
 打开 <http://127.0.0.1:6326>，页面会自动连接并进入工作区。
 
-如果希望在浏览器中手动填写连接信息：
+裸执行 `win-sshpass -web` 会报错退出。使用配置文件连接：
 
 ```bash
-win-sshpass -web
+win-sshpass -f server.config -web
 ```
 
 修改监听地址：
 
 ```bash
-win-sshpass -web -web-addr 127.0.0.1:6326
+win-sshpass -web -h example.com -u root -p '密码' -web-addr 127.0.0.1:6326
 ```
 
-默认仅监听回环地址。绑定到其他网卡会向该网络暴露连接页面。
+默认仅监听回环地址。绑定到其他网卡会向该网络暴露 Web 工作区。
 
 ## 工作区
 

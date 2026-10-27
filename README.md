@@ -57,8 +57,8 @@ win-sshpass -h example.com -p 'password' -d -remote /tmp/app.log -local ./app.lo
 win-sshpass -web -h 127.0.0.1 -u root -P 22 -p 'password'
 ```
 
-Open <http://127.0.0.1:6326>. When connection flags are supplied, the Web
-workspace connects and opens directly.
+The command must include an SSH host, either through `-h` or `-f`. Open
+<http://127.0.0.1:6326> to enter the connected workspace directly.
 
 ## Web Console
 
@@ -70,16 +70,17 @@ The Web workspace is designed for managing files and a live SSH session:
 - Themes: System by default, plus explicit Light and Dark.
 - Upload footer: aggregate file count, filename, progress bar, and percentage.
 
-Start without connection flags to use the in-browser connection form:
+Bare `win-sshpass -web` is rejected. Supply a host, user and authentication
+option on the command line, or use a config file:
 
 ```bash
-win-sshpass -web
+win-sshpass -f server.config -web
 ```
 
 Change the listener deliberately if needed:
 
 ```bash
-win-sshpass -web -web-addr 127.0.0.1:6326
+win-sshpass -web -h example.com -u root -p 'password' -web-addr 127.0.0.1:6326
 ```
 
 The default is loopback-only.

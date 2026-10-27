@@ -436,7 +436,7 @@ func prepareWebConfig(base, override *sshpass.Config, agentForward bool) (*sshpa
 	config := sshpass.NewConfig()
 	config.MergeConfig(base, override)
 	if strings.TrimSpace(config.Host) == "" {
-		return nil, nil
+		return nil, errors.New("SSH host is required; use -h <host> or -f <config-file> with -web")
 	}
 	config.ApplyUserDefault()
 	config.Normalize()

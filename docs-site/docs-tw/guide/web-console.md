@@ -1,7 +1,7 @@
 # Web 控制台與 MCP
 
-`win-sshpass -web` 會在瀏覽器中啟動本機 SSH 工作區，支援命令列自動連線、
-瀏覽器連線表單、SFTP 檔案管理、真實終端與 MCP 工具。
+`win-sshpass -web` 會在瀏覽器中啟動本機 SSH 工作區，必須透過 `-h` 或 `-f`
+提供 SSH 伺服器位址。工作區包含 SFTP 檔案管理、真實終端與 MCP 工具。
 
 ## 啟動
 
@@ -13,19 +13,19 @@ win-sshpass -web -h 127.0.0.1 -u root -P 22 -p '密碼'
 
 開啟 <http://127.0.0.1:6326> 後會自動連線並進入工作區。
 
-若要在瀏覽器手動填寫連線資訊：
+直接執行 `win-sshpass -web` 會報錯結束。使用設定檔連線：
 
 ```bash
-win-sshpass -web
+win-sshpass -f server.config -web
 ```
 
 變更監聽位址：
 
 ```bash
-win-sshpass -web -web-addr 127.0.0.1:6326
+win-sshpass -web -h example.com -u root -p '密碼' -web-addr 127.0.0.1:6326
 ```
 
-預設僅監聽回環位址。綁定到其他網路介面會向該網路公開連線頁面。
+預設僅監聽回環位址。綁定到其他網路介面會向該網路公開 Web 工作區。
 
 ## 工作區
 

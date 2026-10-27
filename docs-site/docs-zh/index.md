@@ -56,7 +56,7 @@ win-sshpass -p 'password' ssh user@host
 win-sshpass keygen
 
 # 打开 Web SSH 工作区
-win-sshpass -web
+win-sshpass -web -h example.com -u root -p 'password'
 ```
 
 ---
