@@ -28,6 +28,7 @@
 - **JSON 输出模式**（`-json`）— 为 AI 代理和自动化输出结构化 JSON 结果
 - **代理支持** — 通过 SOCKS5/SOCKS4/HTTP/HTTPS 代理隧道连接 SSH
 - **断点续传** — 中断的 SFTP 文件传输可从断点处恢复
+- **Web SSH 控制台**（`-web`）— 通过使用 Go 模板构建的本地网页管理 SSH 连接并执行命令
 - **文件哈希与校验** — 计算和校验本地文件哈希（MD5、SHA-1、SHA-256、SHA-512）
 - **密钥生成** — SSH 密钥对生成（Ed25519/RSA）
 - **后台运行命令**（`--bg`）— 通过 SSH 启动服务后立即返回，会话不会挂在服务上
@@ -99,6 +100,49 @@ win-sshpass -h example.com -p 'password' -local file.txt -remote /tmp/file.txt
 
 # 下载文件
 win-sshpass -h example.com -p 'password' -d -remote /tmp/file.txt -local ./file.txt
+```
+
+## Web SSH 控制台
+
+启动本地 Web 控制台：
+
+```bash
+win-sshpass -web
+```
+
+打开 <http://127.0.0.1:6326>。默认仅监听回环地址，可通过
+`-web -web-addr <地址>` 修改监听地址或端口。
+
+如果希望打开页面后直接进入命令控制台，可在启动命令中携带连接参数，页面会
+自动连接并隐藏登录表单：
+
+```bash
+win-sshpass -web -h 127.0.0.1 -u root -P 22 -p '密码'
+```
+
+未提供 Host 时，`-web` 会保留浏览器连接表单。
+
+控制台支持密码、私钥和 ssh-agent 认证，以及代理、主机密钥校验、连接超时和
+操作超时。每个浏览器会话在服务端维护独立的 SSH 连接，并展示 stdout、stderr
+和远端退出码。凭据只保存在本地服务进程内，不会写入网页。
+
+全屏工作区由 SFTP 文件管理器和基于 xterm.js 的真实交互式 SSH PTY 组成。
+中间分隔条可拖动，也可用方向键调整。可把本机文件或目录拖入左侧上传，也可把
+远端文件拖出浏览器下载。
+
+当前 Web 界面是命令控制台，不是完整的浏览器终端模拟器。绑定到非回环地址会
+向该网络中的其他机器暴露连接页面，请谨慎使用 `-web-addr`。
+
+同一服务默认在 `http://127.0.0.1:6326/mcp` 提供 MCP Streamable HTTP 端点。
+MCP 客户端初始化后会获得 `Mcp-Session-Id`，可使用 `ssh_exec`、`sftp_list`、
+`sftp_read`、`sftp_write`、`sftp_mkdir` 和 `sftp_delete`。MCP 复用 `-web`
+启动命令中提供的 SSH 连接参数。
+
+Codex 配置示例：
+
+```toml
+[mcp_servers.win-sshpass]
+url = "http://127.0.0.1:6326/mcp"
 ```
 
 ## 交互式 Shell
@@ -272,6 +316,8 @@ win-sshpass -p <密码> rsync -avz user@host:<远程路径> <本地路径>
 | `-A` | 启用 ssh-agent 转发 | `-A` |
 | `--bg` | 让命令脱离会话在后台启动并立即返回（用于启动服务，如部署完二进制后）。输出需在命令内部重定向 | `--bg './server > /tmp/server.log 2>&1'` |
 | `-json` | JSON 格式输出（适用于 AI/自动化） | `-json` |
+| `-web` | 在回环地址启动 Web SSH 控制台 | `-web` |
+| `-web-addr` | 修改 Web 控制台监听地址 | `-web-addr 127.0.0.1:6326` |
 | `-algo` | 密钥算法（ed25519/rsa），默认 ed25519 | `-algo rsa` |
 | `-out` | 密钥输出路径前缀，默认 id_ed25519 | `-out ~/.ssh/mykey` |
 | `-comment` | 密钥注释 | `-comment "my-laptop"` |

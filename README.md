@@ -37,6 +37,7 @@ A cross-platform implementation of sshpass (Windows, Linux & macOS), providing s
 - **Key generation** — built-in SSH key pair generation (Ed25519 and RSA)
 - **Self-update** (`update`) — check GitHub Releases and replace the binary with the newest release in place
 - **Detached commands** (`--bg`) — start a service over SSH and return immediately, without the session hanging on it
+- **Web SSH console** (`-web`) — manage SSH connections and run commands from a local browser UI built with Go templates
 
 ## Download
 
@@ -105,6 +106,55 @@ win-sshpass -h example.com -p 'password' -local file.txt -remote /tmp/file.txt
 
 # Download file
 win-sshpass -h example.com -p 'password' -d -remote /tmp/file.txt -local ./file.txt
+```
+
+## Web SSH Console
+
+Start the local web console:
+
+```bash
+win-sshpass -web
+```
+
+Open <http://127.0.0.1:6326>. The default listener is loopback-only. Use
+`-web -web-addr <address>` to choose another address or port.
+
+To open directly in the command console, provide the connection settings on the
+start command. The page will connect automatically and hide the login form:
+
+```bash
+win-sshpass -web -h 127.0.0.1 -u root -P 22 -p 'password'
+```
+
+Without a host, `-web` starts with the connection form so the target can be
+chosen in the browser.
+
+The console supports password, private-key, and ssh-agent authentication,
+proxy URLs, known-host verification, and connection/operation timeouts. It
+keeps each SSH connection in a server-side browser session and displays stdout,
+stderr, and the remote exit code. Credentials remain in the local server
+process and are not written into the page.
+
+The full-screen workspace combines an SFTP file manager and a real interactive
+SSH PTY powered by xterm.js. The center divider can be dragged or adjusted with
+the arrow keys. Files and folders can be dropped onto the file manager to upload
+them; remote files can be dragged out to download.
+
+This first web interface is a command console, not a full browser terminal
+emulator. Binding it to a non-loopback address exposes the connection form to
+other machines on that network, so use `-web-addr` deliberately.
+
+The same server exposes an MCP Streamable HTTP endpoint at
+`http://127.0.0.1:6326/mcp` by default. MCP clients receive a
+`Mcp-Session-Id` during initialization and can use `ssh_exec`, `sftp_list`,
+`sftp_read`, `sftp_write`, `sftp_mkdir`, and `sftp_delete`. MCP uses the SSH
+connection settings supplied on the `-web` command.
+
+Example Codex configuration:
+
+```toml
+[mcp_servers.win-sshpass]
+url = "http://127.0.0.1:6326/mcp"
 ```
 
 ## Interactive Shell
@@ -286,6 +336,8 @@ win-sshpass -p <password> rsync -avz user@host:<remote_path> <local_path>
 | `-A` | Enable ssh-agent forwarding | `-A` |
 | `--bg` | Start the command detached from the session and return immediately (for services, e.g. after deploying a binary). Redirect the command's output inside the command itself | `--bg './server > /tmp/server.log 2>&1'` |
 | `-json` | Output results as JSON (for AI/automation) | `-json` |
+| `-web` | Start the local Web SSH console on loopback | `-web` |
+| `-web-addr` | Override the Web console listen address | `-web-addr 127.0.0.1:6326` |
 | `-v` | Show version | `-v` |
 | `-help` | Show help message | `-help` |
 

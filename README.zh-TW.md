@@ -28,6 +28,7 @@
 - **JSON 輸出模式**（`-json`）— 為 AI 代理和自動化輸出結構化 JSON 結果
 - **代理支援** — 透過 SOCKS5/SOCKS4/HTTP/HTTPS 代理通道連線 SSH
 - **斷點續傳** — 中斷的 SFTP 檔案傳輸可從斷點處恢復
+- **Web SSH 控制台**（`-web`）— 透過使用 Go 模板建置的本機網頁管理 SSH 連線並執行命令
 - **檔案雜湊與校驗** — 計算和校驗本地檔案雜湊（MD5、SHA-1、SHA-256、SHA-512）
 - **金鑰產生** — SSH 金鑰對產生（Ed25519/RSA）
 - **自動更新**（`update`）— 檢查 GitHub Releases 並就地替換為最新版本的執行檔
@@ -100,6 +101,49 @@ win-sshpass -h example.com -p 'password' -local file.txt -remote /tmp/file.txt
 
 # 下載檔案
 win-sshpass -h example.com -p 'password' -d -remote /tmp/file.txt -local ./file.txt
+```
+
+## Web SSH 控制台
+
+啟動本機 Web 控制台：
+
+```bash
+win-sshpass -web
+```
+
+開啟 <http://127.0.0.1:6326>。預設僅監聽回環位址，可使用
+`-web -web-addr <位址>` 修改監聽位址或連接埠。
+
+若希望開啟頁面後直接進入命令控制台，可在啟動命令中攜帶連線參數，頁面會
+自動連線並隱藏登入表單：
+
+```bash
+win-sshpass -web -h 127.0.0.1 -u root -P 22 -p '密碼'
+```
+
+未提供 Host 時，`-web` 會保留瀏覽器連線表單。
+
+控制台支援密碼、私鑰和 ssh-agent 認證，以及代理、主機金鑰驗證、連線逾時和
+操作逾時。每個瀏覽器工作階段會在伺服器端維護獨立的 SSH 連線，並顯示 stdout、
+stderr 和遠端結束碼。憑證只保存在本機服務程序內，不會寫入網頁。
+
+全螢幕工作區由 SFTP 檔案管理器和基於 xterm.js 的真實互動式 SSH PTY 組成。
+中央分隔線可拖曳，也可用方向鍵調整。可將本機檔案或目錄拖入左側上傳，也可把
+遠端檔案拖出瀏覽器下載。
+
+目前 Web 介面是命令控制台，不是完整的瀏覽器終端機模擬器。綁定到非回環位址會
+向該網路中的其他機器公開連線頁面，請謹慎使用 `-web-addr`。
+
+同一服務預設在 `http://127.0.0.1:6326/mcp` 提供 MCP Streamable HTTP 端點。
+MCP 用戶端初始化後會取得 `Mcp-Session-Id`，可使用 `ssh_exec`、`sftp_list`、
+`sftp_read`、`sftp_write`、`sftp_mkdir` 和 `sftp_delete`。MCP 會沿用 `-web`
+啟動命令中提供的 SSH 連線參數。
+
+Codex 設定範例：
+
+```toml
+[mcp_servers.win-sshpass]
+url = "http://127.0.0.1:6326/mcp"
 ```
 
 ## 互動式 Shell
@@ -273,6 +317,8 @@ win-sshpass -p <密碼> rsync -avz user@host:<遠端路徑> <本地路徑>
 | `-A` | 啟用 ssh-agent 轉送 | `-A` |
 | `--bg` | 讓指令脫離工作階段在背景啟動並立即返回（用於啟動服務，如部署完二進位檔後）。輸出需在指令內重新導向 | `--bg './server > /tmp/server.log 2>&1'` |
 | `-json` | JSON 格式輸出（適用於 AI/自動化） | `-json` |
+| `-web` | 在回環位址啟動 Web SSH 控制台 | `-web` |
+| `-web-addr` | 修改 Web 控制台監聽位址 | `-web-addr 127.0.0.1:6326` |
 | `-algo` | 金鑰演算法（ed25519/rsa），預設 ed25519 | `-algo rsa` |
 | `-out` | 金鑰輸出路徑前綴，預設 id_ed25519 | `-out ~/.ssh/mykey` |
 | `-comment` | 金鑰註解 | `-comment "my-laptop"` |

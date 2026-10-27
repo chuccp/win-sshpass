@@ -103,6 +103,8 @@ func main() {
 	showVersion := flag.Bool("v", false, "show version")
 	showHelp := flag.Bool("help", false, "show help")
 	jsonFlag := flag.Bool("json", false, "output results as JSON (for AI agents and automation)")
+	webMode := flag.Bool("web", false, "start the local Web SSH console")
+	webAddress := flag.String("web-addr", "127.0.0.1:6326", "Web console listen address")
 	var localForwards, remoteForwards repeatableFlag
 	flag.Var(&localForwards, "L", "local port forward [bind:]port:host:hostport (e.g. -L 8080:db:3306)")
 	flag.Var(&remoteForwards, "R", "remote port forward [bind:]port:host:hostport (e.g. -R 9090:localhost:8080)")
@@ -204,6 +206,20 @@ func main() {
 	})
 	if config != nil {
 		config.MergeConfig(nil, cliOverride)
+	}
+
+	if *webMode {
+		if len(remainingArgs) > 0 {
+			fatalError("-web does not accept SSH command arguments")
+		}
+		webConfig, err := prepareWebConfig(config, cliOverride, *agentForward)
+		if err != nil {
+			fatalError("invalid web connection settings: %v", err)
+		}
+		if err := runWebServer(*webAddress, webConfig); err != nil {
+			fatalError("web server failed: %v", err)
+		}
+		return
 	}
 
 	// --- hash/verify subcommands (local file operations, no SSH connection) ---
@@ -591,6 +607,7 @@ func printUsage() {
 	fmt.Println("  win-sshpass -h <host> -p <password> -local <path> -remote <file> -d (download)")
 	fmt.Println("  win-sshpass keygen [-algo <ed25519|rsa>] [-out <keypath>]  (generate key pair locally)")
 	fmt.Println("  win-sshpass update [-check] [-force]  (install the latest release from GitHub)")
+	fmt.Println("  win-sshpass -web [-web-addr 127.0.0.1:6326]  (start the Web SSH console)")
 	fmt.Println("\nOptions:")
 	fmt.Println("  -p <password>      specify password directly (empty value is allowed)")
 	fmt.Println("  -f <file>          read password from file (single line) or config file")
@@ -614,6 +631,8 @@ func printUsage() {
 	fmt.Println("  -A                 enable ssh-agent forwarding (remote server can use local agent)")
 	fmt.Println("  --bg               start the command detached (for services); redirect its output inside the command")
 	fmt.Println("  -json              output results as JSON (for AI agents and automation)")
+	fmt.Println("  -web               start the local Web SSH console")
+	fmt.Println("  -web-addr <addr>   Web console listen address (default: 127.0.0.1:6326)")
 	fmt.Println("  -v                 show version")
 	fmt.Println("  -help              show this help message")
 	fmt.Println("\nExamples:")
@@ -638,6 +657,7 @@ func printUsage() {
 	fmt.Println("  win-sshpass -json -p 'pass' ssh user@example.com 'whoami'  # JSON output for automation")
 	fmt.Println("  win-sshpass ssh user@example.com                          # auto-detect ssh-agent (no -p/-i)")
 	fmt.Println("  win-sshpass -A -i ~/.ssh/id_ed25519 ssh user@example.com  # enable agent forwarding")
+	fmt.Println("  win-sshpass -web                                   # open Web UI at http://127.0.0.1:6326")
 	fmt.Println("\nSDK usage (as a Go library):")
 	fmt.Println("  import \"github.com/chuccp/win-sshpass\"  // package sshpass")
 	fmt.Println("  client, err := sshpass.NewClient(cfg)")
