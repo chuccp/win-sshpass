@@ -1,6 +1,6 @@
 site_name: win-sshpass
 site_url: https://chuccp.github.io/win-sshpass/ja/
-site_description: 'win-sshpass — クロスプラットフォームの sshpass 実装：SSH パスワード/キーログイン、インタラクティブシェル、SFTP/SCP/Rsync 転送、SOCKS5/SOCKS4/HTTP プロキシトンネル、ブレークポイントレジューム、ファイルハッシュ検証、鍵生成、Docker テストスイート、再利用可能な Go SDK。'
+site_description: 'win-sshpass — クロスプラットフォーム SSH クライアント：SFTP/SCP/Rsync、ポート転送、プロキシ、全画面 Web SSH、MCP ツール、再利用可能な Go SDK。'
 site_author: win-sshpass Team
 
 docs_dir: docs-ja
@@ -54,8 +54,7 @@ edit_uri: edit/main/docs-site/docs-ja/
 plugins:
   - search:
       separator: '[\s\-,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])'
-  - tags:
-      tags_file: tags.md
+  - tags
 
 markdown_extensions:
   - abbr
@@ -129,6 +128,7 @@ nav:
       - インタラクティブシェル: guide/shell.md
       - SCP と Rsync: guide/scp-rsync.md
       - 設定ファイル: guide/config-file.md
+      - Web コンソールと MCP: guide/web-console.md
   - 高度な使い方:
       - Go SDK: advanced/sdk.md
       - ベストプラクティス: advanced/best-practices.md

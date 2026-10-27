@@ -108,8 +108,18 @@ win-sshpass update
 win-sshpass update -check
 ```
 
+## Web 控制台与 MCP
+
+```bash
+win-sshpass -web -h 127.0.0.1 -u root -P 22 -p '密码'
+```
+
+打开 <http://127.0.0.1:6326>。工作区包含 SFTP 文件管理器、真实 SSH 终端、
+拖拽传输、主题，以及 `/mcp` 上的 MCP 工具。
+
 ## 下一步
 
 - [SSH 连接](../guide/ssh.md) - 深入了解认证方式
 - [文件传输](../guide/file-transfer.md) - SFTP 传输完整用法
 - [配置文件](../guide/config-file.md) - 管理多台服务器
+- [Web 控制台与 MCP](../guide/web-console.md) - 浏览器工作区与 AI 工具

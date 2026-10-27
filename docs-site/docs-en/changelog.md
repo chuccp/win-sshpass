@@ -1,5 +1,13 @@
 # Changelog
 
+## Current
+
+- Added the full-screen Web SSH workspace with SFTP file manager and xterm.js PTY.
+- Added drag-and-drop transfers, upload percentages, resizable panes, and system/light/dark themes.
+- Added MCP Streamable HTTP tools for SSH commands and SFTP operations.
+- Hardened CLI parsing, config validation, proxy negotiation, SFTP resume, forwarding, and rz/sz handling.
+- Added Docker-backed CLI, Web, terminal, file manager, proxy, and MCP regression tests.
+
 ## v0.9.1
 
 - Add JSON output mode (`-json` flag) — structured JSON results for AI agents and automation, with progress bar suppressed on stderr in JSON mode

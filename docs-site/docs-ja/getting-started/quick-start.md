@@ -108,8 +108,18 @@ win-sshpass update
 win-sshpass update -check
 ```
 
+## Web コンソールと MCP
+
+```bash
+win-sshpass -web -h 127.0.0.1 -u root -P 22 -p 'password'
+```
+
+<http://127.0.0.1:6326> を開きます。SFTP ファイルマネージャー、実際の SSH
+ターミナル、ドラッグ＆ドロップ、テーマ、`/mcp` の MCP ツールを利用できます。
+
 ## 次のステップ
 
 - [SSH 接続](../guide/ssh.md) - 認証方法の詳細
 - [ファイル転送](../guide/file-transfer.md) - SFTP の完全な使用方法
 - [設定ファイル](../guide/config-file.md) - 複数サーバーの管理
+- [Web コンソールと MCP](../guide/web-console.md) - ブラウザーワークスペースと AI ツール

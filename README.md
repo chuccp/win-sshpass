@@ -1,154 +1,96 @@
-## Related Project
-
-[**go-web-frame**](https://github.com/chuccp/go-web-frame) — Effortless auth: declare required permissions on routes, verify once in a Filter, keep handlers clean. Generic Model for full-stack CRUD: define a struct, and create/read/update/delete just works. Lightweight, install only the components you need. No code generation, no CI tooling required — the most elegant Go web full-stack framework.
-
 # win-sshpass
 
-[![GitHub release](https://badgen.net/github/release/chuccp/win-sshpass/include-prereleases)](https://github.com/chuccp/win-sshpass/releases)
+[![Release](https://badgen.net/github/release/chuccp/win-sshpass)](https://github.com/chuccp/win-sshpass/releases)
 [![License](https://badgen.net/badge/License/Apache%202.0/blue)](LICENSE)
 [![Go Version](https://badgen.net/badge/Go/1.26.0/00ADD8?icon=go)](go.mod)
 [![Downloads](https://img.shields.io/github/downloads/chuccp/win-sshpass/total)](https://github.com/chuccp/win-sshpass/releases)
 
-[English](README.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [日本語](README.ja.md)
+[English](README.md) · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md)
 
-A cross-platform implementation of sshpass (Windows, Linux & macOS), providing similar functionality to the Linux sshpass tool.
+`win-sshpass` is a cross-platform SSH client and automation tool for Windows,
+Linux, and macOS. It combines password/key authentication, SFTP and
+SCP/Rsync-style transfers, port forwarding, a browser-based SSH workspace, MCP
+tools, and a reusable Go SDK.
 
-> 💡 **Like this project?** Give it a ⭐ Star — it helps others discover the tool!
+## Highlights
 
-## Features
+- SSH with password, private key, ssh-agent, or explicit empty password.
+- Remote commands, JSON output, retry, timeout, proxy, and `known_hosts`.
+- Interactive terminal, `--bg`, and shell transfer via `rz` / `sz`.
+- SFTP upload/download, recursive directories, multiple files, and resume.
+- Local/remote port forwarding and SOCKS4/SOCKS5/HTTP/HTTPS proxies.
+- Full-screen Web SSH console with SFTP file manager and xterm.js PTY.
+- Drag-and-drop transfers, upload percentage, resizable panes, light/dark themes.
+- MCP tools for SSH execution and SFTP file operations.
+- Self-update, SSH key generation, hash, and verify commands.
 
-- SSH login with password, private key, or ssh-agent authentication
-- Execute remote commands or open interactive shell
-- File upload/download via SFTP (with progress bar)
-- SCP-style and Rsync-style file transfer
-- Config file support for managing multiple servers
-- Interactive shell with raw terminal mode (proper echo, Ctrl+C, and full-screen app support)
-- Dynamic terminal resizing in interactive shell mode
-- Git Bash path conversion detection and auto-fix
-- IPv6 address support
-- Support for Windows (x64, ARM64), Linux (amd64, arm64), and macOS (amd64, arm64)
-- **Reusable Go SDK** — import as a library (`package sshpass`) to embed SSH/SFTP/shell in your own app, with injectable I/O streams and progress callbacks
-- **Port forwarding** — local (`-L`) and remote (`-R`) TCP port forwarding through SSH tunnels
-- **SSH agent forwarding** (`-A`) — forward local ssh-agent to remote server, auto-detect agent when no credentials specified
-- **JSON output mode** (`-json`) — structured JSON results for AI agents and automation
-- **Proxy support** — tunnel SSH connections through SOCKS5/SOCKS4/HTTP/HTTPS proxies
-- **Breakpoint resume** — resume interrupted SFTP file transfers from where they left off
-- **File hash & verify** — compute and verify local file hashes (MD5, SHA-1, SHA-256, SHA-512)
-- **Key generation** — built-in SSH key pair generation (Ed25519 and RSA)
-- **Self-update** (`update`) — check GitHub Releases and replace the binary with the newest release in place
-- **Detached commands** (`--bg`) — start a service over SSH and return immediately, without the session hanging on it
-- **Web SSH console** (`-web`) — manage SSH connections and run commands from a local browser UI built with Go templates
+## Install
 
-## Download
+```powershell
+winget install chuccp.win-sshpass
+```
 
-Download the latest release from [GitHub Releases](https://github.com/chuccp/win-sshpass/releases):
-
-### Windows
-
-| Architecture | Zip | MSI Installer |
-|--------------|-----|---------------|
-| **x64 (amd64)** | `win-sshpass-*-amd64.zip` | `win-sshpass-*-amd64.msi` |
-| **ARM64** | `win-sshpass-*-arm64.zip` | `win-sshpass-*-arm64.msi` |
-
-### Linux
-
-| Architecture | Tarball |
-|--------------|---------|
-| **amd64** | `win-sshpass-*-linux-amd64.tar.gz` |
-| **arm64** | `win-sshpass-*-linux-arm64.tar.gz` |
-
-### macOS
-
-| Architecture | PKG Installer | Tarball |
-|--------------|---------------|---------|
-| **amd64 (Intel)** | `win-sshpass-*-darwin-amd64.pkg` | `win-sshpass-*-darwin-amd64.tar.gz` |
-| **arm64 (Apple Silicon)** | `win-sshpass-*-darwin-arm64.pkg` | `win-sshpass-*-darwin-arm64.tar.gz` |
-
-> The `.pkg` installer places the binary at `/usr/local/bin/win-sshpass` automatically.
-
-1. Go to [Releases](https://github.com/chuccp/win-sshpass/releases) page
-2. Download the package for your platform and architecture
-3. **Windows MSI / macOS PKG**: run the installer — it will add the binary to your system PATH automatically
-4. **Windows Zip / Linux tar.gz / macOS tar.gz**: extract and place the binary in your PATH
-
-> **Zero dependencies**: `win-sshpass.exe` is a standalone binary. No need to install OpenSSH or any other software. Download it, put it in your PATH, and you're ready to go.
-
-### Install via Scoop
-
-```bash
+```powershell
 scoop bucket add chuccp https://github.com/chuccp/scoop-bucket
 scoop install win-sshpass
 ```
 
-### Install via WinGet
+Or download the archive, MSI, or PKG from
+[GitHub Releases](https://github.com/chuccp/win-sshpass/releases).
 
-```bash
-winget install chuccp.win-sshpass
-```
+No external runtime is required.
 
 ## Quick Start
 
 ```bash
-# Password login and execute command
-win-sshpass -p 'password' ssh user@example.com 'whoami'
+# Run a command
+win-sshpass -p 'password' ssh root@example.com 'whoami'
 
-# Private key login and execute command
-win-sshpass -i ~/.ssh/id_ed25519 ssh user@example.com 'hostname'
+# Open an interactive shell
+win-sshpass -p 'password' ssh root@example.com
 
-# SSH agent authentication (auto-detect, no -p/-i needed)
-win-sshpass ssh user@example.com 'whoami'
+# Upload and download
+win-sshpass -h example.com -p 'password' -local ./app.jar -remote /tmp/app.jar
+win-sshpass -h example.com -p 'password' -d -remote /tmp/app.log -local ./app.log
 
-# JSON output for AI agents and automation
-win-sshpass -json -p 'password' ssh user@example.com 'uptime'
-
-# Upload file
-win-sshpass -h example.com -p 'password' -local file.txt -remote /tmp/file.txt
-
-# Download file
-win-sshpass -h example.com -p 'password' -d -remote /tmp/file.txt -local ./file.txt
+# Start the Web SSH console at http://127.0.0.1:6326
+win-sshpass -web -h 127.0.0.1 -u root -P 22 -p 'password'
 ```
 
-## Web SSH Console
+Open <http://127.0.0.1:6326>. When connection flags are supplied, the Web
+workspace connects and opens directly.
 
-Start the local web console:
+## Web Console
+
+The Web workspace is designed for managing files and a live SSH session:
+
+- Left: SFTP directory browser, upload/download, mkdir, delete, drag-and-drop.
+- Right: real SSH PTY rendered with xterm.js; supports vim/top and Tab completion.
+- Center divider: drag or use arrow keys to resize; width is remembered.
+- Themes: System by default, plus explicit Light and Dark.
+- Upload footer: aggregate file count, filename, progress bar, and percentage.
+
+Start without connection flags to use the in-browser connection form:
 
 ```bash
 win-sshpass -web
 ```
 
-Open <http://127.0.0.1:6326>. The default listener is loopback-only. Use
-`-web -web-addr <address>` to choose another address or port.
-
-To open directly in the command console, provide the connection settings on the
-start command. The page will connect automatically and hide the login form:
+Change the listener deliberately if needed:
 
 ```bash
-win-sshpass -web -h 127.0.0.1 -u root -P 22 -p 'password'
+win-sshpass -web -web-addr 127.0.0.1:6326
 ```
 
-Without a host, `-web` starts with the connection form so the target can be
-chosen in the browser.
+The default is loopback-only.
 
-The console supports password, private-key, and ssh-agent authentication,
-proxy URLs, known-host verification, and connection/operation timeouts. It
-keeps each SSH connection in a server-side browser session and displays stdout,
-stderr, and the remote exit code. Credentials remain in the local server
-process and are not written into the page.
+## MCP
 
-The full-screen workspace combines an SFTP file manager and a real interactive
-SSH PTY powered by xterm.js. The center divider can be dragged or adjusted with
-the arrow keys. Files and folders can be dropped onto the file manager to upload
-them; remote files can be dragged out to download.
+The Web server exposes MCP Streamable HTTP at:
 
-This first web interface is a command console, not a full browser terminal
-emulator. Binding it to a non-loopback address exposes the connection form to
-other machines on that network, so use `-web-addr` deliberately.
-
-The same server exposes an MCP Streamable HTTP endpoint at
-`http://127.0.0.1:6326/mcp` by default. MCP clients receive a
-`Mcp-Session-Id` during initialization and can use `ssh_exec`, `sftp_list`,
-`sftp_read`, `sftp_write`, `sftp_mkdir`, and `sftp_delete`. MCP uses the SSH
-connection settings supplied on the `-web` command.
+```text
+http://127.0.0.1:6326/mcp
+```
 
 Example Codex configuration:
 
@@ -157,536 +99,106 @@ Example Codex configuration:
 url = "http://127.0.0.1:6326/mcp"
 ```
 
-## Interactive Shell
-
-When no command is specified, `win-sshpass` opens an interactive shell with **raw terminal mode**:
-
-```bash
-win-sshpass -p 'password' ssh user@host
-```
-
-**Raw terminal mode** features:
-
-- **Proper echo** — typed characters are displayed correctly (no double echo)
-- **Ctrl+C / Ctrl+Z** — signals are forwarded to the remote process
-- **Full-screen apps** — vim, top, htop, nano, etc. work correctly
-- **Dynamic terminal resizing** — the remote terminal automatically matches your local window size
-- **Tab completion** — remote shell tab completion works as expected
-
-### File Transfer in Interactive Shell
-
-While connected, use `rz` / `sz` commands to transfer files (no need to install anything on the remote server):
-
-```bash
-# Upload file to the remote SFTP working directory (usually the login home; opens file picker)
-rz
-
-# Upload specific local file
-rz /local/path/to/file
-
-# Download remote file (opens save dialog)
-sz /remote/path/to/file
-
-# Download remote file to specific local path
-sz /remote/path/to/file /local/save/path
-```
-
-> **How it works**: When the remote shell reports `rz`/`sz: command not found`, the tool intercepts it and performs the transfer over SFTP instead. Files and directories are both supported, with progress bars.
-> The SFTP working directory is usually the login home directory; it is independent of later `cd` commands in the shell.
-
-## Command Format
-
-### SSH Login
-
-```bash
-# Password authentication
-win-sshpass -p <password> ssh [user@host] [command]
-win-sshpass -p <password> ssh -p <port> user@host 'command'
-win-sshpass -p <password> ssh -o StrictHostKeyChecking=no user@host
-
-# Host without user@ — user defaults to root, the name is resolved by the OS
-win-sshpass -p <password> ssh example.com 'uptime'
-
-# Empty password — for servers that have no password set (use -p '', don't omit it)
-win-sshpass -p '' ssh root@192.168.1.100 'hostname'
-
-# Interactive shell (raw terminal mode: proper echo, Ctrl+C, vim/top support)
-win-sshpass -p <password> ssh user@host
-
-# Private key authentication
-win-sshpass -i <private_key_path> ssh [user@host] [command]
-
-# SSH agent authentication (auto-detect, no -p/-i needed)
-win-sshpass ssh user@host 'whoami'
-
-# SSH agent with forwarding (-A flag)
-win-sshpass -A -i ~/.ssh/id_ed25519 ssh user@jumphost
-
-# Password from environment variable
-SSHPASS=<password> win-sshpass -e ssh user@host
-
-# Password from file
-echo 'password' > pass.txt
-win-sshpass -f pass.txt ssh user@host
-
-# Configuration file (multi-line format)
-win-sshpass -f server.config
-```
-
-### Detached Commands (`--bg`)
-
-Start a long-running process (a service, a daemon) and return immediately
-instead of waiting for it to exit.
-
-```bash
-# Start a service after deploying a new binary
-win-sshpass -p 'pass' ssh --bg root@host 'cd /app && ./myapp > /tmp/myapp.log 2>&1'
-
-# Replace the binary and start it in the same command
-win-sshpass -p 'pass' ssh --bg root@host 'cd /app && cp /tmp/myapp-new ./myapp && chmod +x ./myapp && ./myapp > /tmp/myapp.log 2>&1'
-
-# Restart a service, then verify it in a separate connection
-win-sshpass -p 'pass' ssh --bg root@host 'pkill -x myapp; sleep 1; cd /app && ./myapp > /tmp/myapp.log 2>&1'
-win-sshpass -p 'pass' ssh root@host 'ps -ef | grep [m]yapp; curl -s localhost:8080/api/status/ping'
-```
-
-Why it is needed: `ssh host 'nohup ./myapp &'` **hangs**. The background
-process inherits the session's stdout/stderr, so the SSH channel never reaches
-EOF and the client keeps waiting until the service exits (or `-t` fires).
-`--bg` starts the command through `setsid` (falling back to `nohup` on systems
-without it) with all three streams redirected, so the channel closes as soon as
-the shell returns while the service keeps running.
-
-Notes:
-
-- Redirect the command's output **inside** the command (`> /tmp/xxx.log 2>&1`);
-  `--bg` discards anything left on the streams.
-- The exit code only reports that the command was launched, not that the service
-  came up — verify with a second connection as shown above.
-- Can also be set per host in a [config file](#configuration-file-format) with `background: true`.
-
-### File Transfer
-
-> **Git Bash users**: Use `//` prefix for remote paths, e.g. `-remote //tmp/file.txt`. See [Git Bash Notes](#git-bash-notes) below.
-
-```bash
-# Upload file
-win-sshpass -h <host> -p <password> -local <local_path> -remote <remote_path>
-
-# Upload multiple files (comma-separated)
-win-sshpass -h <host> -p <password> -local "a.txt,b.txt,c.txt" -remote //tmp/
-
-# Upload multiple files (space-separated, only for simple paths without / or \)
-win-sshpass -h <host> -p <password> -local "a.txt b.txt c.txt" -remote //tmp/
-
-# Upload directory (auto-recursive)
-win-sshpass -h <host> -p <password> -local <local_dir> -remote <remote_dir>
-
-# Download file/directory
-win-sshpass -h <host> -p <password> -d -remote <remote_path> -local <local_path>
-```
-
-### SCP Style
-
-```bash
-# Upload file
-win-sshpass -p <password> scp <local_file> user@host:<remote_path>
-win-sshpass -p <password> scp -P <port> <local_file> user@host:<remote_path>
-
-# Upload directory
-win-sshpass -p <password> scp -r <local_dir> user@host:<remote_path>
-
-# Download file/directory
-win-sshpass -p <password> scp user@host:<remote_file> <local_path>
-```
-
-### Rsync Style
-
-```bash
-# Upload
-win-sshpass -p <password> rsync -avz <local_path> user@host:<remote_path>
-
-# Download
-win-sshpass -p <password> rsync -avz user@host:<remote_path> <local_path>
-```
-
-## Parameters
-
-| Parameter | Description | Example |
-|-----------|-------------|---------|
-| `-p` | Password. An explicitly empty value (`-p ''`) is a valid password, for servers with no password set | `-p 'secret123'` |
-| `-i` | Private key path | `-i ~/.ssh/id_ed25519` |
-| `-f` | Password file / config file | `-f pass.txt` |
-| `-e` | Read password from SSHPASS env var | `SSHPASS='pass' win-sshpass -e ssh ...` |
-| `-h` | Host address | `-h example.com` |
-| `-u` | Username, default: root | `-u ubuntu` |
-| `-P` | Port, default: 22 | `-P 2222` |
-| `-c` | Command to execute | `-c 'ls -la'` |
-| `-local` | Local path(s) (comma or space separated) | `-local "a.txt,b.txt"` |
-| `-remote` | Remote path (upload/download) | `-remote /tmp/file.txt` |
-| `-d` | Download mode | `-d` |
-| `-k` | Enable strict host key verification | `-k` |
-| `-t` | Total operation timeout in seconds (0 = no limit) | `-t 30` |
-| `-ct` | TCP connection timeout in seconds (default: 10) | `-ct 5` |
-| `-retry` | Total connection attempts (default: 3) | `-retry 5` |
-| `-resume` | Resume interrupted file transfer from breakpoint | `-resume` |
-| `-proxy` | Proxy URL (socks5/socks4/http/https) | `-proxy socks5://127.0.0.1:1080` |
-| `-L` | Local port forward (repeatable) | `-L 8080:db.internal:3306` |
-| `-R` | Remote port forward (repeatable) | `-R 9090:localhost:8080` |
-| `-A` | Enable ssh-agent forwarding | `-A` |
-| `--bg` | Start the command detached from the session and return immediately (for services, e.g. after deploying a binary). Redirect the command's output inside the command itself | `--bg './server > /tmp/server.log 2>&1'` |
-| `-json` | Output results as JSON (for AI/automation) | `-json` |
-| `-web` | Start the local Web SSH console on loopback | `-web` |
-| `-web-addr` | Override the Web console listen address | `-web-addr 127.0.0.1:6326` |
-| `-v` | Show version | `-v` |
-| `-help` | Show help message | `-help` |
-
-### Keygen flags
-
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `-algo` | Key algorithm (`ed25519` or `rsa`) | `ed25519` |
-| `-comment` | Comment for generated public key | `user@host` |
-| `-out` | Output path for private key | `~/.ssh/id_ed25519` or `~/.ssh/id_rsa` |
-
-## Hash & Verify
-
-Compute and verify local file hashes without needing an SSH connection:
-
-```bash
-# Compute hash
-win-sshpass hash md5 ./file.iso
-win-sshpass hash sha256 ./file.iso
-
-# Verify file against expected hash
-win-sshpass verify sha256 d1dc38f6df... ./file.iso
-# Output: OK  (or: FAILED)
-```
-
-Supported algorithms: `md5`, `sha1`, `sha256`, `sha512`.
-
-## Key Generation
-
-Generate SSH key pairs locally without needing ssh-keygen:
-
-```bash
-# Generate Ed25519 key (recommended — faster and more secure)
-win-sshpass keygen
-
-# Generate RSA 4096-bit key
-win-sshpass keygen -algo rsa
-
-# Specify output path
-win-sshpass keygen -out ~/.ssh/mykey
-
-# Add a comment
-win-sshpass keygen -comment "my-laptop"
-
-# Show generated key info
-# Private key: ~/.ssh/id_ed25519 (or specified -out path)
-# Public key:  ~/.ssh/id_ed25519.pub
-```
-
-Keys are saved to `~/.ssh/id_ed25519` (Ed25519) or `~/.ssh/id_rsa` (RSA) by default. The public key file is automatically given a `.pub` suffix.
-
-**Deploy the public key to enable password-less login:**
-
-```bash
-# Read the public key content into a variable, then deploy via SSH
-PUBKEY=$(cat ~/.ssh/id_ed25519.pub)
-win-sshpass -p 'password' ssh user@host "mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo '$PUBKEY' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
-
-# Then log in with the private key
-win-sshpass -i ~/.ssh/id_ed25519 ssh user@host
-```
-
-## Update
-
-Update to the latest release directly from GitHub — no need to re-download the archive by hand:
-
-```bash
-# Update to the latest release
-win-sshpass update
-
-# Only check whether a newer release exists
-win-sshpass update -check
-
-# Reinstall the current version, or move to a specific release tag
-win-sshpass update -force
-win-sshpass update -version v1.0.0
-```
-
-It first asks GitHub which release is current and compares that with the version you are running — one request, no download. Only when the release is newer does it fetch the archive for your OS and architecture and replace the running binary in place:
-
-```
-$ win-sshpass update
-Updating win-sshpass v0.9.1 (windows/amd64)...
-downloading win-sshpass-v0.9.4-amd64.zip
-Downloading win-sshpass-v0.9.4-amd64.zip 100% |████████████████| (3.6/3.6 MB, 1.2 MB/s)
-Updated win-sshpass v0.9.1 -> v0.9.4 (C:\Tools\win-sshpass.exe)
-```
-
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `-check` | Only report whether a newer release exists | — |
-| `-force` | Reinstall even when the current version is already the latest | — |
-| `-version <tag>` | Install a specific release tag (implies `-force`) | latest release |
-| `-target <path>` | Binary to replace | the running executable |
-
-Notes:
-
-- On Windows the previous binary is kept as `win-sshpass.exe.old` (a running `.exe` cannot be deleted) and removed by the next update. On Linux and macOS the swap is an atomic rename.
-- The install directory must be writable. If win-sshpass came from **scoop**, **winget**, or the **MSI/PKG** installer, update through that package manager instead — it tracks the files it owns.
-- The downloaded binary is verified to be a real executable before it replaces anything, so a failed or intercepted download cannot leave you without a working `win-sshpass`.
-- The version check uses github.com's `/releases/latest` redirect instead of the REST API, so it needs no token and no API quota (the API allows 60 unauthenticated requests per hour) and keeps working where `api.github.com` is blocked. The API is only a fallback.
-- Behind a proxy, `update` honours the `HTTPS_PROXY` / `HTTP_PROXY` environment variables.
-
-## Configuration File Format
+Available tools:
+
+- `ssh_exec`
+- `sftp_list`
+- `sftp_read`
+- `sftp_write`
+- `sftp_mkdir`
+- `sftp_delete`
+
+MCP reuses the SSH connection supplied with `-web` and maintains its own
+`Mcp-Session-Id`.
+
+## Common Commands
+
+| Task | Command |
+|---|---|
+| Private key | `win-sshpass -i ~/.ssh/id_ed25519 ssh user@host` |
+| Environment password | `SSHPASS='pass' win-sshpass -e ssh user@host` |
+| Password file | `win-sshpass -f pass.txt ssh user@host` |
+| Config file | `win-sshpass -f server.config 'docker ps'` |
+| Custom port | `win-sshpass -p 'pass' ssh -p 2222 user@host` |
+| Operation timeout | `win-sshpass -t 30 -p 'pass' ssh user@host 'long-task'` |
+| SOCKS5 proxy | `win-sshpass -proxy socks5://127.0.0.1:1080 ssh user@host` |
+| SCP upload | `win-sshpass -p 'pass' scp -P 2222 file.txt user@host:/tmp/` |
+| Rsync upload | `win-sshpass -p 'pass' rsync -avz ./ user@host:/backup/` |
+| Generate key | `win-sshpass keygen -algo ed25519` |
+| Hash / verify | `win-sshpass hash sha256 file.iso` |
+| Update | `win-sshpass update -check` |
+
+## Configuration
 
 ```yaml
-host: example.com
+host: 192.168.1.10
 username: root
-password: your_password
+password: secret
 port: 22
-# key: ~/.ssh/id_ed25519  # optional, use private key instead of password
-# timeout: 0              # optional, total operation timeout in seconds (0 = no limit)
-# connect_timeout: 10     # optional, TCP connection timeout in seconds
-# strict_host_key: false  # optional, enable strict host key verification
-# proxy: socks5://user:pass@127.0.0.1:1080  # optional, proxy URL (socks5/socks4/http/https)
+timeout: 0
+strict_host_key: false
 ```
 
-Usage:
-```bash
-win-sshpass -f server.config -c 'ls -la'
-win-sshpass -f server.config 'ls -la'
-```
-
-## Complete Examples
+Run a command with the file:
 
 ```bash
-# 1. Password login and execute command
-win-sshpass -p 'mypass' ssh root@192.168.1.100 'docker ps'
-
-# 2. Private key login and execute sudo command
-win-sshpass -i ~/.ssh/id_ed25519 ssh ubuntu@server.com 'sudo systemctl restart nginx'
-
-# 3. Upload entire directory to server
-win-sshpass -h server.com -p 'mypass' -local ./dist -remote //var/www/html
-
-# 4. Download server log directory
-win-sshpass -h server.com -p 'mypass' -d -remote //var/log/nginx -local ./logs
-
-# 5. SCP upload file
-win-sshpass -p 'mypass' scp ./app.jar user@server.com:/opt/app/
-
-# 6. Password via environment variable (more secure)
-export SSHPASS='mypass'
-win-sshpass -e ssh user@server.com 'whoami'
-
-# 7. Operation timeout (abort after 30 seconds)
-win-sshpass -p 'mypass' -t 30 ssh user@server.com 'long-running-command'
-
-# 8. Config file with positional command
 win-sshpass -f server.config 'docker ps'
-
-# 9. Resume interrupted upload
-win-sshpass -p 'mypass' -h server.com -local ./bigfile.iso -remote //data/bigfile.iso -resume
-
-# 10. Compute file hash
-win-sshpass hash sha256 ./download.iso
-
-# 11. Verify file integrity
-win-sshpass verify sha256 d1dc38f6dfb1e4c8... ./download.iso
-
-# 12. Generate SSH key pair
-win-sshpass keygen
-
-# 13. Generate RSA key with custom path and comment
-win-sshpass keygen -algo rsa -out ~/.ssh/mykey -comment "my-server"
-
-# 14. Login with generated private key (after deploying public key to server)
-win-sshpass -i ~/.ssh/id_ed25519 ssh user@host
-
-# 15. SSH agent authentication (no password/key needed)
-win-sshpass ssh user@host 'whoami'
-
-# 16. SSH agent forwarding to jumphost
-win-sshpass -A ssh user@jumphost
-
-# 17. JSON output for automation
-win-sshpass -json -p 'pass' ssh user@host 'uptime'
-
-# 18. Local port forwarding (access internal DB via jumphost)
-win-sshpass -p 'pass' -L 3306:db.internal:3306 ssh user@jumphost
-
-# 19. Remote port forwarding (expose local dev server)
-win-sshpass -p 'pass' -R 9090:localhost:8080 ssh user@server
 ```
 
-## Proxy Support
+See the [configuration guide](https://chuccp.github.io/win-sshpass/en/guide/config-file/)
+for key, proxy, timeout, retry, and background options.
 
-Tunnel SSH connections through a proxy server. Supported protocols: SOCKS5, SOCKS4, SOCKS4A, HTTP CONNECT, and HTTPS CONNECT.
-
-```bash
-# SOCKS5 proxy
-win-sshpass -p 'pass' -proxy socks5://127.0.0.1:1080 ssh user@host
-
-# SOCKS5 with authentication
-win-sshpass -p 'pass' -proxy socks5://proxyuser:proxypass@127.0.0.1:1080 ssh user@host
-
-# SOCKS4 proxy
-win-sshpass -p 'pass' -proxy socks4://192.168.1.1:1080 ssh user@host
-
-# HTTP CONNECT proxy
-win-sshpass -p 'pass' -proxy http://proxy.local:8080 ssh user@host
-
-# HTTPS CONNECT proxy with authentication
-win-sshpass -p 'pass' -proxy https://user:pass@proxy.local:8443 ssh user@host
-
-# Proxy with file transfer
-win-sshpass -p 'pass' -proxy socks5://127.0.0.1:1080 -h host -local ./file.txt -remote /tmp/file.txt
-
-# Proxy with SCP
-win-sshpass -p 'pass' -proxy socks5://127.0.0.1:1080 scp ./app.jar user@host:/opt/app/
-
-# Proxy via config file
-# proxy: socks5://user:pass@127.0.0.1:1080
-```
-
-## Port Forwarding
-
-Tunnel TCP connections through an SSH server using local (`-L`) or remote (`-R`) forwarding:
-
-```bash
-# Local forward: access db.internal:3306 via jumphost at localhost:8080
-win-sshpass -p 'pass' -L 8080:db.internal:3306 ssh user@jumphost
-
-# Multiple local forwards
-win-sshpass -p 'pass' -L 8080:db1.internal:3306 -L 8081:db2.internal:3306 ssh user@jumphost
-
-# Remote forward: expose localhost:8080 at remote server's port 9090
-win-sshpass -p 'pass' -R 9090:localhost:8080 ssh user@server
-
-# Forward-only mode (block until Ctrl+C, no command)
-win-sshpass -p 'pass' -L 8080:db.internal:3306 -L 6379:redis.internal:6379 ssh user@jumphost
-```
-
-> Port forwarding uses the standard OpenSSH format: `[bind_address:]port:host:hostport`. Not supported with SCP, Rsync, or file transfer modes.
-
-## Git Bash Notes
-
-Use `//` prefix for remote paths to avoid path conversion:
-```bash
-# Wrong: /tmp will be converted to Windows path
-win-sshpass ... -remote /tmp/file.txt
-
-# Correct: use double slashes
-win-sshpass ... -remote //tmp/file.txt
-```
-
-## Use as a Go SDK
-
-`win-sshpass` is also a reusable Go library (`package sshpass`). Import it to
-embed SSH/SFTP/shell capabilities in your own application:
-
-```bash
-go get github.com/chuccp/win-sshpass
-```
-
-```go
-package main
-
-import (
-	"log"
-
-	sshpass "github.com/chuccp/win-sshpass"
-)
-
-func main() {
-	cfg := sshpass.NewConfig()
-	cfg.Host = "example.com"
-	cfg.User = "root"
-	cfg.Password = "secret"
-
-	// NewClient dials and returns a ready-to-use client.
-	client, err := sshpass.NewClient(cfg, sshpass.WithSignalHandler())
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer client.Close()
-
-	// Execute a command (output streams to os.Stdout/os.Stderr by default).
-	if err := client.Exec("uname -a"); err != nil {
-		log.Fatal(err)
-	}
-
-	// Upload a file over SFTP.
-	sftp, err := client.SFTP()
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer sftp.Close()
-	if err := sftp.Upload("./local.txt", "/tmp/remote.txt"); err != nil {
-		log.Fatal(err)
-	}
-}
-```
-
-### Customization options
-
-Behavior is configured through functional options passed to `NewClient`:
-
-| Option | Purpose |
-|--------|---------|
-| `WithStdin(r)` / `WithStdout(w)` / `WithStderr(w)` | Redirect I/O streams (default `os.Stdin`/`os.Stdout`/`os.Stderr`). |
-| `WithProgress(fn)` | Set a `ProgressFunc` callback that receives `(description string, sent, total int64)` during SFTP transfers. The SDK performs no rendering — callers display progress however they like. Defaults to none (headless-friendly). |
-| `WithFileSelector(s)` | Set the `FileSelector` used by the rz/sz shell-transfer fallback. The SDK ships no default implementation; without one, rz/sz prompts for a path on stdin. |
-| `WithResume()` | Enable breakpoint-resume for SFTP transfers — interrupted uploads/downloads continue from where they left off. |
-| `WithSignalHandler()` | Register a Ctrl+C handler that closes the connection. Off by default so the library never interferes with host signal handling. |
-
-The SDK intentionally bundles **no UI code** (no progress bar, no file dialog).
-Those concerns live in the CLI package (`cmd/sshpass/ui.go`), which wires a
-progressbar-based `ProgressFunc` and a zenity-based `FileSelector` into the
-client. Library users provide their own.
-
-To tunnel the SSH connection through a proxy, set `Config.ProxyURL` before
-calling `NewClient`:
+## Go SDK
 
 ```go
 cfg := sshpass.NewConfig()
 cfg.Host = "example.com"
 cfg.User = "root"
 cfg.Password = "secret"
-cfg.ProxyURL = "socks5://user:pass@127.0.0.1:1080" // or http://, https://, socks4://
 
 client, err := sshpass.NewClient(cfg)
+if err != nil {
+    log.Fatal(err)
+}
+defer client.Close()
+
+if err := client.Exec("uname -a"); err != nil {
+    log.Fatal(err)
+}
 ```
-
-Lower-level helpers are also exported for advanced use: `Dial`, `NewConfig`,
-`LoadConfig`, `LoadConfigOrPasswordFile`, `ParseSSHArgs`, `ParseSCPArgs`,
-`ParseRsyncArgs`, `DetectCommandType`, `RunSCP`, `RunRsync`, `CleanRemotePath`,
-`SplitPaths`, `ParseUserHostPath`, `ExitCodeFromError`.
-
-## Build
 
 ```bash
-# Windows
-go build -o win-sshpass.exe ./cmd/sshpass
-
-# Linux / macOS
-go build -o win-sshpass ./cmd/sshpass
-
-# Cross-compile
-GOOS=linux   GOARCH=amd64 CGO_ENABLED=0 go build -o win-sshpass ./cmd/sshpass
-GOOS=windows GOARCH=amd64               go build -o win-sshpass.exe ./cmd/sshpass
-GOOS=darwin  GOARCH=arm64               go build -o win-sshpass ./cmd/sshpass
+go get github.com/chuccp/win-sshpass
 ```
 
-## Dependencies
+See the [Go SDK guide](https://chuccp.github.io/win-sshpass/en/advanced/sdk/).
 
-- Go 1.26+
-- golang.org/x/crypto/ssh
-- github.com/pkg/sftp
-- github.com/schollz/progressbar/v3 (CLI progress bar only)
-- github.com/ncruces/zenity (CLI file dialogs only)
+## Documentation
 
+- [English](https://chuccp.github.io/win-sshpass/en/)
+- [简体中文](https://chuccp.github.io/win-sshpass/zh/)
+- [繁體中文](https://chuccp.github.io/win-sshpass/tw/)
+- [日本語](https://chuccp.github.io/win-sshpass/ja/)
+- [Documentation source](https://github.com/chuccp/win-sshpass/tree/main/docs-site)
+
+Detailed guides cover installation, Web/MCP, SSH, shell, file transfer,
+SCP/Rsync, configuration, proxies, forwarding, the SDK, and best practices.
+
+## Development
+
+```bash
+go test -race ./...
+go vet ./...
+go build -o win-sshpass.exe ./cmd/sshpass
+```
+
+Cross-compilation examples:
+
+```bash
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o win-sshpass ./cmd/sshpass
+GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -o win-sshpass ./cmd/sshpass
+```
+
+## License
+
+Apache-2.0. See [LICENSE](LICENSE).

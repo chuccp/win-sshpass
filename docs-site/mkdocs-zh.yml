@@ -1,6 +1,6 @@
 site_name: win-sshpass 使用手册
 site_url: https://chuccp.github.io/win-sshpass/zh/
-site_description: 'win-sshpass — 跨平台 sshpass 实现：密码/密钥 SSH 登录、交互式 Shell、SFTP/SCP/Rsync 文件传输、SOCKS5/SOCKS4/HTTP 代理隧道、断点续传、文件哈希校验、密钥生成、Docker 测试套件，以及可复用的 Go SDK。'
+site_description: 'win-sshpass — 跨平台 SSH 客户端：SFTP/SCP/Rsync、端口转发、代理、全屏 Web SSH 工作区、MCP 工具和可复用 Go SDK。'
 site_author: win-sshpass Team
 
 docs_dir: docs-zh
@@ -54,8 +54,7 @@ edit_uri: edit/main/docs-site/docs-zh/
 plugins:
   - search:
       separator: '[\s\-,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])'
-  - tags:
-      tags_file: tags.md
+  - tags
 
 markdown_extensions:
   - abbr
@@ -129,6 +128,7 @@ nav:
       - 交互式 Shell: guide/shell.md
       - SCP 与 Rsync: guide/scp-rsync.md
       - 配置文件: guide/config-file.md
+      - Web 控制台与 MCP: guide/web-console.md
   - 高级:
       - Go SDK: advanced/sdk.md
       - 最佳实践: advanced/best-practices.md

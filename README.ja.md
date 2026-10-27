@@ -1,147 +1,91 @@
-## 関連プロジェクト
-
-[**go-web-frame**](https://github.com/chuccp/go-web-frame) — 認証の問題を簡単に解決——ルート宣言に必要な権限、Filterで一括チェック、handlerはクリーンに。ジェネリクスModelでフルスタックCRUD——structを定義するだけで、作成・読取・更新・削除がすぐ使える。軽量で、必要なコンポーネントだけオンデマンドでインストール。コード生成不要、CIツール不要、今最も精巧なGoウェブフルスタックフレームワーク。
-
 # win-sshpass
 
-[English](README.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [日本語](README.ja.md)
+[![Release](https://badgen.net/github/release/chuccp/win-sshpass)](https://github.com/chuccp/win-sshpass/releases)
+[![License](https://badgen.net/badge/License/Apache%202.0/blue)](LICENSE)
+[![Go Version](https://badgen.net/badge/Go/1.26.0/00ADD8?icon=go)](go.mod)
+[![Downloads](https://img.shields.io/github/downloads/chuccp/win-sshpass/total)](https://github.com/chuccp/win-sshpass/releases)
 
-Windows、Linux、macOS 対応の sshpass ツール。Linux の sshpass と同様の機能を提供します。
+[English](README.md) · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md)
 
-> 💡 **このプロジェクトが役に立ったら、⭐ Star をお願いします！** より多くの人にこのツールを見つけてもらえます。
+`win-sshpass` は Windows、Linux、macOS 対応の SSH クライアント兼自動化ツールです。
+パスワード/鍵認証、SFTP と SCP/Rsync 形式の転送、ポート転送、ブラウザー SSH
+ワークスペース、MCP ツール、再利用可能な Go SDK を提供します。
 
-## 機能
+## 主な機能
 
-- パスワード、秘密鍵、または ssh-agent 認証による SSH ログイン
-- リモートコマンドの実行またはインタラクティブシェル
-- SFTP によるファイルのアップロード/ダウンロード（プログレスバー付き）
-- SCP スタイルおよび Rsync スタイルのファイル転送
-- 複数サーバー管理用の設定ファイルサポート
-- インタラクティブシェルの raw ターミナルモード（正しいエコー、Ctrl+C、vim/top フルスクリーンアプリ対応）
-- インタラクティブシェルモードでの動的ターミナルサイズ変更
-- Git Bash パス変換の検出と自動修正
-- IPv6 アドレス対応
-- Windows（x64、ARM64）、Linux（amd64、arm64）、macOS（amd64、arm64）対応
-- **再利用可能な Go SDK** — ライブラリとしてインポート（`package sshpass`）して、SSH/SFTP/Shell 機能を独自アプリに組み込み可能。I/O ストリームと進行コールバックの注入に対応
-- **ポート転送** — ローカル（`-L`）およびリモート（`-R`）TCP ポート転送を SSH トンネル経由で実現
-- **SSH Agent 転送**（`-A`）— ローカル ssh-agent をリモートサーバーに転送、認証情報なしで自動検出
-- **JSON 出力モード**（`-json`）— AI エージェントと自動化のための構造化 JSON 出力
-- **プロキシ対応** — SOCKS5/SOCKS4/HTTP/HTTPS プロキシ経由で SSH 接続をトンネル
-- **ブレークポイントレジューム** — 中断された SFTP ファイル転送を途中から再開
-- **Web SSH コンソール**（`-web`）— Go テンプレートで構築したローカル Web UI から SSH 接続とコマンド実行を管理
-- **ファイルハッシュと検証** — ローカルファイルのハッシュ計算と検証（MD5、SHA-1、SHA-256、SHA-512）
-- **鍵生成** — 内蔵SSH鍵ペア生成（Ed25519 と RSA）
-- **セルフアップデート**（`update`）— GitHub Releases を確認し、実行中のバイナリを最新版に置き換え
-- **バックグラウンド実行**（`--bg`）— SSH 経由でサービスを起動して即座に戻る。セッションがサービスに引きずられません
+- パスワード、秘密鍵、ssh-agent、明示的な空パスワードで SSH 接続。
+- リモートコマンド、JSON、再試行、タイムアウト、プロキシ、`known_hosts`。
+- 対話型ターミナル、バックグラウンド実行 `--bg`、`rz`/`sz` 転送。
+- SFTP アップロード/ダウンロード、ディレクトリ再帰、複数ファイル、再開。
+- ローカル/リモートポート転送、SOCKS4/SOCKS5/HTTP/HTTPS プロキシ。
+- 全画面 Web SSH：SFTP ファイルマネージャーと xterm.js の実 PTY。
+- ドラッグ＆ドロップ、アップロード進捗率、可変分割バー、ライト/ダークテーマ。
+- SSH 実行と SFTP 操作用の MCP ツール。
+- 自己更新、SSH 鍵生成、ハッシュ、検証。
 
-## ダウンロード
+## インストール
 
-[GitHub Releases](https://github.com/chuccp/win-sshpass/releases) から最新版をダウンロード：
+```powershell
+winget install chuccp.win-sshpass
+```
 
-### Windows
-
-| アーキテクチャ | Zip | MSI インストーラー |
-|----------------|-----|-------------------|
-| **x64 (amd64)** | `win-sshpass-*-amd64.zip` | `win-sshpass-*-amd64.msi` |
-| **ARM64** | `win-sshpass-*-arm64.zip` | `win-sshpass-*-arm64.msi` |
-
-### Linux
-
-| アーキテクチャ | Tarball |
-|----------------|---------|
-| **amd64** | `win-sshpass-*-linux-amd64.tar.gz` |
-| **arm64** | `win-sshpass-*-linux-arm64.tar.gz` |
-
-### macOS
-
-| アーキテクチャ | PKG インストーラー | Tarball |
-|----------------|-------------------|---------|
-| **amd64 (Intel)** | `win-sshpass-*-darwin-amd64.pkg` | `win-sshpass-*-darwin-amd64.tar.gz` |
-| **arm64 (Apple Silicon)** | `win-sshpass-*-darwin-arm64.pkg` | `win-sshpass-*-darwin-arm64.tar.gz` |
-
-> `.pkg` インストーラーはバイナリを `/usr/local/bin/win-sshpass` に自動的に配置します。
-
-1. [Releases](https://github.com/chuccp/win-sshpass/releases) ページを開く
-2. お使いのプラットフォームとアーキテクチャに合ったパッケージをダウンロード
-3. **Windows MSI / macOS PKG**：インストーラーを実行するだけで、バイナリがシステム PATH に自動的に追加されます
-4. **Windows Zip / Linux tar.gz / macOS tar.gz**：展開してバイナリを PATH に配置
-
-> **依存関係ゼロ**：`win-sshpass.exe` はスタンドアロンの実行ファイルです。OpenSSH やその他のソフトウェアのインストールは不要です。ダウンロードして PATH に配置すればすぐに使用できます。
-
-### Scoop でインストール
-
-```bash
+```powershell
 scoop bucket add chuccp https://github.com/chuccp/scoop-bucket
 scoop install win-sshpass
 ```
 
-### WinGet でインストール
-
-```bash
-winget install chuccp.win-sshpass
-```
+または [GitHub Releases](https://github.com/chuccp/win-sshpass/releases) から
+アーカイブ、MSI、PKG をダウンロードできます。外部ランタイムは不要です。
 
 ## クイックスタート
 
 ```bash
-# パスワード認証でコマンド実行
-win-sshpass -p 'password' ssh user@example.com 'whoami'
+# コマンドを実行
+win-sshpass -p 'password' ssh root@example.com 'whoami'
 
-# 秘密鍵認証でコマンド実行
-win-sshpass -i ~/.ssh/id_ed25519 ssh user@example.com 'hostname'
+# 対話型シェルを開く
+win-sshpass -p 'password' ssh root@example.com
 
-# SSH agent 認証（自動検出、-p/-i 不要）
-win-sshpass ssh user@example.com 'whoami'
+# アップロードとダウンロード
+win-sshpass -h example.com -p 'password' -local ./app.jar -remote /tmp/app.jar
+win-sshpass -h example.com -p 'password' -d -remote /tmp/app.log -local ./app.log
 
-# JSON 出力モード（AI エージェントと自動化向け）
-win-sshpass -json -p 'password' ssh user@example.com 'uptime'
-
-# ファイルをアップロード
-win-sshpass -h example.com -p 'password' -local file.txt -remote /tmp/file.txt
-
-# ファイルをダウンロード
-win-sshpass -h example.com -p 'password' -d -remote /tmp/file.txt -local ./file.txt
+# Web SSH コンソール（既定: http://127.0.0.1:6326）
+win-sshpass -web -h 127.0.0.1 -u root -P 22 -p 'password'
 ```
 
-## Web SSH コンソール
+接続オプション付きで起動した場合、<http://127.0.0.1:6326> を開くと自動接続して
+ワークスペースを直接表示します。
 
-ローカル Web コンソールを起動します：
+## Web SSH ワークスペース
+
+- 左側：SFTP ディレクトリ閲覧、アップロード/ダウンロード、ディレクトリ作成、削除、ドラッグ＆ドロップ。
+- 右側：xterm.js で表示する実際の SSH PTY。vim/top と Tab 補完に対応。
+- 分割バー：ドラッグまたは方向キーで幅を調整し、設定を保存。
+- テーマ：既定はシステム設定。ライト/ダークも選択可能。
+- アップロード進捗：ファイル名、順序、バー、全体パーセント。
+
+接続オプションを省略した場合はブラウザーの接続フォームを使用します：
 
 ```bash
 win-sshpass -web
 ```
 
-<http://127.0.0.1:6326> を開きます。デフォルトではループバックのみを
-リッスンします。`-web -web-addr <アドレス>` でアドレスやポートを変更できます。
-
-起動コマンドに接続情報を指定すると、ページを開いた際に自動接続して
-コマンドコンソールを表示し、ログインフォームを隠します：
+待受アドレスの変更：
 
 ```bash
-win-sshpass -web -h 127.0.0.1 -u root -P 22 -p 'パスワード'
+win-sshpass -web -web-addr 127.0.0.1:6326
 ```
 
-Host を指定しない場合は、ブラウザ上で接続先を入力するフォームを表示します。
+既定ではループバックのみをリッスンします。
 
-パスワード、秘密鍵、ssh-agent 認証、プロキシ、ホスト鍵検証、接続・操作
-タイムアウトに対応します。ブラウザセッションごとにサーバー側で独立した SSH
-接続を保持し、stdout、stderr、リモート終了コードを表示します。認証情報は
-ローカルサーバープロセス内だけに保持され、ページには書き込まれません。
+## MCP
 
-全画面ワークスペースは SFTP ファイルマネージャーと xterm.js による実際の
-対話型 SSH PTY で構成されます。中央の分割バーはドラッグまたは矢印キーで
-移動できます。ローカルのファイルやフォルダーを左側へドロップしてアップロードし、
-リモートファイルをブラウザ外へドラッグしてダウンロードできます。
+Web サーバーは既定で MCP Streamable HTTP を公開します：
 
-現在の Web UI はコマンドコンソールであり、完全なブラウザターミナル
-エミュレーターではありません。非ループバックアドレスへのバインドは同一
-ネットワーク上の他端末へ接続画面を公開するため、`-web-addr` は慎重に使用してください。
-
-同じサーバーはデフォルトで
-`http://127.0.0.1:6326/mcp` に MCP Streamable HTTP エンドポイントを公開します。
-MCP クライアントは初期化時に `Mcp-Session-Id` を受け取り、`ssh_exec`、
-`sftp_list`、`sftp_read`、`sftp_write`、`sftp_mkdir`、`sftp_delete` を
-利用できます。MCP は `-web` 起動コマンドで指定した SSH 接続情報を使用します。
+```text
+http://127.0.0.1:6326/mcp
+```
 
 Codex 設定例：
 
@@ -150,521 +94,99 @@ Codex 設定例：
 url = "http://127.0.0.1:6326/mcp"
 ```
 
-## インタラクティブシェル
-
-コマンドを指定しない場合、`win-sshpass` は **raw ターミナルモード** でインタラクティブシェルを開きます：
-
-```bash
-win-sshpass -p 'password' ssh user@host
-```
-
-**Raw ターミナルモード** の機能：
-
-- **正しいエコーバック** — 入力した文字が正しく表示される（二重エコーなし）
-- **Ctrl+C / Ctrl+Z** — シグナルがリモートプロセスに正しく転送される
-- **フルスクリーンアプリ** — vim、top、htop、nano などが正常に動作
-- **動的ターミナルサイズ変更** — リモートターミナルがローカルウィンドウサイズに自動調整
-- **Tab 補完** — リモートシェルの Tab 補完が正常に機能
-
-### インタラクティブシェルでのファイル転送
-
-接続中に `rz` / `sz` コマンドでファイル転送が可能（リモートサーバーに何もインストールする必要なし）：
-
-```bash
-# リモートの SFTP 作業ディレクトリにアップロード（通常はログイン先ホーム。ファイル選択ダイアログが開く）
-rz
-
-# 特定のローカルファイルをアップロード
-rz /ローカル/ファイル/パス
-
-# リモートファイルをダウンロード（保存ダイアログが開く）
-sz /リモート/ファイル/パス
-
-# リモートファイルを特定のローカルパスにダウンロード
-sz /リモート/ファイル/パス /ローカル/保存/パス
-```
-
-> **仕組み**：リモートシェルが `rz`/`sz: command not found` を返した時、ツールがそれを検出して SFTP で転送を実行します。ファイルとディレクトリの両方に対応し、プログレスバー付きです。
-> SFTP の作業ディレクトリは通常ログイン先ホームであり、シェルで後から実行した `cd` の影響を受けません。
-
-## コマンド形式
-
-### SSH ログイン
-
-```bash
-# パスワード認証
-win-sshpass -p <パスワード> ssh [user@host] [コマンド]
-win-sshpass -p <パスワード> ssh -p <ポート> user@host 'コマンド'
-win-sshpass -p <パスワード> ssh -o StrictHostKeyChecking=no user@host
-
-# ホスト名のみ（user@ は省略可。ユーザーは root、名前は OS が解決）
-win-sshpass -p <パスワード> ssh example.com 'uptime'
-
-# 空パスワード（サーバーにパスワードが設定されていない場合。-p '' を明示すること）
-win-sshpass -p '' ssh root@192.168.1.100 'hostname'
-
-# インタラクティブシェル（raw ターミナルモード：正しいエコー、Ctrl+C、vim/top 対応）
-win-sshpass -p <パスワード> ssh user@host
-
-# 秘密鍵認証
-win-sshpass -i <秘密鍵パス> ssh [user@host] [コマンド]
-
-# SSH agent 認証（自動検出、-p/-i 不要）
-win-sshpass ssh user@host 'whoami'
-
-# SSH agent 転送（-A フラグ）
-win-sshpass -A -i ~/.ssh/id_ed25519 ssh user@jumphost
-
-# 環境変数からパスワード読み込み
-SSHPASS=<パスワード> win-sshpass -e ssh user@host
-
-# パスワードファイル
-echo 'password' > pass.txt
-win-sshpass -f pass.txt ssh user@host
-
-# 設定ファイル（複数行形式）
-win-sshpass -f server.config
-```
-
-### バックグラウンド実行（`--bg`）
-
-常駐プロセス（サービス、デーモン）を起動して即座に戻ります。終了を待ちません。
-
-```bash
-# 新しいバイナリを配置した後にサービスを起動
-win-sshpass -p 'pass' ssh --bg root@host 'cd /app && ./myapp > /tmp/myapp.log 2>&1'
-
-# 同じコマンド内でバイナリを差し替えて起動
-win-sshpass -p 'pass' ssh --bg root@host 'cd /app && cp /tmp/myapp-new ./myapp && chmod +x ./myapp && ./myapp > /tmp/myapp.log 2>&1'
-
-# サービスを再起動し、別の接続で確認
-win-sshpass -p 'pass' ssh --bg root@host 'pkill -x myapp; sleep 1; cd /app && ./myapp > /tmp/myapp.log 2>&1'
-win-sshpass -p 'pass' ssh root@host 'ps -ef | grep [m]yapp; curl -s localhost:8080/api/status/ping'
-```
-
-なぜ必要か：`ssh host 'nohup ./myapp &'` は**ハングします**。バックグラウンドプロセスがセッションの stdout/stderr を継承するため SSH チャネルが EOF に達せず、サービスが終了するまで（または `-t` が発火するまで）クライアントは待ち続けます。`--bg` はコマンドを `setsid`（無い環境では `nohup`）で起動し、3 つの標準ストリームをすべてリダイレクトするため、シェルが戻ると同時にチャネルが閉じ、サービスは動き続けます。
-
-注意：
-
-- 出力は**コマンドの内部で**リダイレクトしてください（`> /tmp/xxx.log 2>&1`）。それ以外は `--bg` が破棄します
-- 終了コードは「起動できた」ことだけを示します。サービスが立ち上がったかは上記のように別の接続で確認してください
-- [設定ファイル](#設定ファイル形式)でホストごとに `background: true` を指定することもできます
-
-### ファイル転送
-
-> **Git Bash ユーザー**: リモートパスには `//` プレフィックスを使用してください（例: `-remote //tmp/file.txt）。詳細は下記の [Git Bash の注意事項](#git-bash-の注意事項) を参照してください。
-
-```bash
-# ファイルをアップロード
-win-sshpass -h <ホスト> -p <パスワード> -local <ローカルパス> -remote <リモートパス>
-
-# 複数のファイルをアップロード（カンマ区切り）
-win-sshpass -h <ホスト> -p <パスワード> -local "a.txt,b.txt,c.txt" -remote //tmp/
-
-# 複数のファイルをアップロード（スペース区切り、/ や \ を含まない単純なパスのみ）
-win-sshpass -h <ホスト> -p <パスワード> -local "a.txt b.txt c.txt" -remote //tmp/
-
-# ディレクトリをアップロード（自動再帰）
-win-sshpass -h <ホスト> -p <パスワード> -local <ローカルディレクトリ> -remote <リモートディレクトリ>
-
-# ファイル/ディレクトリをダウンロード
-win-sshpass -h <ホスト> -p <パスワード> -d -remote <リモートパス> -local <ローカルパス>
-```
-
-### SCP スタイル
-
-```bash
-# ファイルをアップロード
-win-sshpass -p <パスワード> scp <ローカルファイル> user@host:<リモートパス>
-win-sshpass -p <パスワード> scp -P <ポート> <ローカルファイル> user@host:<リモートパス>
-
-# ディレクトリをアップロード
-win-sshpass -p <パスワード> scp -r <ローカルディレクトリ> user@host:<リモートパス>
-
-# ファイル/ディレクトリをダウンロード
-win-sshpass -p <パスワード> scp user@host:<リモートファイル> <ローカルパス>
-```
-
-### Rsync スタイル
-
-```bash
-# アップロード
-win-sshpass -p <パスワード> rsync -avz <ローカルパス> user@host:<リモートパス>
-
-# ダウンロード
-win-sshpass -p <パスワード> rsync -avz user@host:<リモートパス> <ローカルパス>
-```
-
-## パラメータ
-
-| パラメータ | 説明 | 例 |
-|-----------|------|-----|
-| `-p` | パスワード。明示的な空値 `-p ''` は「サーバーにパスワードなし」を意味する | `-p 'secret123'` |
-| `-i` | 秘密鍵パス | `-i ~/.ssh/id_ed25519` |
-| `-f` | パスワードファイル/設定ファイル | `-f pass.txt` |
-| `-e` | 環境変数 SSHPASS からパスワード読み込み | `SSHPASS='pass' win-sshpass -e ssh ...` |
-| `-h` | ホストアドレス | `-h example.com` |
-| `-u` | ユーザー名、デフォルト: root | `-u ubuntu` |
-| `-P` | ポート、デフォルト: 22 | `-P 2222` |
-| `-c` | 実行するコマンド | `-c 'ls -la'` |
-| `-local` | ローカルパス（カンマまたはスペース区切り） | `-local "a.txt,b.txt"` |
-| `-remote` | リモートパス（アップロード/ダウンロード） | `-remote /tmp/file.txt` |
-| `-d` | ダウンロードモード | `-d` |
-| `-k` | 厳密なホスト鍵検証を有効化 | `-k` |
-| `-t` | 総操作タイムアウト（秒）、0 = 無制限 | `-t 30` |
-| `-ct` | TCP 接続タイムアウト（秒）、デフォルト: 10 | `-ct 5` |
-| `-retry` | 総接続試行回数（デフォルト：3） | `-retry 5` |
-| `-resume` | 中断されたファイル転送をブレークポイントから再開 | `-resume` |
-| `-proxy` | プロキシ URL（socks5/socks4/http/https） | `-proxy socks5://127.0.0.1:1080` |
-| `-L` | ローカルポート転送（繰り返し可能） | `-L 8080:db.internal:3306` |
-| `-R` | リモートポート転送（繰り返し可能） | `-R 9090:localhost:8080` |
-| `-A` | ssh-agent 転送を有効化 | `-A` |
-| `--bg` | コマンドをセッションから切り離して起動し、即座に戻る（サービスの起動用。バイナリ配置後など）。出力はコマンド内でリダイレクトしてください | `--bg './server > /tmp/server.log 2>&1'` |
-| `-json` | JSON 形式で出力（AI/自動化向け） | `-json` |
-| `-web` | ループバックで Web SSH コンソールを起動 | `-web` |
-| `-web-addr` | Web コンソールのリッスンアドレスを変更 | `-web-addr 127.0.0.1:6326` |
-| `-v` | バージョン表示 | `-v` |
-| `-help` | ヘルプメッセージを表示 | `-help` |
-
-### Keygen フラグ
-
-| パラメータ | 説明 | デフォルト |
-|-----------|------|------------|
-| `-algo` | 鍵アルゴリズム（`ed25519` または `rsa`） | `ed25519` |
-| `-comment` | 生成された公開鍵のコメント | `user@host` |
-| `-out` | 秘密鍵の出力パス | `~/.ssh/id_ed25519` または `~/.ssh/id_rsa` |
-
-## ハッシュと検証
-
-SSH 接続なしでローカルファイルのハッシュを計算・検証：
-
-```bash
-# ハッシュを計算
-win-sshpass hash md5 ./file.iso
-win-sshpass hash sha256 ./file.iso
-
-# 期待値と照合
-win-sshpass verify sha256 d1dc38f6df... ./file.iso
-# 出力: OK  (または: FAILED)
-```
-
-対応アルゴリズム: `md5`、`sha1`、`sha256`、`sha512`。
-
-## 鍵生成
-
-ssh-keygen なしで SSH 鍵ペアをローカルに生成：
-
-```bash
-# Ed25519鍵を生成（推奨 — 高速でより安全）
-win-sshpass keygen
-
-# RSA 4096ビット鍵を生成
-win-sshpass keygen -algo rsa
-
-# 出力パスを指定
-win-sshpass keygen -out ~/.ssh/mykey
-
-# コメントを追加
-win-sshpass keygen -comment "my-laptop"
-```
-
-デフォルトでは、鍵は `~/.ssh/id_ed25519`（Ed25519）または `~/.ssh/id_rsa`（RSA）に保存されます。公開鍵ファイルには自動的に `.pub` 拡張子が付与されます。
-
-**公開鍵をデプロイしてパスワード不要のログインを有効にする：**
-
-```bash
-# 公開鍵の内容を変数に読み込み、SSH経由でデプロイ
-PUBKEY=$(cat ~/.ssh/id_ed25519.pub)
-win-sshpass -p 'password' ssh user@host "mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo '$PUBKEY' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
-
-# その後、秘密鍵でログイン
-win-sshpass -i ~/.ssh/id_ed25519 ssh user@host
-```
-
-## アップデート
-
-アーカイブを手動でダウンロードし直すことなく、GitHub から最新リリースに更新できます：
-
-```bash
-# 最新リリースに更新
-win-sshpass update
-
-# 新しいリリースがあるか確認するだけ
-win-sshpass update -check
-
-# 現在のバージョンを再インストール、または特定のタグに切り替え
-win-sshpass update -force
-win-sshpass update -version v1.0.0
-```
-
-まず GitHub に現在の最新リリースを問い合わせ、実行中のバージョンと比較します——リクエスト1回だけで、ダウンロードは発生しません。実際に新しい場合にのみ、お使いの OS とアーキテクチャに合うアーカイブを取得し、実行中のバイナリをその場で置き換えます：
-
-```
-$ win-sshpass update
-Updating win-sshpass v0.9.1 (windows/amd64)...
-downloading win-sshpass-v0.9.4-amd64.zip
-Downloading win-sshpass-v0.9.4-amd64.zip 100% |████████████████| (3.6/3.6 MB, 1.2 MB/s)
-Updated win-sshpass v0.9.1 -> v0.9.4 (C:\Tools\win-sshpass.exe)
-```
-
-| パラメータ | 説明 | デフォルト |
-|-----------|------|-----------|
-| `-check` | 新しいリリースがあるか確認するだけ（ダウンロードしない） | — |
-| `-force` | 最新版であっても再インストールする | — |
-| `-version <tag>` | 指定したリリースタグをインストール（`-force` を含む） | 最新リリース |
-| `-target <path>` | 置き換えるバイナリのパス | 実行中のバイナリ |
-
-注意点：
-
-- Windows では旧バイナリは `win-sshpass.exe.old` として残り（実行中の `.exe` は削除できないため）、次回のアップデートで削除されます。Linux と macOS ではアトミックなリネームで置き換えます。
-- インストール先ディレクトリに書き込み権限が必要です。**scoop**、**winget**、**MSI/PKG** インストーラーで導入した場合は、ファイル管理が重複するため、それぞれのパッケージマネージャーで更新してください。
-- 置き換える前に、ダウンロードしたファイルが実際に実行ファイルであることを検証します。そのため、ダウンロードの失敗や傍受によって `win-sshpass` が使えなくなることはありません。
-- バージョン確認は REST API ではなく github.com の `/releases/latest` リダイレクトを使うため、トークン不要・API の匿名レート制限（1時間60回）の影響を受けず、`api.github.com` がブロックされたネットワークでも動作します（API はフォールバックのみ）。
-- プロキシ環境では、`update` は `HTTPS_PROXY` / `HTTP_PROXY` 環境変数を参照します。
-
-## 設定ファイル形式
+利用できるツール：
+
+- `ssh_exec`
+- `sftp_list`
+- `sftp_read`
+- `sftp_write`
+- `sftp_mkdir`
+- `sftp_delete`
+
+MCP は `-web` 起動時の SSH 接続を使用し、`Mcp-Session-Id` でセッションを管理します。
+
+## よく使うコマンド
+
+| 操作 | コマンド |
+|---|---|
+| 秘密鍵 | `win-sshpass -i ~/.ssh/id_ed25519 ssh user@host` |
+| 環境変数パスワード | `SSHPASS='pass' win-sshpass -e ssh user@host` |
+| パスワードファイル | `win-sshpass -f pass.txt ssh user@host` |
+| 設定ファイル | `win-sshpass -f server.config 'docker ps'` |
+| ポート指定 | `win-sshpass -p 'pass' ssh -p 2222 user@host` |
+| 操作タイムアウト | `win-sshpass -t 30 -p 'pass' ssh user@host 'long-task'` |
+| SOCKS5 プロキシ | `win-sshpass -proxy socks5://127.0.0.1:1080 ssh user@host` |
+| SCP アップロード | `win-sshpass -p 'pass' scp -P 2222 file.txt user@host:/tmp/` |
+| Rsync アップロード | `win-sshpass -p 'pass' rsync -avz ./ user@host:/backup/` |
+| 鍵生成 | `win-sshpass keygen -algo ed25519` |
+| ハッシュ / 検証 | `win-sshpass hash sha256 file.iso` |
+| 更新確認 | `win-sshpass update -check` |
+
+## 設定ファイル
 
 ```yaml
-host: example.com
+host: 192.168.1.10
 username: root
-password: your_password
+password: secret
 port: 22
-# key: ~/.ssh/id_ed25519  # オプション、パスワードの代わりに秘密鍵を使用
-# timeout: 0              # オプション、総操作タイムアウト（秒）、0 = 無制限
-# connect_timeout: 10     # オプション、TCP 接続タイムアウト（秒）
-# strict_host_key: false  # オプション、厳密なホスト鍵検証を有効化
-# proxy: socks5://user:pass@127.0.0.1:1080  # オプション、プロキシ URL（socks5/socks4/http/https）
+timeout: 0
+strict_host_key: false
 ```
 
-使用方法：
 ```bash
-win-sshpass -f server.config -c 'ls -la'
-win-sshpass -f server.config 'ls -la'
-```
-
-## 完全な例
-
-```bash
-# 1. パスワード認証でコマンド実行
-win-sshpass -p 'mypass' ssh root@192.168.1.100 'docker ps'
-
-# 2. 秘密鍵認証で sudo コマンド実行
-win-sshpass -i ~/.ssh/id_ed25519 ssh ubuntu@server.com 'sudo systemctl restart nginx'
-
-# 3. ディレクトリ全体をサーバーにアップロード
-win-sshpass -h server.com -p 'mypass' -local ./dist -remote //var/www/html
-
-# 4. サーバーのログディレクトリをダウンロード
-win-sshpass -h server.com -p 'mypass' -d -remote //var/log/nginx -local ./logs
-
-# 5. SCP でファイルをアップロード
-win-sshpass -p 'mypass' scp ./app.jar user@server.com:/opt/app/
-
-# 6. 環境変数でパスワードを渡す（より安全）
-export SSHPASS='mypass'
-win-sshpass -e ssh user@server.com 'whoami'
-
-# 7. 操作タイムアウト（30 秒後に自動中断）
-win-sshpass -p 'mypass' -t 30 ssh user@server.com 'long-running-command'
-
-# 8. 設定ファイル + 位置引数コマンド
 win-sshpass -f server.config 'docker ps'
-
-# 9. 中断されたアップロードを再開
-win-sshpass -p 'mypass' -h server.com -local ./bigfile.iso -remote //data/bigfile.iso -resume
-
-# 10. ファイルハッシュを計算
-win-sshpass hash sha256 ./download.iso
-
-# 11. ファイルの整合性を検証
-win-sshpass verify sha256 d1dc38f6dfb1e4c8... ./download.iso
-
-# 12. SSH鍵ペアを生成
-win-sshpass keygen
-
-# 13. カスタムパスとコメントで RSA 鍵を生成
-win-sshpass keygen -algo rsa -out ~/.ssh/mykey -comment "my-server"
-
-# 14. 生成した秘密鍵でログイン（公開鍵をサーバーにデプロイ後）
-win-sshpass -i ~/.ssh/id_ed25519 ssh user@host
-
-# 15. SSH agent 認証（パスワード/鍵不要）
-win-sshpass ssh user@host 'whoami'
-
-# 16. SSH agent 転送でジャンプホストへ
-win-sshpass -A ssh user@jumphost
-
-# 17. JSON 出力モード（自動化向け）
-win-sshpass -json -p 'pass' ssh user@host 'uptime'
-
-# 18. ローカルポート転送（ジャンプホスト経由で内部 DB にアクセス）
-win-sshpass -p 'pass' -L 3306:db.internal:3306 ssh user@jumphost
-
-# 19. リモートポート転送（ローカル開発サーバーを公開）
-win-sshpass -p 'pass' -R 9090:localhost:8080 ssh user@server
 ```
 
-## プロキシ対応
+詳細は[設定ファイルガイド](https://chuccp.github.io/win-sshpass/ja/guide/config-file/)を参照してください。
 
-プロキシサーバー経由で SSH 接続をトンネルできます。対応プロトコル：SOCKS5、SOCKS4、SOCKS4A、HTTP CONNECT、HTTPS CONNECT。
-
-```bash
-# SOCKS5 プロキシ
-win-sshpass -p 'pass' -proxy socks5://127.0.0.1:1080 ssh user@host
-
-# SOCKS5（認証付き）
-win-sshpass -p 'pass' -proxy socks5://proxyuser:proxypass@127.0.0.1:1080 ssh user@host
-
-# SOCKS4 プロキシ
-win-sshpass -p 'pass' -proxy socks4://192.168.1.1:1080 ssh user@host
-
-# HTTP CONNECT プロキシ
-win-sshpass -p 'pass' -proxy http://proxy.local:8080 ssh user@host
-
-# HTTPS CONNECT プロキシ（認証付き）
-win-sshpass -p 'pass' -proxy https://user:pass@proxy.local:8443 ssh user@host
-
-# プロキシ + ファイル転送
-win-sshpass -p 'pass' -proxy socks5://127.0.0.1:1080 -h host -local ./file.txt -remote /tmp/file.txt
-
-# プロキシ + SCP
-win-sshpass -p 'pass' -proxy socks5://127.0.0.1:1080 scp ./app.jar user@host:/opt/app/
-
-# 設定ファイルでプロキシを指定
-# proxy: socks5://user:pass@127.0.0.1:1080
-```
-
-## ポート転送
-
-SSH サーバーを介した TCP トンネル接続。ローカル転送（`-L`）とリモート転送（`-R`）に対応：
-
-```bash
-# ローカル転送：ジャンプホスト経由で db.internal:3306 → localhost:8080
-win-sshpass -p 'pass' -L 8080:db.internal:3306 ssh user@jumphost
-
-# 複数ローカル転送
-win-sshpass -p 'pass' -L 8080:db1.internal:3306 -L 8081:db2.internal:3306 ssh user@jumphost
-
-# リモート転送：localhost:8080 をリモートサーバーのポート 9090 に公開
-win-sshpass -p 'pass' -R 9090:localhost:8080 ssh user@server
-
-# 転送のみモード（コマンドなし、Ctrl+C までブロック）
-win-sshpass -p 'pass' -L 8080:db.internal:3306 -L 6379:redis.internal:6379 ssh user@jumphost
-```
-
-> ポート転送は標準 OpenSSH 形式：`[バインドアドレス:]ポート:ホスト:ホストポート`。SCP、Rsync、ファイル転送モードとの併用は不可。
-
-## Git Bash の注意事項
-
-リモートパスは `//` で始めてパス変換を回避してください：
-```bash
-# 誤り: /tmp が Windows パスに変換される
-win-sshpass ... -remote /tmp/file.txt
-
-# 正しい: ダブルスラッシュを使用
-win-sshpass ... -remote //tmp/file.txt
-```
-
-## Go SDK としての利用
-
-`win-sshpass` は再利用可能な Go ライブラリ（`package sshpass`）でもあります。インポートして、SSH/SFTP/Shell 機能を独自アプリに組み込めます：
-
-```bash
-go get github.com/chuccp/win-sshpass
-```
-
-```go
-package main
-
-import (
-	"log"
-
-	sshpass "github.com/chuccp/win-sshpass"
-)
-
-func main() {
-	cfg := sshpass.NewConfig()
-	cfg.Host = "example.com"
-	cfg.User = "root"
-	cfg.Password = "secret"
-
-	// NewClient がダイヤルし、すぐに使えるクライアントを返します。
-	client, err := sshpass.NewClient(cfg, sshpass.WithSignalHandler())
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer client.Close()
-
-	// コマンドを実行（出力はデフォルトで os.Stdout/os.Stderr に流れます）。
-	if err := client.Exec("uname -a"); err != nil {
-		log.Fatal(err)
-	}
-
-	// SFTP でファイルをアップロード。
-	sftp, err := client.SFTP()
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer sftp.Close()
-	if err := sftp.Upload("./local.txt", "/tmp/remote.txt"); err != nil {
-		log.Fatal(err)
-	}
-}
-```
-
-### カスタマイズオプション
-
-`NewClient` に渡す関数型オプションで動作を設定します：
-
-| オプション | 用途 |
-|-----------|------|
-| `WithStdin(r)` / `WithStdout(w)` / `WithStderr(w)` | I/O ストリームのリダイレクト（デフォルト `os.Stdin`/`os.Stdout`/`os.Stderr`）。 |
-| `WithProgress(fn)` | SFTP 転送中に `(description string, sent, total int64)` を受け取る `ProgressFunc` コールバックを設定。SDK 自身はレンダリングを行わず、進行の表示方法は呼び出し側に委ねられます。デフォルトは未設定（ヘッドレス環境向け）。 |
-| `WithFileSelector(s)` | rz/sz ファイル転送フォールバックで使用する `FileSelector` を設定。SDK はデフォルト実装を提供せず、未設定時は rz/sz が stdin からパスを読み取ります。 |
-| `WithSignalHandler()` | Ctrl+C ハンドラを登録して接続を閉じる。デフォルトでは登録されず、ライブラリはホストプロセスのシグナル処理に干渉しません。 |
-
-SDK は意図的に **UI コードを一切内蔵していません**（プログレスバーやファイルダイアログなし）。
-これらは CLI パッケージ（`cmd/sshpass/ui.go`）に実装され、progressbar ベースの
-`ProgressFunc` と zenity ベースの `FileSelector` をクライアントに組み込んでいます。
-ライブラリ利用者は独自に提供する必要があります。
-
-SSH 接続をプロキシ経由でトンネルするには、`NewClient` を呼び出す前に `Config.ProxyURL` を設定します：
+## Go SDK
 
 ```go
 cfg := sshpass.NewConfig()
 cfg.Host = "example.com"
 cfg.User = "root"
 cfg.Password = "secret"
-cfg.ProxyURL = "socks5://user:pass@127.0.0.1:1080" // または http://、https://、socks4://
 
 client, err := sshpass.NewClient(cfg)
+if err != nil {
+    log.Fatal(err)
+}
+defer client.Close()
+
+if err := client.Exec("uname -a"); err != nil {
+    log.Fatal(err)
+}
 ```
-
-低レベルヘルパー関数も高度な用途向けにエクスポートされています：`Dial`、`NewConfig`、
-`LoadConfig`、`LoadConfigOrPasswordFile`、`ParseSSHArgs`、`ParseSCPArgs`、`ParseRsyncArgs`、
-`DetectCommandType`、`RunSCP`、`RunRsync`、`CleanRemotePath`、`SplitPaths`、
-`ParseUserHostPath`、`ExitCodeFromError`。
-
-## ビルド
 
 ```bash
-# Windows
-go build -o win-sshpass.exe ./cmd/sshpass
-
-# Linux / macOS
-go build -o win-sshpass ./cmd/sshpass
-
-# クロスコンパイル
-GOOS=linux   GOARCH=amd64 CGO_ENABLED=0 go build -o win-sshpass ./cmd/sshpass
-GOOS=windows GOARCH=amd64               go build -o win-sshpass.exe ./cmd/sshpass
-GOOS=darwin  GOARCH=arm64               go build -o win-sshpass ./cmd/sshpass
+go get github.com/chuccp/win-sshpass
 ```
 
-## 依存関係
+[Go SDK ガイド](https://chuccp.github.io/win-sshpass/ja/advanced/sdk/)も参照してください。
 
-- Go 1.26+
-- golang.org/x/crypto/ssh
-- github.com/pkg/sftp
-- github.com/schollz/progressbar/v3（CLI プログレスバーのみ）
-- github.com/ncruces/zenity（CLI ファイルダイアログのみ）
+## オンラインドキュメント
 
+- [English](https://chuccp.github.io/win-sshpass/en/)
+- [简体中文](https://chuccp.github.io/win-sshpass/zh/)
+- [繁體中文](https://chuccp.github.io/win-sshpass/tw/)
+- [日本語](https://chuccp.github.io/win-sshpass/ja/)
+- [ドキュメントソース](https://github.com/chuccp/win-sshpass/tree/main/docs-site)
+
+## 開発
+
+```bash
+go test -race ./...
+go vet ./...
+go build -o win-sshpass.exe ./cmd/sshpass
+```
+
+クロスコンパイル：
+
+```bash
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o win-sshpass ./cmd/sshpass
+GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -o win-sshpass ./cmd/sshpass
+```
+
+## License
+
+Apache-2.0。[LICENSE](LICENSE) を参照してください。

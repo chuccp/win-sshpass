@@ -108,8 +108,18 @@ win-sshpass update
 win-sshpass update -check
 ```
 
+## Web Console and MCP
+
+```bash
+win-sshpass -web -h 127.0.0.1 -u root -P 22 -p 'password'
+```
+
+Open <http://127.0.0.1:6326>. The workspace includes an SFTP file manager, a
+real SSH terminal, drag-and-drop transfers, themes, and MCP at `/mcp`.
+
 ## Next Steps
 
 - [SSH Connection](../guide/ssh.md) - Deep dive into authentication
 - [File Transfer](../guide/file-transfer.md) - Complete SFTP usage
 - [Configuration File](../guide/config-file.md) - Manage multiple servers
+- [Web Console & MCP](../guide/web-console.md) - Browser workspace and AI tools

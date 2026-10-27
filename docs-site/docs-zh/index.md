@@ -6,7 +6,7 @@ hide:
 
 # win-sshpass
 
-> win-sshpass — 跨平台 sshpass 实现：密码/密钥/ssh-agent SSH 登录、交互式 Shell、SFTP/SCP/Rsync 文件传输、端口转发 (-L/-R)、SOCKS5/SOCKS4/HTTP 代理隧道、AI 代理 JSON 输出、断点续传、文件哈希校验、密钥生成，以及可复用的 Go SDK。
+> win-sshpass — 跨 Windows、Linux、macOS 的 SSH 客户端：密码/密钥/agent 登录、SFTP 与 SCP/Rsync 传输、端口转发、SOCKS/HTTP 代理、JSON 自动化、全屏 Web SSH 工作区、MCP 工具和可复用 Go SDK。
 
 [快速开始](getting-started/quick-start.md){ .md-button .md-button--primary }
 [安装](getting-started/installation.md){ .md-button }
@@ -25,6 +25,8 @@ hide:
 - **:material-shield-account: SSH Agent 与 JSON 模式** — 自动检测并使用本地 ssh-agent 进行认证，支持 agent 转发（`-A`）。结构化 JSON 输出（`-json`）适用于 AI 代理和自动化。
 - **:material-reload: 断点续传** — 使用 `-resume` 标志从中断处恢复 SFTP 上传/下载。
 - **:material-fingerprint: 文件哈希与校验** — 计算并校验本地文件校验和（MD5、SHA-1、SHA-256、SHA-512）— 无需 SSH 连接。
+- **:material-monitor-dashboard: Web SSH 工作区** — SFTP 文件管理、拖拽传输、上传进度、可拖动分隔线、明暗主题和真实 xterm.js SSH PTY。
+- **:material-robot: MCP** — 在 `/mcp` 提供 `ssh_exec` 与 SFTP 文件工具，供 AI 客户端使用。
 - **:material-package-variant: 可复用 Go SDK** — 导入 `package sshpass`，将 SSH/SFTP/Shell 嵌入你自己的应用，支持注入 I/O、进度回调，零 UI 依赖。
 
 ---
@@ -52,6 +54,9 @@ win-sshpass -p 'password' ssh user@host
 
 # 生成 SSH 密钥对
 win-sshpass keygen
+
+# 打开 Web SSH 工作区
+win-sshpass -web
 ```
 
 ---
@@ -63,7 +68,7 @@ win-sshpass keygen
 | [:material-download: 安装](getting-started/installation.md) | [:material-rocket-launch: 快速开始](getting-started/quick-start.md) | [:material-console: SSH 连接](guide/ssh.md) |
 | [:material-file-sync: 文件传输](guide/file-transfer.md) | [:material-monitor: 交互式 Shell](guide/shell.md) | [:material-folder-multiple: SCP 与 Rsync](guide/scp-rsync.md) |
 | [:material-cog: 配置文件](guide/config-file.md) | [:material-code-braces: Go SDK](advanced/sdk.md) | [:material-security: 最佳实践](advanced/best-practices.md) |
-| [:material-history: 更新日志](changelog.md) | | |
+| [:material-monitor-dashboard: Web 控制台与 MCP](guide/web-console.md) | [:material-history: 更新日志](changelog.md) | |
 
 ---
 

@@ -6,7 +6,7 @@ hide:
 
 # win-sshpass
 
-> クロスプラットフォームの sshpass 実装（Windows、Linux、macOS）：パスワード/キー/ssh-agent SSH ログイン、インタラクティブシェル、SFTP/SCP/Rsync ファイル転送、ポート転送 (-L/-R)、SOCKS5/SOCKS4/HTTP プロキシトンネル、AI エージェント向け JSON 出力、ブレークポイントレジューム、ファイルハッシュ検証、鍵生成、再利用可能な Go SDK。
+> Windows、Linux、macOS 対応の SSH クライアント：パスワード/鍵/agent ログイン、SFTP と SCP/Rsync 転送、ポート転送、SOCKS/HTTP プロキシ、JSON 自動化、全画面 Web SSH ワークスペース、MCP ツール、再利用可能な Go SDK。
 
 [クイックスタート](getting-started/quick-start.md){ .md-button .md-button--primary }
 [インストール](getting-started/installation.md){ .md-button }
@@ -25,6 +25,8 @@ hide:
 - **:material-shield-account: SSH Agent と JSON モード** — ローカル ssh-agent を自動検出して認証、オプションのエージェント転送（`-A`）。AI エージェントと自動化のための構造化 JSON 出力（`-json`）。
 - **:material-reload: ブレークポイントレジューム** — 中断された SFTP アップロード/ダウンロードを `-resume` フラグで途中から再開。
 - **:material-fingerprint: ファイルハッシュ検証** — ローカルファイルのチェックサム（MD5、SHA-1、SHA-256、SHA-512）を計算・検証 — SSH 接続不要。
+- **:material-monitor-dashboard: Web SSH ワークスペース** — SFTP 管理、ドラッグ＆ドロップ、アップロード進捗、可変分割、テーマ、実際の xterm.js SSH PTY。
+- **:material-robot: MCP** — `/mcp` で `ssh_exec` と SFTP ファイルツールを AI クライアントへ提供。
 - **:material-package-variant: 再利用可能な Go SDK** — `package sshpass` をインポートして、SSH/SFTP/シェルを独自のアプリに組み込み可能。注入可能な I/O、プログレスコールバック、UI 依存ゼロ。
 
 ---
@@ -52,6 +54,9 @@ win-sshpass -p 'password' ssh user@host
 
 # SSH キーペアを生成
 win-sshpass keygen
+
+# Web SSH ワークスペースを開く
+win-sshpass -web
 ```
 
 ---
@@ -63,7 +68,7 @@ win-sshpass keygen
 | [:material-download: インストール](getting-started/installation.md) | [:material-rocket-launch: クイックスタート](getting-started/quick-start.md) | [:material-console: SSH 接続](guide/ssh.md) |
 | [:material-file-sync: ファイル転送](guide/file-transfer.md) | [:material-monitor: インタラクティブシェル](guide/shell.md) | [:material-folder-multiple: SCP と Rsync](guide/scp-rsync.md) |
 | [:material-cog: 設定ファイル](guide/config-file.md) | [:material-code-braces: Go SDK](advanced/sdk.md) | [:material-security: ベストプラクティス](advanced/best-practices.md) |
-| [:material-history: 変更履歴](changelog.md) | | |
+| [:material-monitor-dashboard: Web コンソールと MCP](guide/web-console.md) | [:material-history: 変更履歴](changelog.md) | |
 
 ---
 

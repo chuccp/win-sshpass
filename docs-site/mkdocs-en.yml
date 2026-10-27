@@ -1,6 +1,6 @@
 site_name: win-sshpass
 site_url: https://chuccp.github.io/win-sshpass/en/
-site_description: 'win-sshpass — A cross-platform sshpass implementation: SSH password/key login, interactive shell, SFTP/SCP/Rsync transfer, SOCKS5/SOCKS4/HTTP proxy tunneling, breakpoint resume, file hash/verify, key generation, Docker test suite, and a reusable Go SDK.'
+site_description: 'win-sshpass — Cross-platform SSH client with SFTP/SCP/Rsync, port forwarding, proxies, a full-screen Web SSH workspace, MCP tools, and a reusable Go SDK.'
 site_author: win-sshpass Team
 
 docs_dir: docs-en
@@ -54,8 +54,7 @@ edit_uri: edit/main/docs-site/docs-en/
 plugins:
   - search:
       separator: '[\s\-,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])'
-  - tags:
-      tags_file: tags.md
+  - tags
 
 markdown_extensions:
   - abbr
@@ -129,6 +128,7 @@ nav:
       - Interactive Shell: guide/shell.md
       - SCP & Rsync: guide/scp-rsync.md
       - Configuration File: guide/config-file.md
+      - Web Console & MCP: guide/web-console.md
   - Advanced:
       - Go SDK: advanced/sdk.md
       - Best Practices: advanced/best-practices.md

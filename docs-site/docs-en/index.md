@@ -6,7 +6,7 @@ hide:
 
 # win-sshpass
 
-> A cross-platform implementation of sshpass (Windows, Linux & macOS): password/key/ssh-agent SSH login, interactive shell, SFTP/SCP/Rsync file transfer, port forwarding (-L/-R), SOCKS5/SOCKS4/HTTP proxy tunneling, JSON output for AI agents, breakpoint resume, file hash/verify, key generation, and a reusable Go SDK.
+> A cross-platform SSH client for Windows, Linux and macOS with password/key/agent login, SFTP and SCP/Rsync transfers, port forwarding, SOCKS/HTTP proxies, JSON automation, a full-screen Web SSH workspace, MCP tools, and a reusable Go SDK.
 
 [Quick Start](getting-started/quick-start.md){ .md-button .md-button--primary }
 [Installation](getting-started/installation.md){ .md-button }
@@ -25,6 +25,8 @@ hide:
 - **:material-shield-account: SSH Agent & JSON Mode** — Auto-detect and use local ssh-agent for authentication, with optional agent forwarding (`-A`). Structured JSON output (`-json`) for AI agents and automation.
 - **:material-reload: Breakpoint Resume** — Resume interrupted SFTP uploads/downloads from where they left off with the `-resume` flag.
 - **:material-fingerprint: File Hash & Verify** — Compute and verify local file checksums (MD5, SHA-1, SHA-256, SHA-512) — no SSH connection needed.
+- **:material-monitor-dashboard: Web SSH Workspace** — SFTP manager, drag-and-drop transfers, upload progress, resizable panes, themes, and a real xterm.js SSH PTY.
+- **:material-robot: MCP** — Expose `ssh_exec` and SFTP file tools at `/mcp` for AI clients.
 - **:material-package-variant: Reusable Go SDK** — Import `package sshpass` to embed SSH/SFTP/shell in your own app with injectable I/O, progress callbacks, and zero UI dependencies.
 
 ---
@@ -52,6 +54,9 @@ win-sshpass -p 'password' ssh user@host
 
 # Generate SSH key pair
 win-sshpass keygen
+
+# Open the Web SSH workspace
+win-sshpass -web
 ```
 
 ---
@@ -63,7 +68,7 @@ win-sshpass keygen
 | [:material-download: Installation](getting-started/installation.md) | [:material-rocket-launch: Quick Start](getting-started/quick-start.md) | [:material-console: SSH Connection](guide/ssh.md) |
 | [:material-file-sync: File Transfer](guide/file-transfer.md) | [:material-monitor: Interactive Shell](guide/shell.md) | [:material-folder-multiple: SCP & Rsync](guide/scp-rsync.md) |
 | [:material-cog: Configuration File](guide/config-file.md) | [:material-code-braces: Go SDK](advanced/sdk.md) | [:material-security: Best Practices](advanced/best-practices.md) |
-| [:material-history: Changelog](changelog.md) | | |
+| [:material-monitor-dashboard: Web Console & MCP](guide/web-console.md) | [:material-history: Changelog](changelog.md) | |
 
 ---
 

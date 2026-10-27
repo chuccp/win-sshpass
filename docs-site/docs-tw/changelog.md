@@ -1,5 +1,13 @@
 # 更新日誌
 
+## 目前版本
+
+- 新增全螢幕 Web SSH 工作區，包含 SFTP 檔案管理員與 xterm.js PTY。
+- 新增拖曳傳輸、上傳百分比、可拖曳分隔線與跟隨系統/明暗主題。
+- 新增 SSH 命令與 SFTP 操作的 MCP Streamable HTTP 工具。
+- 強化 CLI 解析、設定驗證、代理協商、SFTP 續傳、連接埠轉送與 rz/sz 處理。
+- 新增基於 Docker 的 CLI、Web、終端、檔案管理、代理與 MCP 回歸測試。
+
 ## v0.9.1
 
 - 新增 JSON 輸出模式（`-json` 參數）—— 為 AI 代理和自動化輸出結構化 JSON 結果，JSON 模式下自動抑制進度條
