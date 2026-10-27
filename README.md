@@ -62,6 +62,8 @@ The command must include an SSH host, either through `-h` or `-f`. Open
 
 ## Web Console
 
+![win-sshpass Web SSH console with SFTP file manager and terminal](assets/web-console.png)
+
 The Web workspace is designed for managing files and a live SSH session:
 
 - Left: SFTP directory browser, upload/download, mkdir, delete, drag-and-drop.

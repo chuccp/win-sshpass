@@ -59,6 +59,8 @@ win-sshpass -web -h 127.0.0.1 -u root -P 22 -p 'password'
 
 ## Web SSH ワークスペース
 
+![win-sshpass Web SSH ワークスペース：SFTP ファイルマネージャーとターミナル](assets/web-console.png)
+
 - 左側：SFTP ディレクトリ閲覧、アップロード/ダウンロード、ディレクトリ作成、削除、ドラッグ＆ドロップ。
 - 右側：xterm.js で表示する実際の SSH PTY。vim/top と Tab 補完に対応。
 - 分割バー：ドラッグまたは方向キーで幅を調整し、設定を保存。

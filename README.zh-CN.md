@@ -59,6 +59,8 @@ win-sshpass -web -h 127.0.0.1 -u root -P 22 -p '密码'
 
 ## Web SSH 工作区
 
+![win-sshpass Web SSH 工作区：SFTP 文件管理器与终端](assets/web-console.png)
+
 - 左侧：SFTP 目录浏览、上传下载、新建目录、删除、拖拽传输。
 - 右侧：xterm.js 渲染的真实 SSH PTY，支持 vim/top 和 Tab 补全。
 - 分隔线：拖动或方向键调整宽度，自动记忆。
