@@ -196,7 +196,11 @@ func SelfUpdate(opts UpdateOptions) (*UpdateResult, error) {
 	defer os.RemoveAll(tmpDir)
 
 	archivePath := filepath.Join(tmpDir, "release"+ext)
-	opts.Logf("downloading %s (%s)", asset.Name, humanBytes(asset.Size))
+	if asset.Size > 0 {
+		opts.Logf("downloading %s (%s)", asset.Name, humanBytes(asset.Size))
+	} else {
+		opts.Logf("downloading %s", asset.Name)
+	}
 	if _, err := DownloadFile(asset.URL, archivePath, "Downloading "+asset.Name, opts.Client, opts.Progress); err != nil {
 		return nil, err
 	}
@@ -255,18 +259,7 @@ func CompareVersions(a, b string) int {
 	}
 
 	// Same numbers: a final release outranks any pre-release of it.
-	switch {
-	case aPre == bPre:
-		return 0
-	case aPre == "":
-		return 1
-	case bPre == "":
-		return -1
-	case aPre < bPre:
-		return -1
-	default:
-		return 1
-	}
+	return comparePrerelease(aPre, bPre)
 }
 
 // parseVersion splits a version string into its numeric parts and its
@@ -278,7 +271,12 @@ func parseVersion(v string) (nums []int, pre string, ok bool) {
 	if v == "" {
 		return nil, "", false
 	}
-	if i := strings.IndexAny(v, "-+"); i >= 0 {
+	// Build metadata (everything after "+") does not participate in version
+	// precedence. Strip it before looking for the pre-release suffix.
+	if i := strings.IndexByte(v, '+'); i >= 0 {
+		v = v[:i]
+	}
+	if i := strings.IndexByte(v, '-'); i >= 0 {
 		pre, v = v[i+1:], v[:i]
 	}
 	for _, part := range strings.Split(v, ".") {
@@ -289,6 +287,68 @@ func parseVersion(v string) (nums []int, pre string, ok bool) {
 		nums = append(nums, n)
 	}
 	return nums, pre, len(nums) > 0
+}
+
+// comparePrerelease compares dot-separated SemVer pre-release identifiers.
+// Numeric identifiers compare numerically and sort before non-numeric ones.
+func comparePrerelease(a, b string) int {
+	switch {
+	case a == b:
+		return 0
+	case a == "":
+		return 1
+	case b == "":
+		return -1
+	}
+
+	aParts := strings.Split(a, ".")
+	bParts := strings.Split(b, ".")
+	for i := 0; i < len(aParts) && i < len(bParts); i++ {
+		aNumeric := isAllDigits(aParts[i])
+		bNumeric := isAllDigits(bParts[i])
+		switch {
+		case aNumeric && bNumeric:
+			if cmp := compareNumericIdentifier(aParts[i], bParts[i]); cmp != 0 {
+				return cmp
+			}
+		case aNumeric:
+			return -1
+		case bNumeric:
+			return 1
+		default:
+			if cmp := strings.Compare(aParts[i], bParts[i]); cmp != 0 {
+				return cmp
+			}
+		}
+	}
+
+	switch {
+	case len(aParts) < len(bParts):
+		return -1
+	case len(aParts) > len(bParts):
+		return 1
+	default:
+		return 0
+	}
+}
+
+func compareNumericIdentifier(a, b string) int {
+	a = strings.TrimLeft(a, "0")
+	b = strings.TrimLeft(b, "0")
+	if a == "" {
+		a = "0"
+	}
+	if b == "" {
+		b = "0"
+	}
+	switch {
+	case len(a) < len(b):
+		return -1
+	case len(a) > len(b):
+		return 1
+	default:
+		return strings.Compare(a, b)
+	}
 }
 
 // FetchLatestRelease returns the newest published (non-draft, non-prerelease)

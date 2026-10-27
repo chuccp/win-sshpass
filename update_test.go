@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -32,6 +33,15 @@ func TestCompareVersions(t *testing.T) {
 		{"v1.0.0-rc1", "v1.0.0", -1}, // pre-release sorts first
 		{"v1.0.0", "v1.0.0-rc1", 1},  //
 		{"v1.0.0-rc1", "v1.0.0-rc2", -1},
+		{"v1.0.0-rc.2", "v1.0.0-rc.10", -1},
+		{"v1.0.0-rc.10", "v1.0.0-rc.2", 1},
+		{"v1.0.0-2", "v1.0.0-10", -1},
+		{"v1.0.0-1", "v1.0.0-alpha", -1},
+		{"v1.0.0-alpha", "v1.0.0-alpha.1", -1},
+		{"v1.0.0-alpha.1", "v1.0.0-alpha.beta", -1},
+		{"v1.0.0+build.1", "v1.0.0", 0},
+		{"v1.0.0+build.1", "v1.0.0+build.2", 0},
+		{"v1.0.0-rc.1+exp.sha.5114f85", "v1.0.0", -1},
 		{"dev", "v1.0.0", -1}, // development builds are upgraded to the release
 		{"v1.0.0", "dev", 1},
 		{"dev", "dev", 0},
@@ -598,7 +608,13 @@ func TestSelfUpdateUsesWebRouteWithoutAPI(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	res, err := SelfUpdate(UpdateOptions{TargetPath: target})
+	var logs []string
+	res, err := SelfUpdate(UpdateOptions{
+		TargetPath: target,
+		Logf: func(format string, args ...any) {
+			logs = append(logs, fmt.Sprintf(format, args...))
+		},
+	})
 	if err != nil {
 		t.Fatalf("SelfUpdate failed: %v", err)
 	}
@@ -616,6 +632,11 @@ func TestSelfUpdateUsesWebRouteWithoutAPI(t *testing.T) {
 	}
 	if got, _ := os.ReadFile(target); !bytes.Equal(got, payload) {
 		t.Error("target does not hold the release binary")
+	}
+	for _, line := range logs {
+		if strings.Contains(line, "downloading ") && strings.Contains(line, "(0 B)") {
+			t.Errorf("web-route download log shows an unknown size as 0 B: %q", line)
+		}
 	}
 }
 

@@ -2,6 +2,38 @@ package sshpass
 
 import "strings"
 
+// parseRemotePathArg parses a scp/rsync remote path. Unlike
+// ParseUserHostPath, the username is optional, matching the CLI's
+// "[user@host:]path" syntax. Windows drive paths are treated as local paths.
+func parseRemotePathArg(arg string) (user, host, remotePath string, ok bool) {
+	if arg == "" || isWindowsLocalPath(arg) {
+		return "", "", "", false
+	}
+
+	remainder := arg
+	if at := strings.IndexByte(arg, '@'); at >= 0 {
+		if at == 0 {
+			return "", "", "", false
+		}
+		user = arg[:at]
+		remainder = arg[at+1:]
+	}
+
+	if strings.HasPrefix(remainder, "[") {
+		closeBracket := strings.IndexByte(remainder, ']')
+		if closeBracket <= 1 || closeBracket+1 >= len(remainder) || remainder[closeBracket+1] != ':' {
+			return "", "", "", false
+		}
+		return user, remainder[:closeBracket+1], remainder[closeBracket+2:], true
+	}
+
+	colon := strings.IndexByte(remainder, ':')
+	if colon <= 0 {
+		return "", "", "", false
+	}
+	return user, remainder[:colon], remainder[colon+1:], true
+}
+
 // CommandType represents the command type.
 type CommandType int
 
@@ -26,6 +58,18 @@ func ParseSSHArgs(args []string) (*Config, string) {
 			// skip the ssh command itself
 			i++
 			continue
+		}
+		if config.Host != "" {
+			// Once the destination host is known, all remaining arguments are
+			// the remote command, matching OpenSSH. --bg is a project-specific
+			// extension that may appear before the command.
+			if arg == "--bg" || arg == "-bg" {
+				config.Background = true
+				i++
+				continue
+			}
+			command = JoinArgs(args[i:])
+			break
 		}
 		if arg == "-p" && i+1 < len(args) {
 			config.Port = args[i+1]
@@ -72,11 +116,8 @@ func ParseSSHArgs(args []string) (*Config, string) {
 			i++
 			continue
 		}
-		// remaining args as command
-		if config.Host != "" {
-			command = JoinArgs(args[i:])
-			break
-		}
+		// Unknown option-like tokens before the destination are ignored for
+		// compatibility with OpenSSH options that this client handles natively.
 		i++
 	}
 
@@ -119,8 +160,11 @@ func ParseSCPArgs(args []string) (*Config, []string) {
 			i++
 			continue
 		}
-		if strings.Contains(arg, "@") && strings.Contains(arg, ":") {
-			config.SetUserHostFromArg(arg)
+		if user, host, _, ok := parseRemotePathArg(arg); ok {
+			if user != "" {
+				config.User = user
+			}
+			config.Host = host
 		}
 		scpArgs = append(scpArgs, arg)
 		i++
@@ -164,8 +208,11 @@ func ParseRsyncArgs(args []string) (*Config, []string) {
 			i++
 			continue
 		}
-		if strings.Contains(arg, "@") && strings.Contains(arg, ":") {
-			config.SetUserHostFromArg(arg)
+		if user, host, _, ok := parseRemotePathArg(arg); ok {
+			if user != "" {
+				config.User = user
+			}
+			config.Host = host
 		}
 		rsyncArgs = append(rsyncArgs, arg)
 		i++

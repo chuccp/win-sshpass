@@ -69,6 +69,9 @@ func BackgroundCommand(command string) string {
 // Returns error if complex paths (containing '/' or '\') are space-separated.
 // name identifies which parameter for error messages (e.g., "local" or "remote").
 func SplitPaths(s, name string) ([]string, error) {
+	if strings.TrimSpace(s) == "" {
+		return nil, fmt.Errorf("no %s paths provided", name)
+	}
 	var paths []string
 	if strings.Contains(s, ",") {
 		for _, p := range strings.Split(s, ",") {
@@ -85,6 +88,9 @@ func SplitPaths(s, name string) ([]string, error) {
 		paths = strings.Fields(s)
 	} else {
 		paths = []string{s}
+	}
+	if len(paths) == 0 {
+		return nil, fmt.Errorf("no %s paths provided", name)
 	}
 	return paths, nil
 }

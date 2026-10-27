@@ -32,6 +32,12 @@ func proxyDial(proxyURL, address string, timeout int) (net.Conn, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid proxy URL: %w", err)
 	}
+	if u.Hostname() == "" {
+		return nil, fmt.Errorf("invalid proxy URL %q: proxy host is required", proxyURL)
+	}
+	if err := validateProxyTarget(address); err != nil {
+		return nil, err
+	}
 
 	scheme := strings.ToLower(u.Scheme)
 	switch scheme {
@@ -44,20 +50,82 @@ func proxyDial(proxyURL, address string, timeout int) (net.Conn, error) {
 	}
 }
 
+func validateProxyTarget(address string) error {
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return fmt.Errorf("invalid proxy target address %q: %w", address, err)
+	}
+	if host == "" || strings.ContainsAny(host, "\r\n\x00") {
+		return fmt.Errorf("invalid proxy target address %q", address)
+	}
+	n, err := strconv.Atoi(port)
+	if err != nil || n < 1 || n > 65535 {
+		return fmt.Errorf("invalid proxy target port %q", port)
+	}
+	return nil
+}
+
 // socksDial handles SOCKS4/SOCKS5 proxies. SOCKS5 uses golang.org/x/net/proxy;
 // SOCKS4 is implemented inline (the protocol is trivial and x/net/proxy has
 // no SOCKS4 support).
 func socksDial(u *url.URL, address string, timeout int) (net.Conn, error) {
 	scheme := strings.ToLower(u.Scheme)
-	proxyAddr := u.Host
-	if !strings.Contains(proxyAddr, ":") {
-		proxyAddr = net.JoinHostPort(proxyAddr, "1080")
-	}
+	proxyAddr := socksProxyAddress(u)
 
 	if scheme == "socks4" {
 		return socks4Dial(proxyAddr, u, address, timeout)
 	}
+	if scheme == "socks5" {
+		resolved, err := resolveSOCKS5Address(address, timeout)
+		if err != nil {
+			return nil, err
+		}
+		address = resolved
+	}
 	return socks5Dial(proxyAddr, u, address, timeout)
+}
+
+func socksProxyAddress(u *url.URL) string {
+	port := u.Port()
+	if port == "" {
+		port = "1080"
+	}
+	return net.JoinHostPort(u.Hostname(), port)
+}
+
+// resolveSOCKS5Address mirrors the conventional distinction between socks5
+// and socks5h: socks5 resolves the destination locally, while socks5h sends
+// the hostname to the proxy.
+func resolveSOCKS5Address(address string, timeout int) (string, error) {
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return "", fmt.Errorf("invalid SOCKS5 target address %q: %w", address, err)
+	}
+	if net.ParseIP(host) != nil {
+		return address, nil
+	}
+
+	ctx := context.Background()
+	if timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
+		defer cancel()
+	}
+	ips, err := net.DefaultResolver.LookupNetIP(ctx, "ip", host)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve SOCKS5 target %q locally: %w", host, err)
+	}
+	if len(ips) == 0 {
+		return "", fmt.Errorf("failed to resolve SOCKS5 target %q locally: no addresses", host)
+	}
+	selected := ips[0]
+	for _, ip := range ips {
+		if ip.Is4() {
+			selected = ip
+			break
+		}
+	}
+	return net.JoinHostPort(selected.String(), port), nil
 }
 
 // socks5Dial creates a SOCKS5 dialer via golang.org/x/net/proxy. The timeout
@@ -154,6 +222,9 @@ func socks4Dial(proxyAddr string, u *url.URL, address string, timeout int) (net.
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to SOCKS4 proxy %s: %w", proxyAddr, err)
 	}
+	if timeout > 0 {
+		conn.SetDeadline(time.Now().Add(time.Duration(timeout) * time.Second))
+	}
 
 	host, portStr, err := net.SplitHostPort(address)
 	if err != nil {
@@ -216,6 +287,7 @@ func socks4Dial(proxyAddr string, u *url.URL, address string, timeout int) (net.
 		conn.Close()
 		return nil, fmt.Errorf("SOCKS4 proxy rejected connection (status 0x%02x)", resp[1])
 	}
+	conn.SetDeadline(time.Time{})
 	return conn, nil
 }
 
@@ -241,6 +313,9 @@ func httpConnectDial(u *url.URL, scheme, address string, timeout int) (net.Conn,
 	conn, err := d.Dial("tcp", proxyAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to HTTP proxy %s: %w", proxyAddr, err)
+	}
+	if timeout > 0 {
+		conn.SetDeadline(time.Now().Add(time.Duration(timeout) * time.Second))
 	}
 
 	// For https proxies, wrap the connection in TLS before sending CONNECT.
@@ -310,8 +385,10 @@ func httpConnectDial(u *url.URL, scheme, address string, timeout int) (net.Conn,
 	// may have already started sending SSH handshake data), wrap the connection
 	// so those bytes are served first before reading fresh data from conn.
 	if br.Buffered() > 0 {
+		conn.SetDeadline(time.Time{})
 		return &bufferedConn{r: br, Conn: conn}, nil
 	}
+	conn.SetDeadline(time.Time{})
 	return conn, nil
 }
 

@@ -31,9 +31,9 @@ func RunSCP(c *Client, args []string) error {
 	// parse source and target
 	var localFiles []string
 	for i, arg := range nonFlagArgs {
-		if strings.Contains(arg, "@") && strings.Contains(arg, ":") {
-			// remote path user@host:path (supports IPv6)
-			_, _, remotePath = ParseUserHostPath(arg)
+		if _, _, parsedPath, ok := parseRemotePathArg(arg); ok {
+			// remote path [user@]host:path (supports IPv6 and an optional user)
+			remotePath = parsedPath
 			remoteIdx = i
 			remoteCount++
 		} else if arg != "scp" {
@@ -86,7 +86,7 @@ func RunRsync(c *Client, args []string) error {
 	var isUpload bool
 
 	for _, arg := range args {
-		if strings.Contains(arg, "@") && strings.Contains(arg, ":") {
+		if _, _, _, ok := parseRemotePathArg(arg); ok {
 			remoteArg = arg
 			remoteCount++
 		} else if !strings.HasPrefix(arg, "-") {
@@ -107,7 +107,7 @@ func RunRsync(c *Client, args []string) error {
 		if strings.HasPrefix(arg, "-") {
 			continue
 		}
-		if strings.Contains(arg, "@") && strings.Contains(arg, ":") {
+		if _, _, _, ok := parseRemotePathArg(arg); ok {
 			isUpload = false
 		} else {
 			isUpload = true
@@ -123,7 +123,7 @@ func RunRsync(c *Client, args []string) error {
 
 	if isUpload {
 		// local to remote (upload)
-		_, _, remotePath := ParseUserHostPath(remoteArg)
+		_, _, remotePath, _ := parseRemotePathArg(remoteArg)
 		rPath, err := CleanRemotePath(remotePath)
 		if err != nil {
 			return err
@@ -136,7 +136,7 @@ func RunRsync(c *Client, args []string) error {
 		return nil
 	}
 	// remote to local (download)
-	_, _, remotePath := ParseUserHostPath(remoteArg)
+	_, _, remotePath, _ := parseRemotePathArg(remoteArg)
 	rPath, err := CleanRemotePath(remotePath)
 	if err != nil {
 		return err

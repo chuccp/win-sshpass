@@ -2,6 +2,8 @@ package sshpass
 
 import (
 	"bufio"
+	"encoding/binary"
+	"fmt"
 	"io"
 	"net"
 	"net/url"
@@ -23,6 +25,146 @@ func TestProxyDialInvalidURL(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for invalid URL")
 	}
+}
+
+func TestProxyDialRejectsMissingHost(t *testing.T) {
+	for _, proxyURL := range []string{"http://", "https://", "socks5://", "socks4://"} {
+		t.Run(proxyURL, func(t *testing.T) {
+			_, err := proxyDial(proxyURL, "example.com:22", 1)
+			if err == nil {
+				t.Fatal("proxyDial accepted a proxy URL without a host")
+			}
+			if !strings.Contains(err.Error(), "proxy host is required") {
+				t.Errorf("error = %v, want missing proxy host", err)
+			}
+		})
+	}
+}
+
+func TestValidateProxyTarget(t *testing.T) {
+	valid := []string{"example.com:22", "127.0.0.1:443", "[::1]:2222"}
+	for _, address := range valid {
+		if err := validateProxyTarget(address); err != nil {
+			t.Errorf("validateProxyTarget(%q) error = %v", address, err)
+		}
+	}
+
+	invalid := []string{"", "example.com", ":22", "example.com:0", "example.com:65536", "bad\r\nHost: injected:22"}
+	for _, address := range invalid {
+		if err := validateProxyTarget(address); err == nil {
+			t.Errorf("validateProxyTarget(%q) succeeded, want an error", address)
+		}
+	}
+}
+
+func TestSocksProxyAddressIPv6DefaultPort(t *testing.T) {
+	u, err := url.Parse("socks5://[::1]")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := socksProxyAddress(u); got != "[::1]:1080" {
+		t.Errorf("socksProxyAddress() = %q, want [::1]:1080", got)
+	}
+}
+
+func startSocks5AddressInspector(t *testing.T) (addr string, addressType chan byte, host chan string) {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { ln.Close() })
+	addressType = make(chan byte, 1)
+	host = make(chan string, 1)
+
+	go func() {
+		conn, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+
+		var greeting [2]byte
+		if _, err := io.ReadFull(conn, greeting[:]); err != nil {
+			return
+		}
+		methods := make([]byte, int(greeting[1]))
+		if _, err := io.ReadFull(conn, methods); err != nil {
+			return
+		}
+		if _, err := conn.Write([]byte{0x05, 0x00}); err != nil {
+			return
+		}
+
+		var request [4]byte
+		if _, err := io.ReadFull(conn, request[:]); err != nil {
+			return
+		}
+		var destination string
+		switch request[3] {
+		case 0x01:
+			var ip [4]byte
+			if _, err := io.ReadFull(conn, ip[:]); err != nil {
+				return
+			}
+			destination = net.IP(ip[:]).String()
+		case 0x03:
+			var length [1]byte
+			if _, err := io.ReadFull(conn, length[:]); err != nil {
+				return
+			}
+			name := make([]byte, int(length[0]))
+			if _, err := io.ReadFull(conn, name); err != nil {
+				return
+			}
+			destination = string(name)
+		case 0x04:
+			var ip [16]byte
+			if _, err := io.ReadFull(conn, ip[:]); err != nil {
+				return
+			}
+			destination = net.IP(ip[:]).String()
+		default:
+			return
+		}
+		var port [2]byte
+		if _, err := io.ReadFull(conn, port[:]); err != nil {
+			return
+		}
+		addressType <- request[3]
+		host <- fmt.Sprintf("%s:%d", destination, binary.BigEndian.Uint16(port[:]))
+		_, _ = conn.Write([]byte{0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0})
+	}()
+	return ln.Addr().String(), addressType, host
+}
+
+func TestSocks5DNSResolutionLocation(t *testing.T) {
+	t.Run("socks5 resolves locally", func(t *testing.T) {
+		proxyAddr, addressType, host := startSocks5AddressInspector(t)
+		conn, err := proxyDial("socks5://"+proxyAddr, "localhost:22", 3)
+		if err != nil {
+			t.Fatalf("proxyDial failed: %v", err)
+		}
+		conn.Close()
+		if got := <-addressType; got == 0x03 {
+			t.Fatalf("socks5 sent an FQDN to the proxy; destination = %s", <-host)
+		}
+	})
+
+	t.Run("socks5h resolves at proxy", func(t *testing.T) {
+		proxyAddr, addressType, host := startSocks5AddressInspector(t)
+		conn, err := proxyDial("socks5h://"+proxyAddr, "localhost:22", 3)
+		if err != nil {
+			t.Fatalf("proxyDial failed: %v", err)
+		}
+		conn.Close()
+		if got := <-addressType; got != 0x03 {
+			t.Fatalf("socks5h address type = 0x%02x, want FQDN", got)
+		}
+		if got := <-host; got != "localhost:22" {
+			t.Errorf("socks5h destination = %q, want localhost:22", got)
+		}
+	})
 }
 
 func TestProxyDialSchemeRouting(t *testing.T) {
@@ -539,7 +681,7 @@ func TestSocks5ProxyTimeout(t *testing.T) {
 	}()
 
 	start := time.Now()
-	_, err = proxyDial("socks5://"+ln.Addr().String(), "example.com:22", 2)
+	_, err = proxyDial("socks5://"+ln.Addr().String(), "127.0.0.1:22", 2)
 	elapsed := time.Since(start)
 
 	if err == nil {
@@ -551,5 +693,59 @@ func TestSocks5ProxyTimeout(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "timed out") {
 		t.Errorf("error should mention timeout, got: %v", err)
+	}
+}
+
+func startSilentProxy(t *testing.T) string {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { ln.Close() })
+	go func() {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			go func(c net.Conn) {
+				defer c.Close()
+				io.Copy(io.Discard, c)
+			}(conn)
+		}
+	}()
+	return ln.Addr().String()
+}
+
+func TestSocks4ProxyNegotiationTimeout(t *testing.T) {
+	proxyAddr := startSilentProxy(t)
+	start := time.Now()
+	_, err := proxyDial("socks4://"+proxyAddr, "example.com:22", 1)
+	elapsed := time.Since(start)
+	if err == nil {
+		t.Fatal("expected SOCKS4 negotiation timeout")
+	}
+	if elapsed > 3*time.Second {
+		t.Errorf("SOCKS4 negotiation took %v, want timeout near 1s", elapsed)
+	}
+	if !strings.Contains(strings.ToLower(err.Error()), "timeout") {
+		t.Errorf("error = %v, want a timeout error", err)
+	}
+}
+
+func TestHTTPProxyNegotiationTimeout(t *testing.T) {
+	proxyAddr := startSilentProxy(t)
+	start := time.Now()
+	_, err := proxyDial("http://"+proxyAddr, "example.com:22", 1)
+	elapsed := time.Since(start)
+	if err == nil {
+		t.Fatal("expected HTTP CONNECT negotiation timeout")
+	}
+	if elapsed > 3*time.Second {
+		t.Errorf("HTTP CONNECT negotiation took %v, want timeout near 1s", elapsed)
+	}
+	if !strings.Contains(strings.ToLower(err.Error()), "timeout") {
+		t.Errorf("error = %v, want a timeout error", err)
 	}
 }

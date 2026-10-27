@@ -334,7 +334,10 @@ func TestSplitPaths(t *testing.T) {
 		{"space separated with slash errors", "/a.txt /b.txt", nil, true},
 		{"comma with spaces trimmed", " a.txt , b.txt ", []string{"a.txt", "b.txt"}, false},
 		{"comma trailing empty", "a.txt,,b.txt", []string{"a.txt", "b.txt"}, false},
-		{"empty string", "", []string{""}, false},
+		{"empty string", "", nil, true},
+		{"whitespace only", "   \t", nil, true},
+		{"comma only", ",", nil, true},
+		{"commas and whitespace only", " , ,, ", nil, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

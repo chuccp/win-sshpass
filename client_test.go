@@ -9,6 +9,16 @@ func TestNewClientNilConfig(t *testing.T) {
 	}
 }
 
+func TestNewClientValidatesConfigBeforeConnecting(t *testing.T) {
+	_, err := NewClient(&Config{Port: "22", Password: "secret"})
+	if err == nil {
+		t.Fatal("NewClient accepted a config without a host")
+	}
+	if err.Error() != "host address not specified" {
+		t.Fatalf("error = %q, want missing-host validation", err)
+	}
+}
+
 func TestClientCloseIdempotent(t *testing.T) {
 	// Construct a Client without dialing (sshClient is nil).
 	// Close should be safe to call multiple times without panic.

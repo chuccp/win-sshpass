@@ -28,6 +28,13 @@ func Dial(config *Config) (*ssh.Client, error) {
 // dial is the implementation of Dial that logs retry/backoff messages via the
 // given logger, so NewClient can honor WithLogger for diagnostic output.
 func dial(config *Config, logger *slog.Logger) (*ssh.Client, error) {
+	if config == nil {
+		return nil, fmt.Errorf("config must not be nil")
+	}
+	if err := config.Validate(); err != nil {
+		return nil, err
+	}
+
 	var authMethods []ssh.AuthMethod
 
 	// use private key authentication first
@@ -291,7 +298,7 @@ func runShell(c *Client) error {
 		} else {
 			defer sftpClient.Close()
 			monitor := newRzszMonitor(stdinFile, sftpClient, oldState, c.selector, c.stdout, c.stderr, c.logger, c.resetTimeout, c.progress)
-			session.Stdin = stdinFile
+			session.Stdin = &terminalInputMirror{r: stdinFile, monitor: monitor}
 			session.Stdout = &outputWriter{monitor: monitor, out: c.stdout}
 		}
 	} else {

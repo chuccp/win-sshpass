@@ -123,7 +123,7 @@ win-sshpass -p 'password' ssh user@host
 連線狀態下，使用 `rz` / `sz` 命令傳輸檔案（遠端伺服器無需安裝任何軟體）：
 
 ```bash
-# 上傳檔案到遠端目前目錄（彈出檔案選擇器）
+# 上傳檔案到遠端 SFTP 工作目錄（通常為登入主目錄；彈出檔案選擇器）
 rz
 
 # 上傳指定本地檔案
@@ -137,6 +137,7 @@ sz /遠端/檔案/路徑 /本機/儲存/路徑
 ```
 
 > **原理**：當遠端 Shell 回報 `rz`/`sz: command not found` 時，工具自動攔截並透過 SFTP 完成傳輸。支援檔案和目錄，附進度條。
+> SFTP 工作目錄通常為登入主目錄，不受 Shell 後續 `cd` 指令影響。
 
 ## 命令格式
 
@@ -345,7 +346,7 @@ win-sshpass update -version v1.0.0
 ```
 $ win-sshpass update
 Updating win-sshpass v0.9.1 (windows/amd64)...
-downloading win-sshpass-v0.9.4-amd64.zip (3.4 MiB)
+downloading win-sshpass-v0.9.4-amd64.zip
 Downloading win-sshpass-v0.9.4-amd64.zip 100% |████████████████| (3.6/3.6 MB, 1.2 MB/s)
 Updated win-sshpass v0.9.1 -> v0.9.4 (C:\Tools\win-sshpass.exe)
 ```
@@ -601,7 +602,7 @@ GOOS=darwin  GOARCH=arm64               go build -o win-sshpass ./cmd/sshpass
 
 ## 相依套件
 
-- Go 1.23+
+- Go 1.26+
 - golang.org/x/crypto/ssh
 - github.com/pkg/sftp
 - github.com/schollz/progressbar/v3（僅 CLI 進度條）

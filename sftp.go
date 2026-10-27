@@ -167,21 +167,33 @@ func uploadSingleFile(sftpClient *sftp.Client, localPath, remotePath string, res
 	if resume {
 		if info, statErr := sftpClient.Stat(remotePath); statErr == nil {
 			remoteSize := info.Size()
-			if remoteSize >= fileSize {
+			if remoteSize == fileSize {
 				// already fully uploaded — nothing to do
 				if progress != nil {
 					progress(desc, fileSize, fileSize)
 				}
 				return nil
 			}
-			// partial file exists — seek local and append to remote
-			offset = remoteSize
-			if _, seekErr := localFile.Seek(offset, io.SeekStart); seekErr != nil {
-				return fmt.Errorf("failed to seek local file for resume: %w", seekErr)
-			}
-			remoteFile, err = sftpClient.OpenFile(remotePath, os.O_WRONLY|os.O_APPEND)
-			if err != nil {
-				return fmt.Errorf("failed to open remote file for append: %w", err)
+			if remoteSize > fileSize {
+				// The destination is longer than the source. Appending cannot repair
+				// it, so restart this transfer and truncate the stale data.
+				remoteFile, err = sftpClient.Create(remotePath)
+				if err != nil {
+					return fmt.Errorf("failed to reset oversized remote file: %w", err)
+				}
+			} else {
+				// partial file exists — seek local and append to remote
+				offset = remoteSize
+				if _, seekErr := localFile.Seek(offset, io.SeekStart); seekErr != nil {
+					return fmt.Errorf("failed to seek local file for resume: %w", seekErr)
+				}
+				remoteFile, err = sftpClient.OpenFile(remotePath, os.O_WRONLY)
+				if err != nil {
+					return fmt.Errorf("failed to open remote file for resume: %w", err)
+				}
+				if _, seekErr := remoteFile.Seek(offset, io.SeekStart); seekErr != nil {
+					return fmt.Errorf("failed to seek remote file for resume: %w", seekErr)
+				}
 			}
 		} else {
 			// remote file does not exist — create fresh
@@ -301,21 +313,30 @@ func downloadSingleFile(sftpClient *sftp.Client, remotePath, localPath string, r
 	if resume {
 		if info, statErr := os.Stat(localPath); statErr == nil {
 			localSize := info.Size()
-			if localSize >= fileSize {
+			if localSize == fileSize {
 				// already fully downloaded — nothing to do
 				if progress != nil {
 					progress(desc, fileSize, fileSize)
 				}
 				return nil
 			}
-			// partial file exists — seek remote and append to local
-			offset = localSize
-			if _, seekErr := remoteFile.Seek(offset, io.SeekStart); seekErr != nil {
-				return fmt.Errorf("failed to seek remote file for resume: %w", seekErr)
-			}
-			localFile, err = os.OpenFile(localPath, os.O_WRONLY|os.O_APPEND, 0644)
-			if err != nil {
-				return fmt.Errorf("failed to open local file for append: %w", err)
+			if localSize > fileSize {
+				// A stale local file from a longer/older remote file cannot be
+				// repaired by appending; recreate it from the remote source.
+				localFile, err = os.Create(localPath)
+				if err != nil {
+					return fmt.Errorf("failed to reset oversized local file: %w", err)
+				}
+			} else {
+				// partial file exists — seek remote and append to local
+				offset = localSize
+				if _, seekErr := remoteFile.Seek(offset, io.SeekStart); seekErr != nil {
+					return fmt.Errorf("failed to seek remote file for resume: %w", seekErr)
+				}
+				localFile, err = os.OpenFile(localPath, os.O_WRONLY|os.O_APPEND, 0644)
+				if err != nil {
+					return fmt.Errorf("failed to open local file for append: %w", err)
+				}
 			}
 		} else {
 			// local file does not exist — create fresh

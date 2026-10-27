@@ -38,6 +38,46 @@ func parseForwardSpec(spec string) (listen, target string, err error) {
 	return listen, target, nil
 }
 
+// applyParsedSSHConfig applies values parsed after the ssh subcommand to a
+// config loaded from a file. Unlike Config.MergeFrom, this only copies fields
+// that ParseSSHArgs explicitly populated.
+func applyParsedSSHConfig(config, parsed *sshpass.Config) {
+	if config == nil || parsed == nil {
+		return
+	}
+	if parsed.Host != "" {
+		config.Host = parsed.Host
+		if parsed.User != "" {
+			config.User = parsed.User
+		}
+	}
+	if parsed.Port != "" {
+		config.Port = parsed.Port
+	}
+	if parsed.KeyPath != "" {
+		config.KeyPath = parsed.KeyPath
+	}
+	if parsed.Background {
+		config.Background = true
+	}
+}
+
+// resolveConfigCommand interprets arguments supplied with a config file.
+// "ssh ..." is an explicit login override; any other positional arguments are
+// the remote command. Without this distinction, a simple command such as
+// "whoami" would be mistaken for a bare hostname.
+func resolveConfigCommand(config *sshpass.Config, args []string) string {
+	if len(args) == 0 {
+		return ""
+	}
+	if args[0] != "ssh" {
+		return sshpass.JoinArgs(args)
+	}
+	parsed, command := sshpass.ParseSSHArgs(args)
+	applyParsedSSHConfig(config, parsed)
+	return command
+}
+
 func main() {
 	// command line arguments
 	configFile := flag.String("f", "", "password file or config file path")
@@ -312,28 +352,9 @@ func main() {
 			os.Exit(1)
 		}
 	} else if len(remainingArgs) > 0 {
-		// config from file, but remaining args may override host/user or provide command
-		sshArgs, cmd := sshpass.ParseSSHArgs(remainingArgs)
-		if sshArgs.Host != "" {
-			config.Host = sshArgs.Host
-			if sshArgs.User != "" {
-				config.User = sshArgs.User
-			}
-		} else if cmd == "" {
-			// no user@host in args; treat remaining args as a command
-			// (skip leading "ssh" if present)
-			cmdArgs := remainingArgs
-			if len(cmdArgs) > 0 && cmdArgs[0] == "ssh" {
-				cmdArgs = cmdArgs[1:]
-			}
-			cmd = sshpass.JoinArgs(cmdArgs)
-		}
-		if sshArgs.Port != "" {
-			config.Port = sshArgs.Port
-		}
-		if sshArgs.KeyPath != "" {
-			config.KeyPath = sshArgs.KeyPath
-		}
+		// Config files accept either an explicit "ssh [user@host] command"
+		// override or a positional remote command.
+		cmd := resolveConfigCommand(config, remainingArgs)
 		if cmd != "" {
 			cmdToRun = cmd
 		}

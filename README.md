@@ -128,7 +128,7 @@ win-sshpass -p 'password' ssh user@host
 While connected, use `rz` / `sz` commands to transfer files (no need to install anything on the remote server):
 
 ```bash
-# Upload file to remote current directory (opens file picker)
+# Upload file to the remote SFTP working directory (usually the login home; opens file picker)
 rz
 
 # Upload specific local file
@@ -142,6 +142,7 @@ sz /remote/path/to/file /local/save/path
 ```
 
 > **How it works**: When the remote shell reports `rz`/`sz: command not found`, the tool intercepts it and performs the transfer over SFTP instead. Files and directories are both supported, with progress bars.
+> The SFTP working directory is usually the login home directory; it is independent of later `cd` commands in the shell.
 
 ## Command Format
 
@@ -368,7 +369,7 @@ It first asks GitHub which release is current and compares that with the version
 ```
 $ win-sshpass update
 Updating win-sshpass v0.9.1 (windows/amd64)...
-downloading win-sshpass-v0.9.4-amd64.zip (3.4 MiB)
+downloading win-sshpass-v0.9.4-amd64.zip
 Downloading win-sshpass-v0.9.4-amd64.zip 100% |████████████████| (3.6/3.6 MB, 1.2 MB/s)
 Updated win-sshpass v0.9.1 -> v0.9.4 (C:\Tools\win-sshpass.exe)
 ```
@@ -631,7 +632,7 @@ GOOS=darwin  GOARCH=arm64               go build -o win-sshpass ./cmd/sshpass
 
 ## Dependencies
 
-- Go 1.23+
+- Go 1.26+
 - golang.org/x/crypto/ssh
 - github.com/pkg/sftp
 - github.com/schollz/progressbar/v3 (CLI progress bar only)

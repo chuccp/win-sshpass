@@ -64,6 +64,47 @@ func TestLoadConfigOrPasswordFileFallsBackToPasswordFile(t *testing.T) {
 	}
 }
 
+func TestReadPasswordFilePreservesWhitespace(t *testing.T) {
+	path := writeTempFile(t, "  secret pass  \r\n")
+	password, err := readPasswordFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if password != "  secret pass  " {
+		t.Errorf("password = %q, want leading and trailing spaces preserved", password)
+	}
+}
+
+func TestReadPasswordFileRejectsMultipleLines(t *testing.T) {
+	path := writeTempFile(t, "first\nsecond\n")
+	if _, err := readPasswordFile(path); err == nil {
+		t.Fatal("expected an error for a multi-line password file")
+	}
+}
+
+func TestLoadConfigRejectsInvalidRecognizedValues(t *testing.T) {
+	tests := []struct {
+		name string
+		line string
+	}{
+		{name: "timeout", line: "timeout: soon"},
+		{name: "negative timeout", line: "timeout: -1"},
+		{name: "connect timeout", line: "connect_timeout: fast"},
+		{name: "retries", line: "retries: many"},
+		{name: "strict host key", line: "strict_host_key: tru"},
+		{name: "background", line: "background: enabled"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := writeTempFile(t, "host: example.com\n"+tt.line+"\n")
+			if _, err := LoadConfig(path); err == nil {
+				t.Fatalf("LoadConfig accepted invalid value %q", tt.line)
+			}
+		})
+	}
+}
+
 func TestParseConfigFileStrictHostKey(t *testing.T) {
 	tests := []struct {
 		name  string

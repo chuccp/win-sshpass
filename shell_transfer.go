@@ -36,6 +36,12 @@ type rzszMonitor struct {
 	mu      sync.Mutex
 	recent  []byte // rolling buffer of recent output
 	Handled bool   // set when a command is being handled (prevents re-trigger)
+
+	inputMu     sync.Mutex
+	inputLine   []byte
+	lastCommand string
+	inputEscape int
+
 	// test hooks
 	onRZ func(localPath string)
 	onSZ func(remotePath, localPath string)
@@ -84,6 +90,9 @@ func (w *outputWriter) Write(p []byte) (int, error) {
 	if containsNotFound(p) {
 		// Look for rz/sz command in the rolling buffer, near the "not found" line
 		cmd, args := extractCommandFromNotFound(w.monitor.recent)
+		if cmd != "" && len(args) == 0 {
+			args = w.monitor.argsFromCapturedInput(cmd)
+		}
 		if cmd != "" {
 			w.monitor.Handled = true
 			w.monitor.recent = w.monitor.recent[:0]
@@ -129,9 +138,28 @@ func (w *outputWriter) Write(p []byte) (int, error) {
 
 // containsNotFound checks if the output contains a "command not found" pattern.
 func containsNotFound(p []byte) bool {
-	return bytes.Contains(p, []byte("not found")) ||
-		bytes.Contains(p, []byte("未找到命令")) ||
-		bytes.Contains(p, []byte("No such file or directory"))
+	for _, marker := range notFoundMarkers {
+		if bytes.Contains(bytes.ToLower(p), []byte(marker)) {
+			return true
+		}
+	}
+	return false
+}
+
+var notFoundMarkers = []string{
+	"not found",
+	"未找到命令",
+	"no such file or directory",
+}
+
+func latestNotFoundMarker(s string) int {
+	latest := -1
+	for _, marker := range notFoundMarkers {
+		if i := strings.LastIndex(s, marker); i > latest {
+			latest = i
+		}
+	}
+	return latest
 }
 
 // extractCommandFromNotFound finds the "not found" error line in the buffer,
@@ -143,7 +171,7 @@ func extractCommandFromNotFound(buf []byte) (string, []string) {
 
 	// Find "not found" (case-insensitive)
 	lowerS := strings.ToLower(s)
-	nfIdx := strings.Index(lowerS, "not found")
+	nfIdx := latestNotFoundMarker(lowerS)
 	if nfIdx < 0 {
 		return "", nil
 	}
@@ -206,6 +234,93 @@ func extractCommandFromNotFound(buf []byte) (string, []string) {
 	}
 
 	return cmd, nil
+}
+
+type terminalInputMirror struct {
+	r       io.Reader
+	monitor *rzszMonitor
+}
+
+func (m *terminalInputMirror) Read(p []byte) (int, error) {
+	n, err := m.r.Read(p)
+	if n > 0 {
+		m.monitor.captureInput(p[:n])
+	}
+	return n, err
+}
+
+func (m *rzszMonitor) captureInput(data []byte) {
+	m.inputMu.Lock()
+	defer m.inputMu.Unlock()
+
+	for _, b := range data {
+		if m.inputEscape != 0 {
+			switch m.inputEscape {
+			case 1: // ESC
+				switch b {
+				case '[':
+					m.inputEscape = 2 // CSI
+				case ']':
+					m.inputEscape = 3 // OSC
+				default:
+					m.inputEscape = 0 // two-byte escape
+				}
+			case 2: // CSI ends with a byte in 0x40-0x7e
+				if b >= 0x40 && b <= 0x7e {
+					m.inputEscape = 0
+				}
+			case 3: // OSC ends with BEL or ST (ESC \)
+				if b == 0x07 {
+					m.inputEscape = 0
+				} else if b == 0x1b {
+					m.inputEscape = 4
+				}
+			case 4:
+				if b == '\\' {
+					m.inputEscape = 0
+				} else {
+					m.inputEscape = 3
+				}
+			}
+			continue
+		}
+		switch b {
+		case 0x1b:
+			m.inputEscape = 1
+		case '\r', '\n':
+			if line := strings.TrimSpace(string(m.inputLine)); line != "" {
+				m.lastCommand = line
+			}
+			m.inputLine = m.inputLine[:0]
+		case 0x7f, 0x08: // backspace / delete
+			if len(m.inputLine) > 0 {
+				m.inputLine = m.inputLine[:len(m.inputLine)-1]
+			}
+		case 0x15: // Ctrl+U
+			m.inputLine = m.inputLine[:0]
+		default:
+			if b >= 0x20 {
+				m.inputLine = append(m.inputLine, b)
+			}
+		}
+	}
+}
+
+func (m *rzszMonitor) argsFromCapturedInput(command string) []string {
+	m.inputMu.Lock()
+	line := m.lastCommand
+	m.inputMu.Unlock()
+	return argsFromCommandLine(line, command)
+}
+
+func argsFromCommandLine(line, command string) []string {
+	fields := strings.Fields(line)
+	for i, field := range fields {
+		if field == command {
+			return fields[i+1:]
+		}
+	}
+	return nil
 }
 
 // --- Handlers ---

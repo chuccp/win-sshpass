@@ -190,9 +190,11 @@ func LoadConfig(filename string) (*Config, error) {
 
 	config := NewConfig()
 	hasKeys := false
+	lineNumber := 0
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
+		lineNumber++
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
@@ -222,28 +224,42 @@ func LoadConfig(filename string) (*Config, error) {
 			config.KeyPath = value
 			hasKeys = true
 		case "timeout":
-			if t, err := strconv.Atoi(value); err == nil && t >= 0 {
-				config.Timeout = t
+			t, err := strconv.Atoi(value)
+			if err != nil || t < 0 {
+				return nil, fmt.Errorf("invalid timeout on line %d: %q (expected a non-negative integer)", lineNumber, value)
 			}
+			config.Timeout = t
 			hasKeys = true
 		case "connect_timeout":
-			if t, err := strconv.Atoi(value); err == nil && t >= 0 {
-				config.ConnectTimeout = t
+			t, err := strconv.Atoi(value)
+			if err != nil || t < 0 {
+				return nil, fmt.Errorf("invalid connect_timeout on line %d: %q (expected a non-negative integer)", lineNumber, value)
 			}
+			config.ConnectTimeout = t
 			hasKeys = true
 		case "retry", "retries":
-			if t, err := strconv.Atoi(value); err == nil && t >= 0 {
-				config.Retries = t
+			t, err := strconv.Atoi(value)
+			if err != nil || t < 0 {
+				return nil, fmt.Errorf("invalid %s on line %d: %q (expected a non-negative integer)", key, lineNumber, value)
 			}
+			config.Retries = t
 			hasKeys = true
 		case "strict_host_key":
-			config.StrictHostKey = parseBoolValue(value)
+			parsed, err := parseConfigBool(value)
+			if err != nil {
+				return nil, fmt.Errorf("invalid strict_host_key on line %d: %w", lineNumber, err)
+			}
+			config.StrictHostKey = parsed
 			hasKeys = true
 		case "proxy", "proxy_url":
 			config.ProxyURL = value
 			hasKeys = true
 		case "background", "bg":
-			config.Background = parseBoolValue(value)
+			parsed, err := parseConfigBool(value)
+			if err != nil {
+				return nil, fmt.Errorf("invalid %s on line %d: %w", key, lineNumber, err)
+			}
+			config.Background = parsed
 			hasKeys = true
 		}
 	}
@@ -265,11 +281,18 @@ func LoadConfig(filename string) (*Config, error) {
 
 // parseBoolValue parses a boolean value from a config file
 func parseBoolValue(s string) bool {
-	switch strings.ToLower(s) {
+	value, _ := parseConfigBool(s)
+	return value
+}
+
+func parseConfigBool(s string) (bool, error) {
+	switch strings.ToLower(strings.TrimSpace(s)) {
 	case "true", "yes", "1", "on":
-		return true
+		return true, nil
+	case "false", "no", "0", "off":
+		return false, nil
 	default:
-		return false
+		return false, fmt.Errorf("invalid boolean %q (expected true/false, yes/no, 1/0, or on/off)", s)
 	}
 }
 
@@ -279,7 +302,11 @@ func readPasswordFile(filename string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to read password file: %w", err)
 	}
-	return strings.TrimSpace(string(data)), nil
+	password := strings.TrimRight(string(data), "\r\n")
+	if strings.ContainsAny(password, "\r\n") {
+		return "", fmt.Errorf("password file must contain a single line")
+	}
+	return password, nil
 }
 
 // GetEnvPassword returns the password from the SSHPASS environment variable.

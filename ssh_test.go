@@ -87,3 +87,26 @@ func TestDialAddressFromParseSSHArgs(t *testing.T) {
 		t.Fatalf("dialAddress produced %q, want [::1]:22", addr)
 	}
 }
+
+func TestDialRejectsNilConfig(t *testing.T) {
+	client, err := Dial(nil)
+	if err == nil {
+		if client != nil {
+			client.Close()
+		}
+		t.Fatal("Dial(nil) returned no error")
+	}
+}
+
+func TestDialValidatesConfigBeforeConnecting(t *testing.T) {
+	_, err := Dial(&Config{
+		Port:     "22",
+		Password: "secret",
+	})
+	if err == nil {
+		t.Fatal("Dial accepted a config without a host")
+	}
+	if !strings.Contains(err.Error(), "host address not specified") {
+		t.Fatalf("error = %v, want a missing-host validation error", err)
+	}
+}

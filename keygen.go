@@ -162,13 +162,6 @@ func SaveKeyPair(pair *KeyPair, privateKeyPath string) error {
 		return fmt.Errorf("private key path is empty")
 	}
 
-	// refuse to overwrite an existing private key
-	if _, err := os.Stat(privateKeyPath); err == nil {
-		return fmt.Errorf("private key file already exists: %s (remove it first to regenerate)", privateKeyPath)
-	} else if !os.IsNotExist(err) {
-		return fmt.Errorf("failed to check private key path: %w", err)
-	}
-
 	// create parent directory
 	dir := filepath.Dir(privateKeyPath)
 	if dir != "" && dir != "." {
@@ -177,14 +170,35 @@ func SaveKeyPair(pair *KeyPair, privateKeyPath string) error {
 		}
 	}
 
-	// write private key (0600)
-	if err := os.WriteFile(privateKeyPath, pair.PrivateKey, 0600); err != nil {
+	// Create the private key exclusively: this avoids both overwriting an
+	// existing key and a TOCTOU race between a Stat check and WriteFile.
+	privateFile, err := os.OpenFile(privateKeyPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+	if err != nil {
+		if os.IsExist(err) {
+			return fmt.Errorf("private key file already exists: %s (remove it first to regenerate)", privateKeyPath)
+		}
 		return fmt.Errorf("failed to write private key: %w", err)
+	}
+	if _, err := privateFile.Write(pair.PrivateKey); err != nil {
+		privateFile.Close()
+		if removeErr := os.Remove(privateKeyPath); removeErr != nil {
+			return fmt.Errorf("failed to write private key: %w (also failed to remove partial file: %v)", err, removeErr)
+		}
+		return fmt.Errorf("failed to write private key: %w", err)
+	}
+	if err := privateFile.Close(); err != nil {
+		if removeErr := os.Remove(privateKeyPath); removeErr != nil {
+			return fmt.Errorf("failed to close private key: %w (also failed to remove partial file: %v)", err, removeErr)
+		}
+		return fmt.Errorf("failed to close private key: %w", err)
 	}
 
 	// write public key (.pub, 0644)
 	pubPath := privateKeyPath + ".pub"
 	if err := os.WriteFile(pubPath, pair.PublicKey, 0644); err != nil {
+		if removeErr := os.Remove(privateKeyPath); removeErr != nil {
+			return fmt.Errorf("failed to write public key: %w (also failed to remove private key: %v)", err, removeErr)
+		}
 		return fmt.Errorf("failed to write public key: %w", err)
 	}
 

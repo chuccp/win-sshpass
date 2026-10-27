@@ -211,6 +211,117 @@ func TestParseSCPArgsContent(t *testing.T) {
 	}
 }
 
+func TestParseRemotePathArg(t *testing.T) {
+	tests := []struct {
+		name       string
+		input      string
+		wantUser   string
+		wantHost   string
+		wantPath   string
+		wantRemote bool
+	}{
+		{
+			name:       "user host path",
+			input:      "root@example.com:/tmp/file",
+			wantUser:   "root",
+			wantHost:   "example.com",
+			wantPath:   "/tmp/file",
+			wantRemote: true,
+		},
+		{
+			name:       "host path without user",
+			input:      "example.com:/tmp/file",
+			wantHost:   "example.com",
+			wantPath:   "/tmp/file",
+			wantRemote: true,
+		},
+		{
+			name:       "IPv6 with user",
+			input:      "root@[::1]:/tmp/file",
+			wantUser:   "root",
+			wantHost:   "[::1]",
+			wantPath:   "/tmp/file",
+			wantRemote: true,
+		},
+		{
+			name:       "IPv6 without user",
+			input:      "[::1]:/tmp/file",
+			wantHost:   "[::1]",
+			wantPath:   "/tmp/file",
+			wantRemote: true,
+		},
+		{
+			name:       "colon in remote path",
+			input:      "host:/tmp/a:b",
+			wantHost:   "host",
+			wantPath:   "/tmp/a:b",
+			wantRemote: true,
+		},
+		{
+			name:  "Windows local path",
+			input: `C:\Users\cao\file.txt`,
+		},
+		{
+			name:  "Windows local path with slash",
+			input: "C:/Users/cao/file.txt",
+		},
+		{
+			name:  "local path",
+			input: "./file.txt",
+		},
+		{
+			name:  "missing bracket",
+			input: "root@[::1/tmp",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			user, host, remotePath, ok := parseRemotePathArg(tt.input)
+			if ok != tt.wantRemote {
+				t.Fatalf("parseRemotePathArg(%q) remote = %v, want %v", tt.input, ok, tt.wantRemote)
+			}
+			if user != tt.wantUser {
+				t.Errorf("user = %q, want %q", user, tt.wantUser)
+			}
+			if host != tt.wantHost {
+				t.Errorf("host = %q, want %q", host, tt.wantHost)
+			}
+			if remotePath != tt.wantPath {
+				t.Errorf("remotePath = %q, want %q", remotePath, tt.wantPath)
+			}
+		})
+	}
+}
+
+func TestParseTransferArgsBareHost(t *testing.T) {
+	t.Run("scp", func(t *testing.T) {
+		cfg, args := ParseSCPArgs([]string{"scp", "file.txt", "example.com:/tmp/"})
+		if cfg.Host != "example.com" {
+			t.Errorf("Host = %q, want example.com", cfg.Host)
+		}
+		if cfg.User != "" {
+			t.Errorf("User = %q, want empty so ApplyUserDefault can supply root", cfg.User)
+		}
+		if len(args) != 2 {
+			t.Errorf("scp args = %v, want two transfer operands", args)
+		}
+	})
+
+	t.Run("rsync IPv6", func(t *testing.T) {
+		cfg, args := ParseRsyncArgs([]string{"rsync", "-avz", "./", "[::1]:/backup/"})
+		if cfg.Host != "[::1]" {
+			t.Errorf("Host = %q, want [::1]", cfg.Host)
+		}
+		if cfg.User != "" {
+			t.Errorf("User = %q, want empty so ApplyUserDefault can supply root", cfg.User)
+		}
+		if len(args) != 3 {
+			t.Errorf("rsync args = %v, want three transfer arguments", args)
+		}
+	})
+}
+
 func TestParseRsyncArgsContent(t *testing.T) {
 	cfg, rsyncArgs := ParseRsyncArgs([]string{"rsync", "-avz", "-e", "ssh", "--port=2222", "./", "root@host:/backup/"})
 	_ = cfg
@@ -244,6 +355,56 @@ func TestParseSSHArgsCommandOnly(t *testing.T) {
 	}
 	if cmd != "ls -la /tmp" {
 		t.Errorf("cmd = %q, want %q", cmd, "ls -la /tmp")
+	}
+}
+
+func TestParseSSHArgsArgumentsAfterHostAreRemoteCommand(t *testing.T) {
+	tests := []struct {
+		name        string
+		args        []string
+		wantHost    string
+		wantPort    string
+		wantKeyPath string
+		wantCmd     string
+	}{
+		{
+			name:     "at-sign command token does not replace host",
+			args:     []string{"ssh", "deploy@configured.example", "user@example.com"},
+			wantHost: "configured.example", wantCmd: "user@example.com",
+		},
+		{
+			name:     "port-looking command argument",
+			args:     []string{"ssh", "configured.example", "-p", "2222"},
+			wantHost: "configured.example", wantCmd: "-p 2222",
+		},
+		{
+			name:     "identity-looking command argument",
+			args:     []string{"ssh", "configured.example", "-i", "key"},
+			wantHost: "configured.example", wantCmd: "-i key",
+		},
+		{
+			name:     "verbose-looking command argument",
+			args:     []string{"ssh", "configured.example", "-v"},
+			wantHost: "configured.example", wantCmd: "-v",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg, cmd := ParseSSHArgs(tt.args)
+			if cfg.Host != tt.wantHost {
+				t.Errorf("Host = %q, want %q", cfg.Host, tt.wantHost)
+			}
+			if cfg.Port != tt.wantPort {
+				t.Errorf("Port = %q, want %q", cfg.Port, tt.wantPort)
+			}
+			if cfg.KeyPath != tt.wantKeyPath {
+				t.Errorf("KeyPath = %q, want %q", cfg.KeyPath, tt.wantKeyPath)
+			}
+			if cmd != tt.wantCmd {
+				t.Errorf("command = %q, want %q", cmd, tt.wantCmd)
+			}
+		})
 	}
 }
 

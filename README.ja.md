@@ -123,7 +123,7 @@ win-sshpass -p 'password' ssh user@host
 接続中に `rz` / `sz` コマンドでファイル転送が可能（リモートサーバーに何もインストールする必要なし）：
 
 ```bash
-# リモートの現在のディレクトリにファイルをアップロード（ファイル選択ダイアログが開く）
+# リモートの SFTP 作業ディレクトリにアップロード（通常はログイン先ホーム。ファイル選択ダイアログが開く）
 rz
 
 # 特定のローカルファイルをアップロード
@@ -137,6 +137,7 @@ sz /リモート/ファイル/パス /ローカル/保存/パス
 ```
 
 > **仕組み**：リモートシェルが `rz`/`sz: command not found` を返した時、ツールがそれを検出して SFTP で転送を実行します。ファイルとディレクトリの両方に対応し、プログレスバー付きです。
+> SFTP の作業ディレクトリは通常ログイン先ホームであり、シェルで後から実行した `cd` の影響を受けません。
 
 ## コマンド形式
 
@@ -351,7 +352,7 @@ win-sshpass update -version v1.0.0
 ```
 $ win-sshpass update
 Updating win-sshpass v0.9.1 (windows/amd64)...
-downloading win-sshpass-v0.9.4-amd64.zip (3.4 MiB)
+downloading win-sshpass-v0.9.4-amd64.zip
 Downloading win-sshpass-v0.9.4-amd64.zip 100% |████████████████| (3.6/3.6 MB, 1.2 MB/s)
 Updated win-sshpass v0.9.1 -> v0.9.4 (C:\Tools\win-sshpass.exe)
 ```
@@ -611,7 +612,7 @@ GOOS=darwin  GOARCH=arm64               go build -o win-sshpass ./cmd/sshpass
 
 ## 依存関係
 
-- Go 1.23+
+- Go 1.26+
 - golang.org/x/crypto/ssh
 - github.com/pkg/sftp
 - github.com/schollz/progressbar/v3（CLI プログレスバーのみ）

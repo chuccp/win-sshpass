@@ -2,6 +2,10 @@ package sshpass
 
 import (
 	"bytes"
+	"io"
+	"log/slog"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -53,6 +57,24 @@ func TestExtractCommandFromNotFound(t *testing.T) {
 			buf:      "[root@host ~]# ls\r\nfile_sz.txt\r\n[root@host ~]# rz\r\n-bash: rz: command not found\r\n",
 			wantCmd:  "rz",
 			wantArgs: []string{},
+		},
+		{
+			name:     "latest error wins over stale not found",
+			buf:      "old-command\r\n-bash: old-command: command not found\r\nsz /tmp/file\r\nzsh: command not found: sz\r\n",
+			wantCmd:  "sz",
+			wantArgs: []string{"/tmp/file"},
+		},
+		{
+			name:     "chinese not found with args",
+			buf:      "[root@host ~]# sz /tmp/report.pdf\r\n-bash: sz: 未找到命令\r\n",
+			wantCmd:  "sz",
+			wantArgs: []string{"/tmp/report.pdf"},
+		},
+		{
+			name:     "no such file format with args",
+			buf:      "[root@host ~]# rz /local/file.txt\r\nsh: rz: No such file or directory\r\n",
+			wantCmd:  "rz",
+			wantArgs: []string{"/local/file.txt"},
 		},
 	}
 
@@ -266,5 +288,96 @@ func TestOutputWriterLargeOutputDoesNotPanic(t *testing.T) {
 	writer.Write(large)
 	if outBuf.Len() != 8192 {
 		t.Errorf("output len = %d, want 8192", outBuf.Len())
+	}
+}
+
+func TestOutputWriterFallsBackToCapturedInput(t *testing.T) {
+	monitor := &rzszMonitor{}
+	monitor.captureInput([]byte("sz /tmp/report.pdf C:/tmp/report.pdf\r"))
+	var out bytes.Buffer
+	writer := &outputWriter{monitor: monitor, out: &out}
+	var remotePath, localPath string
+	monitor.onSZ = func(remote, local string) {
+		remotePath, localPath = remote, local
+	}
+
+	writer.Write([]byte("zsh: command not found: sz\r\n"))
+	if remotePath != "/tmp/report.pdf" || localPath != "C:/tmp/report.pdf" {
+		t.Errorf("onSZ args = %q, %q", remotePath, localPath)
+	}
+}
+
+func TestTerminalInputMirrorPreservesBytesAndTracksEdits(t *testing.T) {
+	monitor := &rzszMonitor{}
+	input := []byte("\x1b[11;17Rsz oldd\x7f/new.txt\x1b]0;title\x07\r")
+	mirror := &terminalInputMirror{r: bytes.NewReader(input), monitor: monitor}
+	got, err := io.ReadAll(mirror)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(got, input) {
+		t.Errorf("mirrored input changed: got %q want %q", got, input)
+	}
+	args := monitor.argsFromCapturedInput("sz")
+	if len(args) != 1 || args[0] != "old/new.txt" {
+		t.Errorf("captured args = %v, want [old/new.txt]", args)
+	}
+}
+
+type pathSelector struct {
+	openPath string
+	savePath string
+}
+
+func (s pathSelector) OpenFile() (string, error)       { return s.openPath, nil }
+func (s pathSelector) SaveFile(string) (string, error) { return s.savePath, nil }
+
+func TestRzszMonitorHandlersWithSelector(t *testing.T) {
+	client, remoteRoot := newTestSFTPClient(t)
+	stdin, err := os.Open(os.DevNull)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stdin.Close()
+
+	localSource := filepath.Join(t.TempDir(), "rz-source.txt")
+	if err := os.WriteFile(localSource, []byte("rz upload content"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	localDestination := filepath.Join(t.TempDir(), "sz-destination.txt")
+	var stdout, stderr bytes.Buffer
+	monitor := &rzszMonitor{
+		sftpClient: client,
+		stdin:      stdin,
+		selector: pathSelector{
+			openPath: localSource,
+			savePath: localDestination,
+		},
+		stdout: &stdout,
+		stderr: &stderr,
+		logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+	}
+
+	monitor.handleRZ("")
+	uploaded := filepath.Join(remoteRoot, filepath.Base(localSource))
+	content, err := os.ReadFile(uploaded)
+	if err != nil {
+		t.Fatalf("rz upload missing at %s: %v\nstdout=%s\nstderr=%s", uploaded, err, stdout.String(), stderr.String())
+	}
+	if string(content) != "rz upload content" {
+		t.Errorf("rz upload content = %q", content)
+	}
+
+	remoteFile := filepath.Join(remoteRoot, "sz-source.txt")
+	if err := os.WriteFile(remoteFile, []byte("sz download content"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	monitor.handleSZ(filepath.Base(remoteFile), "")
+	content, err = os.ReadFile(localDestination)
+	if err != nil {
+		t.Fatalf("sz download missing: %v\nstdout=%s\nstderr=%s", err, stdout.String(), stderr.String())
+	}
+	if string(content) != "sz download content" {
+		t.Errorf("sz download content = %q", content)
 	}
 }

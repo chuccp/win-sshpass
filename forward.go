@@ -18,6 +18,10 @@ type Forwarder struct {
 	done      chan struct{}
 	closeOnce sync.Once
 	closeErr  error
+
+	mu     sync.Mutex
+	active map[net.Conn]struct{}
+	closed bool
 }
 
 // sshClientConn is the subset of *ssh.Client used by Forwarder. It is
@@ -78,12 +82,17 @@ func (f *Forwarder) acceptLoop() {
 		if err != nil {
 			return // listener closed
 		}
+		if !f.track(conn) {
+			conn.Close()
+			return
+		}
 		go f.handle(conn)
 	}
 }
 
 // handle forwards a single connection bidirectionally.
 func (f *Forwarder) handle(conn net.Conn) {
+	defer f.untrack(conn)
 	defer conn.Close()
 
 	var upstream net.Conn
@@ -100,18 +109,55 @@ func (f *Forwarder) handle(conn net.Conn) {
 	}
 	defer upstream.Close()
 
-	// Bidirectional copy. When either direction finishes, close both
-	// connections by returning (deferred closes handle cleanup).
+	// Bidirectional copy. Propagate EOF with CloseWrite so a half-closed
+	// request stream can still receive its response, then wait for the other
+	// direction before closing both connections.
 	done := make(chan struct{}, 2)
 	go func() {
 		io.Copy(upstream, conn)
+		closeWrite(upstream)
 		done <- struct{}{}
 	}()
 	go func() {
 		io.Copy(conn, upstream)
+		closeWrite(conn)
 		done <- struct{}{}
 	}()
 	<-done
+	<-done
+}
+
+type closeWriter interface {
+	CloseWrite() error
+}
+
+func closeWrite(conn net.Conn) {
+	if cw, ok := conn.(closeWriter); ok {
+		_ = cw.CloseWrite()
+		return
+	}
+	// conns without half-close support are fully closed so the opposite copy
+	// cannot remain blocked forever.
+	_ = conn.Close()
+}
+
+func (f *Forwarder) track(conn net.Conn) bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.closed {
+		return false
+	}
+	if f.active == nil {
+		f.active = make(map[net.Conn]struct{})
+	}
+	f.active[conn] = struct{}{}
+	return true
+}
+
+func (f *Forwarder) untrack(conn net.Conn) {
+	f.mu.Lock()
+	delete(f.active, conn)
+	f.mu.Unlock()
 }
 
 // Close stops the forwarding tunnel and releases the listener. It is safe to
@@ -119,6 +165,17 @@ func (f *Forwarder) handle(conn net.Conn) {
 func (f *Forwarder) Close() error {
 	f.closeOnce.Do(func() {
 		f.closeErr = f.listener.Close()
+
+		f.mu.Lock()
+		f.closed = true
+		connections := make([]net.Conn, 0, len(f.active))
+		for conn := range f.active {
+			connections = append(connections, conn)
+		}
+		f.mu.Unlock()
+		for _, conn := range connections {
+			conn.Close()
+		}
 	})
 	return f.closeErr
 }

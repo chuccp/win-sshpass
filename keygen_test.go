@@ -211,6 +211,25 @@ func TestSaveKeyPairRefusesOverwrite(t *testing.T) {
 	}
 }
 
+func TestSaveKeyPairRollsBackPrivateKeyWhenPublicWriteFails(t *testing.T) {
+	dir := t.TempDir()
+	keyPath := filepath.Join(dir, "id_ed25519")
+	if err := os.Mkdir(keyPath+".pub", 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	pair, err := GenerateKeyPair(KeyEd25519, "rollback@test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveKeyPair(pair, keyPath); err == nil {
+		t.Fatal("expected public key write to fail")
+	}
+	if _, err := os.Stat(keyPath); !os.IsNotExist(err) {
+		t.Fatalf("private key was left behind after a failed save: %v", err)
+	}
+}
+
 func TestSaveKeyPairNilPair(t *testing.T) {
 	dir := t.TempDir()
 	if err := SaveKeyPair(nil, filepath.Join(dir, "key")); err == nil {
