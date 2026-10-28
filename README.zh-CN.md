@@ -7,9 +7,9 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md)
 
-`win-sshpass` 是一个跨 Windows、Linux 和 macOS 的 SSH 客户端与自动化工具。
-支持密码/密钥登录、SFTP 与 SCP/Rsync 风格传输、端口转发、浏览器 SSH
-工作区、MCP 工具和可复用 Go SDK。
+`win-sshpass` 是一个专为 AI 自动化设计的跨 Windows、Linux 和 macOS SSH
+客户端。支持非交互密码/密钥登录、SFTP 与 SCP/Rsync 风格传输、端口转发、
+浏览器 SSH 工作区、MCP 工具、JSON 输出和可复用 Go SDK。
 
 ## 主要功能
 

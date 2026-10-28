@@ -7,10 +7,10 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md)
 
-`win-sshpass` is a cross-platform SSH client and automation tool for Windows,
-Linux, and macOS. It combines password/key authentication, SFTP and
-SCP/Rsync-style transfers, port forwarding, a browser-based SSH workspace, MCP
-tools, and a reusable Go SDK.
+`win-sshpass` is a cross-platform SSH client designed for AI-driven automation
+on Windows, Linux, and macOS. It combines non-interactive password/key
+authentication, SFTP and SCP/Rsync-style transfers, port forwarding, a
+browser-based SSH workspace, MCP tools, JSON output, and a reusable Go SDK.
 
 ## Highlights
 
